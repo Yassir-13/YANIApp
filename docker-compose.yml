@@ -1,0 +1,24 @@
+services:
+  # ── Base de données ──────────────────────────────
+  postgres:
+    image: postgres:16-alpine        # version 16, image Alpine = légère
+    container_name: yani_postgres
+    restart: unless-stopped          # redémarre seul (sauf arrêt manuel)
+    env_file:
+      - .env                         # injecte les variables du .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT}:5432"   # exposé UNIQUEMENT en local
+    volumes:
+      - yani_pgdata:/var/lib/postgresql/data # persistance des données
+    healthcheck:                     # vérifie que la DB est prête
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  yani_pgdata:                       # volume nommé, survit aux redémarrages

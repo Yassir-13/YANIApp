@@ -1,0 +1,124 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+//  ENUMS
+// ─────────────────────────────────────────────
+
+enum Role {
+  CLIENT
+  STAFF
+  ADMIN
+}
+
+enum LoyaltyTier {
+  NORMAL
+  BRONZE
+  SILVER
+  GOLD
+}
+
+enum LoyaltyTxType {
+  EARN        // points gagnés (ex : RDV complété)
+  REDEEM      // points dépensés (échange récompense)
+  MANUAL      // ajout manuel par le staff
+  ADJUSTMENT  // correction par l'admin
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+// ─────────────────────────────────────────────
+//  UTILISATEURS
+// ─────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  phone        String?
+  passwordHash String   @map("password_hash")
+  role         Role     @default(CLIENT)
+  firstName    String?  @map("first_name")
+  lastName     String?  @map("last_name")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  loyaltyAccount     LoyaltyAccount?
+  appointments       Appointment[]
+  loyaltyTx          LoyaltyTransaction[] @relation("AccountOwner")
+  createdTransactions LoyaltyTransaction[] @relation("TransactionCreator")
+
+  @@map("users")
+}
+
+// ─────────────────────────────────────────────
+//  FIDÉLITÉ
+// ─────────────────────────────────────────────
+
+model LoyaltyAccount {
+  id            String      @id @default(uuid())
+  userId        String      @unique @map("user_id")
+  pointsBalance Int         @default(0) @map("points_balance")
+  tier          LoyaltyTier @default(NORMAL)
+  visitCount    Int         @default(0) @map("visit_count")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions LoyaltyTransaction[]
+
+  @@map("loyalty_accounts")
+}
+
+model LoyaltyTransaction {
+  id          String        @id @default(uuid())
+  accountId   String        @map("account_id")
+  ownerId     String        @map("owner_id")
+  pointsDelta Int           @map("points_delta")
+  type        LoyaltyTxType
+  createdById String?       @map("created_by")
+  appointmentId String?     @unique @map("appointment_id")
+  createdAt   DateTime      @default(now()) @map("created_at")
+
+  account     LoyaltyAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  owner       User           @relation("AccountOwner", fields: [ownerId], references: [id])
+  createdBy   User?          @relation("TransactionCreator", fields: [createdById], references: [id])
+  appointment Appointment?   @relation(fields: [appointmentId], references: [id])
+
+  @@index([accountId])
+  @@map("loyalty_transactions")
+}
+
+// ─────────────────────────────────────────────
+//  RENDEZ-VOUS
+// ─────────────────────────────────────────────
+
+model Appointment {
+  id        String            @id @default(uuid())
+  userId    String            @map("user_id")
+  startAt   DateTime          @map("start_at")
+  status    AppointmentStatus @default(PENDING)
+  createdAt DateTime          @default(now()) @map("created_at")
+  updatedAt DateTime          @updatedAt @map("updated_at")
+
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  loyaltyTx   LoyaltyTransaction?
+
+  @@index([userId])
+  @@index([startAt])
+  @@map("appointments")
+}
