@@ -12,6 +12,8 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { RolesGuard } from './guards/roles.guard';
+import { Roles } from './decorators/roles.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -33,5 +35,13 @@ export class AuthController {
   @Get('me')
   getMe(@Req() req: any) {
     return req.user;
+  }
+
+  // Route de démonstration : réservée aux ADMIN
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Get('admin-only')
+  adminOnly(@Req() req: any) {
+    return { message: 'Bienvenue admin !', user: req.user };
   }
 }

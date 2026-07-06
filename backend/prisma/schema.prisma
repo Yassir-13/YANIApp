@@ -122,3 +122,36 @@ model Appointment {
   @@index([startAt])
   @@map("appointments")
 }
+
+// ─────────────────────────────────────────────
+//  CATALOGUE DE SERVICES
+// ─────────────────────────────────────────────
+
+model ServiceCategory {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  services  Service[]
+
+  @@map("service_categories")
+}
+
+model Service {
+  id          String   @id @default(uuid())
+  categoryId  String   @map("category_id")
+  name        String
+  description String?
+  durationMin Int      @map("duration_min")
+  price       Decimal  @db.Decimal(10, 2)
+  imageUrl    String?  @map("image_url")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  category    ServiceCategory @relation(fields: [categoryId], references: [id])
+
+  @@index([categoryId])
+  @@map("services")
+}
