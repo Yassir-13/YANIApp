@@ -155,3 +155,36 @@ model Service {
   @@index([categoryId])
   @@map("services")
 }
+
+// ─────────────────────────────────────────────
+//  CATALOGUE DE PRODUITS
+// ─────────────────────────────────────────────
+
+model ProductCategory {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  products  Product[]
+
+  @@map("product_categories")
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  categoryId  String   @map("category_id")
+  name        String
+  description String?
+  price       Decimal  @db.Decimal(10, 2)
+  stockQty    Int      @default(0) @map("stock_qty")
+  imageUrl    String?  @map("image_url")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  category    ProductCategory @relation(fields: [categoryId], references: [id])
+
+  @@index([categoryId])
+  @@map("products")
+}
