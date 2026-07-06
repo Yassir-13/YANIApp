@@ -38,10 +38,10 @@ export class AuthController {
   }
 
   // Route de démonstration : réservée aux ADMIN
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  /* @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   @Get('admin-only')
   adminOnly(@Req() req: any) {
     return { message: 'Bienvenue admin !', user: req.user };
-  }
+  } */
 }
