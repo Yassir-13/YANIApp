@@ -7,13 +7,17 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { AppointmentStatus, Role } from '@prisma/client';
+import { LoyaltyService } from '../loyalty/loyalty.service'
 
 // Capacité applicative : 2 cabines réservées à l'app
 const CENTER_CAPACITY = 2;
 
 @Injectable()
 export class AppointmentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly loyaltyService: LoyaltyService,
+  ) {}
 
   // Vérifie la disponibilité d'un créneau (capacité par chevauchement)
  private async assertSlotAvailable(
@@ -177,11 +181,13 @@ export class AppointmentsService {
     });
 
     // ── Automatisation fidélité ──
-    // Quand un RDV passe à COMPLETED, on créditera les points ici.
-    // (à brancher quand le module Loyalty sera construit)
-    // if (status === AppointmentStatus.COMPLETED && appointment.status !== AppointmentStatus.COMPLETED) {
-    //   await this.loyaltyService.earnFromAppointment(updated);
-    // }
+    // Crédite les points UNIQUEMENT à la transition vers COMPLETED
+    if (
+      status === AppointmentStatus.COMPLETED &&
+      appointment.status !== AppointmentStatus.COMPLETED
+    ) {
+      await this.loyaltyService.earnFromAppointment(updated);
+    }
 
     return updated;
   }

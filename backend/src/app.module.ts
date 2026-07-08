@@ -9,6 +9,7 @@ import { ServicesModule } from './services/services.module';
 import { ProductsModule } from './products/products.module';
 import { AppointmentsModule } from './appointments/appointments.module';
 import { OpeningHoursModule } from './opening-hours/opening-hours.module';
+import { LoyaltyModule } from './loyalty/loyalty.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { OpeningHoursModule } from './opening-hours/opening-hours.module';
     ProductsModule,
     AppointmentsModule,
     OpeningHoursModule,
+    LoyaltyModule,
   ],
   controllers: [AppController],
   providers: [AppService],
