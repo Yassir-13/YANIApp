@@ -16,7 +16,7 @@ export class AppointmentsService {
   constructor(private readonly prisma: PrismaService) {}
 
   // Vérifie la disponibilité d'un créneau (capacité par chevauchement)
-  private async assertSlotAvailable(
+ private async assertSlotAvailable(
     serviceId: string,
     startAt: Date,
     excludeAppointmentId?: string,
@@ -34,6 +34,27 @@ export class AppointmentsService {
 
     const endAt = new Date(startAt.getTime() + service.durationMin * 60_000);
 
+    // ── Vérification des horaires d'ouverture ──
+    const dayOfWeek = startAt.getUTCDay(); // 0 = dimanche ... 6 = samedi
+    const hours = await this.prisma.openingHours.findUnique({
+      where: { dayOfWeek },
+    });
+
+    if (!hours || hours.isClosed) {
+      throw new BadRequestException('Le centre est fermé ce jour-là.');
+    }
+
+    // Heure de début et de fin du RDV au format "HH:MM" pour comparer
+    const startHHMM = this.toHHMM(startAt);
+    const endHHMM = this.toHHMM(endAt);
+
+    if (startHHMM < hours.openTime || endHHMM > hours.closeTime) {
+      throw new BadRequestException(
+        `Le créneau doit être compris entre ${hours.openTime} et ${hours.closeTime}.`,
+      );
+    }
+
+    // ── Vérification de la capacité (chevauchement) ──
     const candidates = await this.prisma.appointment.findMany({
       where: {
         status: {
@@ -56,6 +77,13 @@ export class AppointmentsService {
     }
 
     return { service, endAt };
+  }
+
+  // Convertit une Date en "HH:MM" (UTC)
+  private toHHMM(date: Date): string {
+    const h = String(date.getUTCHours()).padStart(2, '0');
+    const m = String(date.getUTCMinutes()).padStart(2, '0');
+    return `${h}:${m}`;
   }
 
   // ----- CLIENT : réserve pour lui-même -----

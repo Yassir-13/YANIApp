@@ -192,3 +192,18 @@ model Product {
   @@index([categoryId])
   @@map("products")
 }
+
+// ─────────────────────────────────────────────
+//  HORAIRES D'OUVERTURE
+// ─────────────────────────────────────────────
+
+model OpeningHours {
+  id        String   @id @default(uuid())
+  dayOfWeek Int      @unique @map("day_of_week") // 0 = dimanche ... 6 = samedi
+  openTime  String   @map("open_time")   // "09:00"
+  closeTime String   @map("close_time")  // "19:00"
+  isClosed  Boolean  @default(false) @map("is_closed")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("opening_hours")
+}
