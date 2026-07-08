@@ -1,0 +1,74 @@
+import {
+  Controller,
+  Post,
+  Get,
+  Patch,
+  Body,
+  Param,
+  Req,
+  UseGuards,
+  ParseUUIDPipe,
+} from '@nestjs/common';
+import { AppointmentsService } from './appointments.service';
+import { CreateAppointmentDto } from './dto/create-appointment.dto';
+import { CreateForClientDto } from './dto/create-for-client.dto';
+import { UpdateStatusDto } from './dto/update-status.dto';
+import { RescheduleDto } from './dto/reschedule.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+
+@Controller('appointments')
+@UseGuards(JwtAuthGuard)
+export class AppointmentsController {
+  constructor(private readonly appointmentsService: AppointmentsService) {}
+
+  // ----- CLIENT (et tous) -----
+
+  @Post()
+  create(@Req() req: any, @Body() dto: CreateAppointmentDto) {
+    return this.appointmentsService.create(req.user.id, dto);
+  }
+
+  @Get()
+  findMine(@Req() req: any) {
+    return this.appointmentsService.findForUser(req.user.id, req.user.role);
+  }
+
+  @Patch(':id/cancel')
+  cancel(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+    return this.appointmentsService.cancel(id, req.user.id, req.user.role);
+  }
+
+  // ----- STAFF / ADMIN -----
+
+  @UseGuards(RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  @Post('for-client')
+  createForClient(@Body() dto: CreateForClientDto) {
+    return this.appointmentsService.createForClient(dto.userId, {
+      serviceId: dto.serviceId,
+      startAt: dto.startAt,
+    });
+  }
+
+  @UseGuards(RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  @Patch(':id/status')
+  updateStatus(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateStatusDto,
+  ) {
+    return this.appointmentsService.updateStatus(id, dto.status);
+  }
+
+  @UseGuards(RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  @Patch(':id/reschedule')
+  reschedule(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RescheduleDto,
+  ) {
+    return this.appointmentsService.reschedule(id, dto.startAt);
+  }
+}

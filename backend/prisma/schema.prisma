@@ -110,15 +110,18 @@ model LoyaltyTransaction {
 model Appointment {
   id        String            @id @default(uuid())
   userId    String            @map("user_id")
+  serviceId String            @map("service_id")
   startAt   DateTime          @map("start_at")
   status    AppointmentStatus @default(PENDING)
   createdAt DateTime          @default(now()) @map("created_at")
   updatedAt DateTime          @updatedAt @map("updated_at")
 
-  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  loyaltyTx   LoyaltyTransaction?
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  service   Service             @relation(fields: [serviceId], references: [id])
+  loyaltyTx LoyaltyTransaction?
 
   @@index([userId])
+  @@index([serviceId])
   @@index([startAt])
   @@map("appointments")
 }
@@ -149,6 +152,7 @@ model Service {
   active      Boolean  @default(true)
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
+  appointments Appointment[]
 
   category    ServiceCategory @relation(fields: [categoryId], references: [id])
 
