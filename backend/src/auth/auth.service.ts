@@ -2,9 +2,14 @@ import {
   Injectable,
   ConflictException,
   UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import * as argon2 from 'argon2';
+import { randomBytes, createHash } from 'crypto';
+import { randomUUID } from 'crypto';
+import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -14,7 +19,51 @@ export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
+    private readonly prisma: PrismaService,
+    private readonly config: ConfigService,
   ) {}
+
+  // ─────────────────────────────────────────
+  //  Utilitaires refresh token
+  // ─────────────────────────────────────────
+
+  // Génère une chaîne aléatoire cryptographiquement sûre
+  private generateRefreshToken(): string {
+    return randomBytes(48).toString('hex');
+  }
+
+  // Hache le token (SHA-256 suffit : c'est un secret aléatoire, pas un mot de passe)
+  private hashToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
+  }
+
+  // Crée et persiste un refresh token
+  private async issueRefreshToken(userId: string, familyId: string) {
+    const token = this.generateRefreshToken();
+    const days = Number(this.config.get<string>('JWT_REFRESH_EXPIRES_IN_DAYS') ?? 14);
+    const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+
+    await this.prisma.refreshToken.create({
+      data: {
+        tokenHash: this.hashToken(token),
+        userId,
+        familyId,
+        expiresAt,
+      },
+    });
+
+    return token;
+  }
+
+  // Génère l'access token (JWT court)
+  private async issueAccessToken(user: { id: string; email: string; role: string }) {
+    const payload = { sub: user.id, email: user.email, role: user.role };
+    return this.jwtService.signAsync(payload);
+  }
+
+  // ─────────────────────────────────────────
+  //  Inscription
+  // ─────────────────────────────────────────
 
   async register(dto: RegisterDto) {
     const existing = await this.usersService.findByEmail(dto.email);
@@ -41,25 +90,30 @@ export class AuthService {
     };
   }
 
+  // ─────────────────────────────────────────
+  //  Connexion : émet les deux tokens
+  // ─────────────────────────────────────────
+
   async login(dto: LoginDto) {
-    // 1. Retrouve l'utilisateur
     const user = await this.usersService.findByEmail(dto.email);
     if (!user) {
       throw new UnauthorizedException('Email ou mot de passe incorrect.');
     }
 
-    // 2. Vérifie le mot de passe contre le hash
     const passwordValid = await argon2.verify(user.passwordHash, dto.password);
     if (!passwordValid) {
       throw new UnauthorizedException('Email ou mot de passe incorrect.');
     }
 
-    // 3. Génère le token signé
-    const payload = { sub: user.id, email: user.email, role: user.role };
-    const accessToken = await this.jwtService.signAsync(payload);
+    // Nouvelle session = nouvelle famille de tokens
+    const familyId = randomUUID();
+
+    const accessToken = await this.issueAccessToken(user);
+    const refreshToken = await this.issueRefreshToken(user.id, familyId);
 
     return {
       accessToken,
+      refreshToken,
       user: {
         id: user.id,
         email: user.email,
@@ -68,5 +122,78 @@ export class AuthService {
         role: user.role,
       },
     };
+  }
+
+  // ─────────────────────────────────────────
+  //  Refresh : rotation + détection de réutilisation
+  // ─────────────────────────────────────────
+
+  async refresh(presentedToken: string) {
+    const tokenHash = this.hashToken(presentedToken);
+
+    const stored = await this.prisma.refreshToken.findUnique({
+      where: { tokenHash },
+      include: { user: true },
+    });
+
+    // Token inconnu
+    if (!stored) {
+      throw new UnauthorizedException('Refresh token invalide.');
+    }
+
+    // ⚠ Token déjà révoqué = réutilisation suspecte
+    // On tue toute la famille : la session est compromise
+    if (stored.revokedAt) {
+      await this.prisma.refreshToken.updateMany({
+        where: { familyId: stored.familyId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      throw new ForbiddenException(
+        'Refresh token déjà utilisé. Session révoquée pour sécurité.',
+      );
+    }
+
+    // Token expiré
+    if (stored.expiresAt.getTime() < Date.now()) {
+      throw new UnauthorizedException('Refresh token expiré.');
+    }
+
+    // Rotation : on révoque l'ancien, on en émet un nouveau (même famille)
+    await this.prisma.refreshToken.update({
+      where: { id: stored.id },
+      data: { revokedAt: new Date() },
+    });
+
+    const accessToken = await this.issueAccessToken(stored.user);
+    const refreshToken = await this.issueRefreshToken(
+      stored.userId,
+      stored.familyId,
+    );
+
+    return { accessToken, refreshToken };
+  }
+
+  // ─────────────────────────────────────────
+  //  Déconnexion : révoque le refresh token
+  // ─────────────────────────────────────────
+
+  async logout(presentedToken: string) {
+    const tokenHash = this.hashToken(presentedToken);
+
+    const stored = await this.prisma.refreshToken.findUnique({
+      where: { tokenHash },
+    });
+
+    if (stored && !stored.revokedAt) {
+      // On révoque toute la famille (déconnexion complète de cette session)
+      await this.prisma.refreshToken.updateMany({
+        where: { familyId: stored.familyId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+    }
+
+    // On répond toujours OK, même si le token n'existe pas
+    // (ne pas révéler si un token est valide ou non)
+    return { message: 'Déconnecté.' };
   }
 }

@@ -11,6 +11,7 @@ import {
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { RefreshDto } from './dto/refresh.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { Roles } from './decorators/roles.decorator';
@@ -37,11 +38,15 @@ export class AuthController {
     return req.user;
   }
 
-  // Route de démonstration : réservée aux ADMIN
-  /* @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
-  @Get('admin-only')
-  adminOnly(@Req() req: any) {
-    return { message: 'Bienvenue admin !', user: req.user };
-  } */
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  refresh(@Body() dto: RefreshDto) {
+    return this.authService.refresh(dto.refreshToken);
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  logout(@Body() dto: RefreshDto) {
+    return this.authService.logout(dto.refreshToken);
+  }
 }
