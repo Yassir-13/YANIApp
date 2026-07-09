@@ -7,7 +7,9 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { AppointmentStatus, Role } from '@prisma/client';
-import { LoyaltyService } from '../loyalty/loyalty.service'
+import { LoyaltyService } from '../loyalty/loyalty.service';
+import { ConfigService } from '@nestjs/config';
+import { toZonedTime, format } from 'date-fns-tz';
 
 // Capacité applicative : 2 cabines réservées à l'app
 const CENTER_CAPACITY = 2;
@@ -17,10 +19,36 @@ export class AppointmentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly loyaltyService: LoyaltyService,
+    private readonly config: ConfigService,
   ) {}
 
-  // Vérifie la disponibilité d'un créneau (capacité par chevauchement)
- private async assertSlotAvailable(
+  // ─────────────────────────────────────────
+  //  Utilitaires fuseau horaire
+  //  Convention : l'API reçoit et stocke des instants UTC.
+  //  Les horaires d'ouverture sont exprimés en heure LOCALE du centre.
+  // ─────────────────────────────────────────
+
+  private get timezone(): string {
+    return this.config.get<string>('CENTER_TIMEZONE') ?? 'Africa/Casablanca';
+  }
+
+  // Convertit un instant UTC en "HH:MM" heure locale du centre
+  private toLocalHHMM(date: Date): string {
+    const zoned = toZonedTime(date, this.timezone);
+    return format(zoned, 'HH:mm', { timeZone: this.timezone });
+  }
+
+  // Jour de la semaine en heure locale (0 = dimanche ... 6 = samedi)
+  private toLocalDayOfWeek(date: Date): number {
+    const zoned = toZonedTime(date, this.timezone);
+    return zoned.getDay();
+  }
+
+  // ─────────────────────────────────────────
+  //  Vérification de disponibilité
+  // ─────────────────────────────────────────
+
+  private async assertSlotAvailable(
     serviceId: string,
     startAt: Date,
     excludeAppointmentId?: string,
@@ -38,8 +66,8 @@ export class AppointmentsService {
 
     const endAt = new Date(startAt.getTime() + service.durationMin * 60_000);
 
-    // ── Vérification des horaires d'ouverture ──
-    const dayOfWeek = startAt.getUTCDay(); // 0 = dimanche ... 6 = samedi
+    // ── Horaires d'ouverture (heure locale du centre) ──
+    const dayOfWeek = this.toLocalDayOfWeek(startAt);
     const hours = await this.prisma.openingHours.findUnique({
       where: { dayOfWeek },
     });
@@ -48,17 +76,16 @@ export class AppointmentsService {
       throw new BadRequestException('Le centre est fermé ce jour-là.');
     }
 
-    // Heure de début et de fin du RDV au format "HH:MM" pour comparer
-    const startHHMM = this.toHHMM(startAt);
-    const endHHMM = this.toHHMM(endAt);
+    const startHHMM = this.toLocalHHMM(startAt);
+    const endHHMM = this.toLocalHHMM(endAt);
 
     if (startHHMM < hours.openTime || endHHMM > hours.closeTime) {
       throw new BadRequestException(
-        `Le créneau doit être compris entre ${hours.openTime} et ${hours.closeTime}.`,
+        `Le créneau doit être compris entre ${hours.openTime} et ${hours.closeTime} (heure locale).`,
       );
     }
 
-    // ── Vérification de la capacité (chevauchement) ──
+    // ── Capacité (chevauchement d'intervalles) ──
     const candidates = await this.prisma.appointment.findMany({
       where: {
         status: {
@@ -83,14 +110,10 @@ export class AppointmentsService {
     return { service, endAt };
   }
 
-  // Convertit une Date en "HH:MM" (UTC)
-  private toHHMM(date: Date): string {
-    const h = String(date.getUTCHours()).padStart(2, '0');
-    const m = String(date.getUTCMinutes()).padStart(2, '0');
-    return `${h}:${m}`;
-  }
+  // ─────────────────────────────────────────
+  //  CLIENT : réserve pour lui-même
+  // ─────────────────────────────────────────
 
-  // ----- CLIENT : réserve pour lui-même -----
   async create(userId: string, dto: CreateAppointmentDto) {
     const startAt = new Date(dto.startAt);
     await this.assertSlotAvailable(dto.serviceId, startAt);
@@ -101,11 +124,11 @@ export class AppointmentsService {
     });
   }
 
-  // ----- STAFF/ADMIN : réserve pour un client donné -----
-  async createForClient(
-    targetUserId: string,
-    dto: CreateAppointmentDto,
-  ) {
+  // ─────────────────────────────────────────
+  //  STAFF/ADMIN : réserve pour un client donné
+  // ─────────────────────────────────────────
+
+  async createForClient(targetUserId: string, dto: CreateAppointmentDto) {
     const client = await this.prisma.user.findUnique({
       where: { id: targetUserId },
     });
@@ -122,7 +145,10 @@ export class AppointmentsService {
     });
   }
 
-  // ----- Lecture : client = les siens ; staff/admin = tous -----
+  // ─────────────────────────────────────────
+  //  Lecture : client = les siens ; staff/admin = tous
+  // ─────────────────────────────────────────
+
   findForUser(userId: string, role: Role) {
     if (role === Role.CLIENT) {
       return this.prisma.appointment.findMany({
@@ -149,7 +175,10 @@ export class AppointmentsService {
     });
   }
 
-  // ----- Annulation : client = le sien ; staff/admin = tous -----
+  // ─────────────────────────────────────────
+  //  Annulation : client = le sien ; staff/admin = tous
+  // ─────────────────────────────────────────
+
   async cancel(id: string, userId: string, role: Role) {
     const appointment = await this.prisma.appointment.findUnique({
       where: { id },
@@ -166,7 +195,10 @@ export class AppointmentsService {
     });
   }
 
-  // ----- STAFF/ADMIN : change librement le statut -----
+  // ─────────────────────────────────────────
+  //  STAFF/ADMIN : change librement le statut
+  // ─────────────────────────────────────────
+
   async updateStatus(id: string, status: AppointmentStatus) {
     const appointment = await this.prisma.appointment.findUnique({
       where: { id },
@@ -192,7 +224,10 @@ export class AppointmentsService {
     return updated;
   }
 
-  // ----- STAFF/ADMIN : reprogrammation (change l'horaire) -----
+  // ─────────────────────────────────────────
+  //  STAFF/ADMIN : reprogrammation
+  // ─────────────────────────────────────────
+
   async reschedule(id: string, newStartAt: string) {
     const appointment = await this.prisma.appointment.findUnique({
       where: { id },
