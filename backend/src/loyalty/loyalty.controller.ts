@@ -15,6 +15,7 @@ import { RedeemDto } from './dto/redeem.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { ManualPointsDto } from './dto/manual-points.dto';
 
 @Controller('loyalty')
 @UseGuards(JwtAuthGuard)
@@ -66,5 +67,30 @@ export class LoyaltyController {
   @Delete('rewards/:id')
   deactivateReward(@Param('id', ParseUUIDPipe) id: string) {
     return this.loyaltyService.deactivateReward(id);
+  }
+
+   // Consulter le compte fidélité d'un client (lecture au comptoir)
+  @UseGuards(RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  @Get('accounts/:userId')
+  getClientAccount(@Param('userId', ParseUUIDPipe) userId: string) {
+    return this.loyaltyService.getAccountByUserId(userId);
+  }
+
+  // Ajouter des points manuellement (tracé)
+  @UseGuards(RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  @Post('manual')
+  addManualPoints(@Req() req: any, @Body() dto: ManualPointsDto) {
+    return this.loyaltyService.addManualPoints(dto, req.user.id);
+  }
+
+  // ----- ADMIN uniquement : audit -----
+
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  @Get('audit/manual')
+  auditManual() {
+    return this.loyaltyService.auditManualTransactions();
   }
 }

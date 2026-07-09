@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { Appointment, LoyaltyTxType } from '@prisma/client';
 import { CreateRewardDto } from './dto/create-reward.dto';
+import { ManualPointsDto } from './dto/manual-points.dto';
 
 // Taux de fidélité : 5% du montant dépensé, converti en points
 const LOYALTY_RATE = 0.05;
@@ -147,5 +148,71 @@ export class LoyaltyService {
       pointsSpent: reward.pointsCost,
       transaction,
     };
+  }
+
+  async addManualPoints(dto: ManualPointsDto, createdById: string) {
+    // Le compte fidélité du client ciblé
+    const account = await this.prisma.loyaltyAccount.findUnique({
+      where: { userId: dto.userId },
+    });
+    if (!account) {
+      throw new NotFoundException('Compte fidélité introuvable.');
+    }
+
+    // Transaction atomique : mouvement tracé + mise à jour du solde
+    const [transaction] = await this.prisma.$transaction([
+      this.prisma.loyaltyTransaction.create({
+        data: {
+          accountId: account.id,
+          ownerId: dto.userId,
+          pointsDelta: dto.points,
+          type: LoyaltyTxType.MANUAL,
+          createdById, // ← QUI a fait cet ajout (audit)
+        },
+      }),
+      this.prisma.loyaltyAccount.update({
+        where: { id: account.id },
+        data: { pointsBalance: { increment: dto.points } },
+      }),
+    ]);
+
+    return {
+      message: `${dto.points} point(s) ajouté(s) manuellement.`,
+      transaction,
+    };
+  }
+
+  // ----- AUDIT : l'admin consulte tous les ajouts manuels -----
+
+  auditManualTransactions() {
+    return this.prisma.loyaltyTransaction.findMany({
+      where: { type: LoyaltyTxType.MANUAL },
+      include: {
+        owner: {
+          select: { id: true, email: true, firstName: true, lastName: true },
+        },
+        createdBy: {
+          select: { id: true, email: true, firstName: true, lastName: true, role: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  // ----- STAFF/ADMIN : consulter le compte fidélité d'un client -----
+
+  async getAccountByUserId(userId: string) {
+    const account = await this.prisma.loyaltyAccount.findUnique({
+      where: { userId },
+      include: {
+        user: {
+          select: { id: true, email: true, firstName: true, lastName: true, phone: true },
+        },
+      },
+    });
+    if (!account) {
+      throw new NotFoundException('Compte fidélité introuvable.');
+    }
+    return account;
   }
 }
