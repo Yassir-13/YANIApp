@@ -93,12 +93,14 @@ model LoyaltyTransaction {
   createdById String?       @map("created_by")
   appointmentId String?     @unique @map("appointment_id")
   createdAt   DateTime      @default(now()) @map("created_at")
+  rewardId    String?       @map("reward_id")
 
   account     LoyaltyAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
   owner       User           @relation("AccountOwner", fields: [ownerId], references: [id])
   createdBy   User?          @relation("TransactionCreator", fields: [createdById], references: [id])
   appointment Appointment?   @relation(fields: [appointmentId], references: [id])
-
+  reward      Reward?       @relation(fields: [rewardId], references: [id])
+  
   @@index([accountId])
   @@map("loyalty_transactions")
 }
@@ -206,4 +208,22 @@ model OpeningHours {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("opening_hours")
+}
+
+// ─────────────────────────────────────────────
+//  RÉCOMPENSES
+// ─────────────────────────────────────────────
+
+model Reward {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  pointsCost  Int      @map("points_cost")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  transactions LoyaltyTransaction[]
+
+  @@map("rewards")
 }
