@@ -9,12 +9,14 @@ import {
   ParseUUIDPipe,
 } from '@nestjs/common';
 import { ServicesService } from './services.service';
-import { CreateCategoryDto } from './dto/create-category.dto';
+import { CreateServiceCategoryDto } from './dto/create-category.dto';
 import { CreateServiceDto } from './dto/create-service.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('services')
 @Controller('services')
 export class ServicesController {
   constructor(private readonly servicesService: ServicesService) {}
@@ -41,7 +43,7 @@ export class ServicesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   @Post('categories')
-  createCategory(@Body() dto: CreateCategoryDto) {
+  createCategory(@Body() dto: CreateServiceCategoryDto) {
     return this.servicesService.createCategory(dto);
   }
 

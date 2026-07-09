@@ -16,7 +16,9 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ManualPointsDto } from './dto/manual-points.dto';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('loyalty')
 @Controller('loyalty')
 @UseGuards(JwtAuthGuard)
 export class LoyaltyController {

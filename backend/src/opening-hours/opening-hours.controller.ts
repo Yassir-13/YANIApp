@@ -10,7 +10,9 @@ import { UpdateHoursDto } from './dto/update-hours.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('opening-hours')
 @Controller('opening-hours')
 export class OpeningHoursController {
   constructor(private readonly openingHoursService: OpeningHoursService) {}
