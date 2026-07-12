@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Query,
   Patch,
   Body,
   Param,
@@ -17,6 +18,7 @@ import { RescheduleDto } from './dto/reschedule.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 import { ApiTags } from '@nestjs/swagger';
 
 @ApiTags('appointments')
@@ -24,6 +26,16 @@ import { ApiTags } from '@nestjs/swagger';
 @UseGuards(JwtAuthGuard)
 export class AppointmentsController {
   constructor(private readonly appointmentsService: AppointmentsService) {}
+
+  // Route (publique)
+  @Public()
+  @Get('availability')
+  getAvailability(
+    @Query('serviceId') serviceId: string,
+    @Query('date') date: string,
+  ) {
+    return this.appointmentsService.getAvailability(serviceId, date);
+  }
 
   // ----- CLIENT (et tous) -----
 
