@@ -1,15 +1,10 @@
 import { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
-import { typography, spacing, radius } from '../theme/typography';
+import { typography, spacing } from '../theme/typography';
 import { productsApi, Product } from '../api/products';
+import Button from '../components/Button';
 
 export default function ProductDetailScreen({ route, navigation }: any) {
   const { theme } = useTheme();
@@ -19,11 +14,7 @@ export default function ProductDetailScreen({ route, navigation }: any) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    productsApi
-      .getOne(productId)
-      .then(setProduct)
-      .catch(() => {})
-      .finally(() => setIsLoading(false));
+    productsApi.getOne(productId).then(setProduct).catch(() => {}).finally(() => setIsLoading(false));
   }, [productId]);
 
   if (isLoading) {
@@ -51,28 +42,21 @@ export default function ProductDetailScreen({ route, navigation }: any) {
         onPress={() => navigation.goBack()}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
-        <Text style={[styles.backText, { color: theme.text }]}>‹ Retour</Text>
+        <Ionicons name="chevron-back" size={26} color={theme.text} />
       </TouchableOpacity>
 
-      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingTop: spacing.xxl }}>
+      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingTop: spacing.xxl * 1.5 }}>
         {product.category && (
-          <Text style={[typography.small, { color: theme.gold, letterSpacing: 1, marginTop: spacing.lg }]}>
+          <Text style={[typography.small, { color: theme.gold, letterSpacing: 1 }]}>
             {product.category.name.toUpperCase()}
           </Text>
         )}
         <Text style={[typography.heading, { color: theme.text, marginVertical: spacing.sm }]}>
           {product.name}
         </Text>
-
-        <Text
-          style={[
-            typography.caption,
-            { color: inStock ? theme.success : theme.danger, marginTop: spacing.xs },
-          ]}
-        >
+        <Text style={[typography.caption, { color: inStock ? theme.success : theme.danger }]}>
           {inStock ? 'En stock' : 'Rupture de stock'}
         </Text>
-
         {product.description && (
           <Text style={[typography.body, { color: theme.textSecondary, marginTop: spacing.lg }]}>
             {product.description}
@@ -80,23 +64,17 @@ export default function ProductDetailScreen({ route, navigation }: any) {
         )}
       </ScrollView>
 
-      {/* Barre du bas */}
       <View style={[styles.bottomBar, { backgroundColor: theme.surface, borderTopColor: theme.border }]}>
         <View>
           <Text style={[typography.small, { color: theme.textMuted }]}>Prix</Text>
           <Text style={[typography.title, { color: theme.gold }]}>{product.price} dh</Text>
         </View>
-        <TouchableOpacity
-          style={[styles.cartBtn, { backgroundColor: inStock ? theme.gold : theme.textMuted, opacity: inStock ? 1 : 0.5 }]}
+        <Button
+          label={inStock ? 'Ajouter au panier' : 'Indisponible'}
+          onPress={() => {}}
           disabled={!inStock}
-          onPress={() => {
-            // Panier à venir (dépend de la décision métier sur les commandes)
-          }}
-        >
-          <Text style={[typography.subtitle, { color: '#1E1B16' }]}>
-            {inStock ? 'Ajouter au panier' : 'Indisponible'}
-          </Text>
-        </TouchableOpacity>
+          style={{ flex: 0, paddingHorizontal: spacing.lg }}
+        />
       </View>
     </View>
   );
@@ -106,17 +84,11 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   backButton: { position: 'absolute', top: spacing.xxl, left: spacing.md, zIndex: 10, padding: spacing.sm },
-  backText: { fontSize: 17, fontWeight: '500' },
   bottomBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: spacing.lg,
     borderTopWidth: 1,
-  },
-  cartBtn: {
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
   },
 });

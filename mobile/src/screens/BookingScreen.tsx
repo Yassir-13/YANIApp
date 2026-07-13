@@ -1,30 +1,31 @@
 import { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { appointmentsApi, Slot } from '../api/appointments';
+import Button from '../components/Button';
 
-
-// Génère les 14 prochains jours
 function getNextDays(count: number) {
   const days = [];
   const today = new Date();
   for (let i = 0; i < count; i++) {
     const d = new Date(today);
     d.setDate(today.getDate() + i);
-    const dateStr = d.toISOString().split('T')[0]; // YYYY-MM-DD
+    const dateStr = d.toISOString().split('T')[0];
     const label = d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
     days.push({ dateStr, label });
   }
   return days;
+}
+
+function buildStartAt(dateStr: string, time: string): string {
+  const [h, m] = time.split(':').map(Number);
+  const CASABLANCA_OFFSET_HOURS = 1;
+  const utcHour = h - CASABLANCA_OFFSET_HOURS;
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const utcDate = new Date(Date.UTC(year, month - 1, day, utcHour, m, 0));
+  return utcDate.toISOString();
 }
 
 export default function BookingScreen({ route, navigation }: any) {
@@ -39,7 +40,6 @@ export default function BookingScreen({ route, navigation }: any) {
   const [closed, setClosed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Recharge les créneaux quand la date change
   useEffect(() => {
     setIsLoading(true);
     setSelectedSlot(null);
@@ -57,7 +57,6 @@ export default function BookingScreen({ route, navigation }: any) {
     if (!selectedSlot) return;
     setSubmitting(true);
     try {
-      // Construit l'instant à envoyer : date + heure locale → le backend valide
       const startAt = buildStartAt(selectedDate, selectedSlot);
       await appointmentsApi.create(serviceId, startAt);
       Alert.alert('Réservation confirmée', `Votre rendez-vous du ${selectedDate} à ${selectedSlot} est enregistré.`, [
@@ -77,15 +76,15 @@ export default function BookingScreen({ route, navigation }: any) {
         onPress={() => navigation.goBack()}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
-        <Text style={[styles.backText, { color: theme.text }]}>‹ Retour</Text>
+        <Ionicons name="chevron-back" size={26} color={theme.text} />
       </TouchableOpacity>
 
-      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingTop: spacing.xxl }}>
+      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingTop: spacing.xxl * 1.5 }}>
         <Text style={[typography.heading, { color: theme.text, marginBottom: spacing.lg }]}>
           Choisir un créneau
         </Text>
 
-        {/* Sélecteur de date (défilement horizontal) */}
+        {/* Sélecteur de date */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing.lg }}>
           {days.map((day) => {
             const active = day.dateStr === selectedDate;
@@ -95,10 +94,7 @@ export default function BookingScreen({ route, navigation }: any) {
                 onPress={() => setSelectedDate(day.dateStr)}
                 style={[
                   styles.dayChip,
-                  {
-                    backgroundColor: active ? theme.gold : theme.surface,
-                    borderColor: theme.border,
-                  },
+                  { backgroundColor: active ? theme.gold : theme.surface, borderColor: theme.border },
                 ]}
               >
                 <Text style={[typography.caption, { color: active ? '#1E1B16' : theme.text }]}>
@@ -150,43 +146,20 @@ export default function BookingScreen({ route, navigation }: any) {
 
       {/* Barre de confirmation */}
       <View style={[styles.bottomBar, { backgroundColor: theme.surface, borderTopColor: theme.border }]}>
-        <TouchableOpacity
-          style={[
-            styles.confirmBtn,
-            { backgroundColor: theme.gold, opacity: selectedSlot && !submitting ? 1 : 0.4 },
-          ]}
+        <Button
+          label={submitting ? 'Réservation...' : selectedSlot ? `Confirmer · ${selectedSlot}` : 'Choisir un créneau'}
           onPress={handleConfirm}
-          disabled={!selectedSlot || submitting}
-        >
-          <Text style={[typography.subtitle, { color: '#1E1B16' }]}>
-            {submitting ? 'Réservation...' : selectedSlot ? `Confirmer · ${selectedSlot}` : 'Choisir un créneau'}
-          </Text>
-        </TouchableOpacity>
+          loading={submitting}
+          disabled={!selectedSlot}
+        />
       </View>
     </View>
   );
 }
 
-// Construit l'ISO string à envoyer au backend.
-// On envoie l'heure locale ; le backend interprète selon le fuseau du centre.
-// Le centre est à UTC+1 (Africa/Casablanca).
-// L'utilisateur choisit une heure LOCALE ; on la convertit en UTC pour le backend.
-function buildStartAt(dateStr: string, time: string): string {
-  const [h, m] = time.split(':').map(Number);
-  // Heure locale marocaine → UTC : on retranche le décalage (+1h)
-  // On construit l'instant UTC directement.
-  const CASABLANCA_OFFSET_HOURS = 1; // UTC+1
-  const utcHour = h - CASABLANCA_OFFSET_HOURS;
-  // Construit une date UTC explicite
-  const [year, month, day] = dateStr.split('-').map(Number);
-  const utcDate = new Date(Date.UTC(year, month - 1, day, utcHour, m, 0));
-  return utcDate.toISOString();
-}
-
 const styles = StyleSheet.create({
   container: { flex: 1 },
   backButton: { position: 'absolute', top: spacing.xxl, left: spacing.md, zIndex: 10, padding: spacing.sm },
-  backText: { fontSize: 17, fontWeight: '500' },
   dayChip: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
@@ -204,9 +177,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   bottomBar: { padding: spacing.lg, borderTopWidth: 1 },
-  confirmBtn: {
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-  },
 });

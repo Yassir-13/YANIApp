@@ -1,17 +1,10 @@
 import { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { useAuthStore } from '../stores/authStore';
+import Button from '../components/Button';
 
 export default function LoginScreen({ navigation }: any) {
   const { theme } = useTheme();
@@ -28,13 +21,9 @@ export default function LoginScreen({ navigation }: any) {
     }
     try {
       await login(email.trim(), password);
-      if (navigation.canGoBack()) {
-        navigation.goBack();
-      }
+      if (navigation.canGoBack()) navigation.goBack();
     } catch (error: any) {
-      const message =
-        error.response?.data?.message || 'Connexion impossible. Réessayez.';
-      Alert.alert('Erreur', message);
+      Alert.alert('Erreur', error.response?.data?.message || 'Connexion impossible. Réessayez.');
     }
   };
 
@@ -43,27 +32,19 @@ export default function LoginScreen({ navigation }: any) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={[styles.container, { backgroundColor: theme.background }]}
     >
-      {/* Bouton retour */}
       {navigation.canGoBack() && (
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Text style={[styles.backText, { color: theme.text }]}>‹ Retour</Text>
+          <Ionicons name="chevron-back" size={26} color={theme.text} />
         </TouchableOpacity>
       )}
 
       <View style={styles.content}>
-        <Text style={[typography.heading, { color: theme.gold, textAlign: 'center' }]}>
-          Yani Concept
-        </Text>
-        <Text
-          style={[
-            typography.caption,
-            { color: theme.textSecondary, textAlign: 'center', marginBottom: spacing.xl },
-          ]}
-        >
+        <Text style={[typography.heading, { color: theme.gold, textAlign: 'center' }]}>Yani Concept</Text>
+        <Text style={[typography.caption, { color: theme.textSecondary, textAlign: 'center', marginBottom: spacing.xl }]}>
           Connectez-vous à votre compte
         </Text>
 
@@ -76,7 +57,6 @@ export default function LoginScreen({ navigation }: any) {
           autoCapitalize="none"
           keyboardType="email-address"
         />
-
         <TextInput
           style={[styles.input, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]}
           placeholder="Mot de passe"
@@ -86,15 +66,12 @@ export default function LoginScreen({ navigation }: any) {
           secureTextEntry
         />
 
-        <TouchableOpacity
-          style={[styles.button, { backgroundColor: theme.gold, opacity: isLoading ? 0.6 : 1 }]}
+        <Button
+          label={isLoading ? 'Connexion...' : 'Se connecter'}
           onPress={handleLogin}
-          disabled={isLoading}
-        >
-          <Text style={[typography.subtitle, { color: '#1E1B16' }]}>
-            {isLoading ? 'Connexion...' : 'Se connecter'}
-          </Text>
-        </TouchableOpacity>
+          loading={isLoading}
+          style={{ marginTop: spacing.sm }}
+        />
 
         <TouchableOpacity onPress={() => navigation.navigate('Register')} style={{ marginTop: spacing.lg }}>
           <Text style={[typography.caption, { color: theme.textSecondary, textAlign: 'center' }]}>
@@ -108,14 +85,7 @@ export default function LoginScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  backButton: {
-    position: 'absolute',
-    top: spacing.xxl,
-    left: spacing.md,
-    zIndex: 10,
-    padding: spacing.sm,
-  },
-  backText: { fontSize: 17, fontWeight: '500' },
+  backButton: { position: 'absolute', top: spacing.xxl, left: spacing.md, zIndex: 10, padding: spacing.sm },
   content: { flex: 1, justifyContent: 'center', paddingHorizontal: spacing.lg },
   input: {
     borderWidth: 1,
@@ -124,11 +94,5 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     marginBottom: spacing.md,
     fontSize: 15,
-  },
-  button: {
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-    marginTop: spacing.sm,
   },
 });

@@ -1,21 +1,15 @@
 import { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  StyleSheet,
-  ActivityIndicator,
-  TouchableOpacity,
-  RefreshControl,
-} from 'react-native';
-import { useTheme } from '../theme/ThemeContext';
-import { typography, spacing, radius } from '../theme/typography';
-import { productsApi, Product } from '../api/products';
+import { Text, FlatList, StyleSheet, ActivityIndicator, RefreshControl, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useTheme } from '../theme/ThemeContext';
+import { typography, spacing } from '../theme/typography';
+import { productsApi, Product } from '../api/products';
+import Screen from '../components/Screen';
+import Card from '../components/Card';
 
 export default function ProductsScreen() {
-  const navigation = useNavigation<any>();
   const { theme } = useTheme();
+  const navigation = useNavigation<any>();
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,23 +39,17 @@ export default function ProductsScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.centered, { backgroundColor: theme.background }]}>
-        <ActivityIndicator size="large" color={theme.gold} />
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={[styles.centered, { backgroundColor: theme.background }]}>
-        <Text style={[typography.body, { color: theme.danger }]}>{error}</Text>
-      </View>
+      <Screen>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={theme.gold} />
+        </View>
+      </Screen>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <Text style={[typography.heading, { color: theme.text, margin: spacing.lg }]}>
+    <Screen padded={false}>
+      <Text style={[typography.heading, { color: theme.text, marginHorizontal: spacing.lg, marginBottom: spacing.lg }]}>
         Produits
       </Text>
       <FlatList
@@ -72,50 +60,45 @@ export default function ProductsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.gold} />
         }
         ListEmptyComponent={
-          <Text style={[typography.body, { color: theme.textSecondary, textAlign: 'center', marginTop: spacing.xl }]}>
-            Aucun produit disponible pour le moment.
-          </Text>
+          error ? (
+            <Text style={[typography.body, { color: theme.danger, textAlign: 'center', marginTop: spacing.xl }]}>
+              {error}
+            </Text>
+          ) : (
+            <Text style={[typography.body, { color: theme.textSecondary, textAlign: 'center', marginTop: spacing.xl }]}>
+              Aucun produit disponible.
+            </Text>
+          )
         }
         renderItem={({ item }) => (
-          <TouchableOpacity
-            onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
-            style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={[typography.subtitle, { color: theme.text }]}>{item.name}</Text>
-              {item.category && (
-                <Text style={[typography.small, { color: theme.textMuted, marginTop: 2 }]}>
-                  {item.category.name}
+          <Card onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}>
+            <View style={styles.cardRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={[typography.subtitle, { color: theme.text }]}>{item.name}</Text>
+                {item.category && (
+                  <Text style={[typography.small, { color: theme.textMuted, marginTop: 2 }]}>
+                    {item.category.name}
+                  </Text>
+                )}
+                <Text
+                  style={[
+                    typography.small,
+                    { color: item.stockQty > 0 ? theme.success : theme.danger, marginTop: spacing.xs },
+                  ]}
+                >
+                  {item.stockQty > 0 ? 'En stock' : 'Rupture'}
                 </Text>
-              )}
-              <Text
-                style={[
-                  typography.small,
-                  { color: item.stockQty > 0 ? theme.success : theme.danger, marginTop: spacing.xs },
-                ]}
-              >
-                {item.stockQty > 0 ? 'En stock' : 'Rupture'}
-              </Text>
+              </View>
+              <Text style={[typography.subtitle, { color: theme.gold }]}>{item.price} dh</Text>
             </View>
-            <Text style={[typography.subtitle, { color: theme.gold }]}>
-              {item.price} dh
-            </Text>
-          </TouchableOpacity>
+          </Card>
         )}
       />
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    marginBottom: spacing.md,
-  },
+  cardRow: { flexDirection: 'row', alignItems: 'center' },
 });

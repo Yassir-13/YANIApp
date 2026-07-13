@@ -1,19 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  Alert,
-  RefreshControl,
-} from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, RefreshControl } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { appointmentsApi, Appointment } from '../api/appointments';
+import Card from '../components/Card';
 
-// Traduit et colore le statut
 function statusInfo(status: string, theme: any) {
   switch (status) {
     case 'PENDING': return { label: 'En attente', color: theme.textSecondary };
@@ -24,10 +16,8 @@ function statusInfo(status: string, theme: any) {
   }
 }
 
-// Formate la date/heure en heure locale marocaine (UTC+1)
 function formatDateTime(iso: string): string {
   const d = new Date(iso);
-  // Affiche en heure locale du device ; pour le Maroc c'est correct la plupart de l'année
   return d.toLocaleString('fr-FR', {
     weekday: 'short',
     day: 'numeric',
@@ -60,7 +50,7 @@ export default function MyAppointmentsScreen({ navigation }: any) {
   }, [load]);
 
   const handleCancel = (appt: Appointment) => {
-    Alert.alert('Annuler le rendez-vous', 'Confirmez-vous l\'annulation ?', [
+    Alert.alert('Annuler le rendez-vous', "Confirmez-vous l'annulation ?", [
       { text: 'Non', style: 'cancel' },
       {
         text: 'Oui, annuler',
@@ -92,18 +82,18 @@ export default function MyAppointmentsScreen({ navigation }: any) {
         onPress={() => navigation.goBack()}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
-        <Text style={[styles.backText, { color: theme.text }]}>‹ Retour</Text>
+        <Ionicons name="chevron-back" size={26} color={theme.text} />
       </TouchableOpacity>
 
       <FlatList
         data={appointments}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: spacing.lg, paddingTop: spacing.xxl }}
+        contentContainerStyle={{ padding: spacing.lg, paddingTop: spacing.xxl * 1.5 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={theme.gold} />
         }
         ListHeaderComponent={
-          <Text style={[typography.heading, { color: theme.text, marginTop: spacing.lg, marginBottom: spacing.lg }]}>
+          <Text style={[typography.heading, { color: theme.text, marginBottom: spacing.lg }]}>
             Mes rendez-vous
           </Text>
         }
@@ -116,7 +106,7 @@ export default function MyAppointmentsScreen({ navigation }: any) {
           const info = statusInfo(item.status, theme);
           const canCancel = item.status === 'PENDING' || item.status === 'CONFIRMED';
           return (
-            <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Card>
               <View style={styles.cardHeader}>
                 <Text style={[typography.subtitle, { color: theme.text }]}>
                   {item.service?.name ?? 'Service'}
@@ -136,7 +126,7 @@ export default function MyAppointmentsScreen({ navigation }: any) {
                   <Text style={[typography.caption, { color: theme.danger }]}>Annuler</Text>
                 </TouchableOpacity>
               )}
-            </View>
+            </Card>
           );
         }}
       />
@@ -148,18 +138,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   backButton: { position: 'absolute', top: spacing.xxl, left: spacing.md, zIndex: 10, padding: spacing.sm },
-  backText: { fontSize: 17, fontWeight: '500' },
-  card: {
-    borderRadius: radius.md,
-    borderWidth: 1,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cancelBtn: {
     alignSelf: 'flex-start',
     borderWidth: 1,
