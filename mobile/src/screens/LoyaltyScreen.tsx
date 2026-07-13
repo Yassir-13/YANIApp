@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
@@ -8,6 +8,7 @@ import { loyaltyApi, LoyaltyAccount, LoyaltyTransaction, Reward } from '../api/l
 import Screen from '../components/Screen';
 import Card from '../components/Card';
 import Button from '../components/Button';
+import ErrorView from '../components/ErrorView';
 
 export default function LoyaltyScreen() {
   const { theme } = useTheme();
@@ -18,9 +19,11 @@ export default function LoyaltyScreen() {
   const [history, setHistory] = useState<LoyaltyTransaction[]>([]);
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
+      setError(null);
       const [acc, hist, rwd] = await Promise.all([
         loyaltyApi.getMyAccount(),
         loyaltyApi.getMyHistory(),
@@ -30,7 +33,7 @@ export default function LoyaltyScreen() {
       setHistory(hist);
       setRewards(rwd);
     } catch {
-      // silencieux
+      setError('Impossible de charger votre fidélité.');
     } finally {
       setIsLoading(false);
     }
@@ -59,7 +62,6 @@ export default function LoyaltyScreen() {
     ]);
   };
 
-  // Mode invité
   if (!user) {
     return (
       <Screen>
@@ -84,11 +86,18 @@ export default function LoyaltyScreen() {
     );
   }
 
+  if (error) {
+    return (
+      <Screen>
+        <ErrorView message={error} onRetry={load} />
+      </Screen>
+    );
+  }
+
   return (
     <Screen scroll>
       <Text style={[typography.heading, { color: theme.text, marginBottom: spacing.lg }]}>Fidélité</Text>
 
-      {/* Bandeau solde */}
       <View style={[styles.balanceCard, { backgroundColor: theme.loyaltyBg }]}>
         <Text style={[typography.small, { color: theme.goldLight, letterSpacing: 1 }]}>VOTRE SOLDE</Text>
         <Text style={[styles.bigPoints, { color: theme.gold }]}>{account?.pointsBalance ?? 0}</Text>
@@ -97,7 +106,6 @@ export default function LoyaltyScreen() {
         </Text>
       </View>
 
-      {/* Récompenses */}
       <Text style={[typography.title, { color: theme.text, marginTop: spacing.xl, marginBottom: spacing.md }]}>
         Récompenses
       </Text>
@@ -119,7 +127,6 @@ export default function LoyaltyScreen() {
         ))
       )}
 
-      {/* Historique */}
       <Text style={[typography.title, { color: theme.text, marginTop: spacing.xl, marginBottom: spacing.md }]}>
         Historique
       </Text>

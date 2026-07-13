@@ -10,6 +10,7 @@ import { productsApi, Product } from '../api/products';
 import { loyaltyApi } from '../api/loyalty';
 import Screen from '../components/Screen';
 import Card from '../components/Card';
+import ErrorView from '../components/ErrorView';
 
 export default function HomeScreen() {
   const { theme } = useTheme();
@@ -20,26 +21,25 @@ export default function HomeScreen() {
   const [products, setProducts] = useState<Product[]>([]);
   const [points, setPoints] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = async () => {
+    try {
+      setError(null);
+      const [srv, prd] = await Promise.all([servicesApi.getAll(), productsApi.getAll()]);
+      setServices(srv);
+      setProducts(prd);
+    } catch {
+      setError('Impossible de charger le contenu.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const [srv, prd] = await Promise.all([
-          servicesApi.getAll(),
-          productsApi.getAll(),
-        ]);
-        setServices(srv);
-        setProducts(prd);
-      } catch {
-        // silencieux
-      } finally {
-        setIsLoading(false);
-      }
-    };
     load();
   }, []);
 
-  // Charge le solde de points si connecté
   useEffect(() => {
     if (user) {
       loyaltyApi.getMyAccount().then((acc) => setPoints(acc.pointsBalance)).catch(() => {});
@@ -58,9 +58,16 @@ export default function HomeScreen() {
     );
   }
 
+  if (error) {
+    return (
+      <Screen>
+        <ErrorView message={error} onRetry={load} />
+      </Screen>
+    );
+  }
+
   return (
     <Screen scroll>
-      {/* Bouton profil */}
       <TouchableOpacity
         onPress={() => navigation.navigate('Profile')}
         style={styles.profileBtn}
@@ -69,13 +76,11 @@ export default function HomeScreen() {
         <Ionicons name="person-circle-outline" size={30} color={theme.gold} />
       </TouchableOpacity>
 
-      {/* En-tête */}
       <Text style={[typography.caption, { color: theme.textSecondary }]}>Bienvenue chez</Text>
       <Text style={[typography.heading, { color: theme.gold, marginBottom: spacing.lg }]}>
         Yani Concept
       </Text>
 
-      {/* Bandeau fidélité */}
       <View style={[styles.loyaltyBanner, { backgroundColor: theme.loyaltyBg }]}>
         <Text style={[typography.small, { color: theme.goldLight, letterSpacing: 1 }]}>FIDÉLITÉ</Text>
         {user ? (
@@ -104,7 +109,6 @@ export default function HomeScreen() {
         )}
       </View>
 
-      {/* Services */}
       <SectionHeader title="Services" onPress={() => navigation.navigate('Services')} theme={theme} />
       {services.slice(0, 3).map((s) => (
         <Card key={s.id} onPress={() => navigation.navigate('Services')}>
@@ -115,7 +119,6 @@ export default function HomeScreen() {
         </Card>
       ))}
 
-      {/* Produits */}
       <SectionHeader title="Produits" onPress={() => navigation.navigate('Produits')} theme={theme} />
       {products.slice(0, 3).map((p) => (
         <Card key={p.id} onPress={() => navigation.navigate('Produits')}>

@@ -6,6 +6,8 @@ import { typography, spacing } from '../theme/typography';
 import { productsApi, Product } from '../api/products';
 import Screen from '../components/Screen';
 import Card from '../components/Card';
+import ErrorView from '../components/ErrorView';
+import EmptyView from '../components/EmptyView';
 
 export default function ProductsScreen() {
   const { theme } = useTheme();
@@ -47,6 +49,13 @@ export default function ProductsScreen() {
     );
   }
 
+  if (error) {
+    return (
+      <Screen>
+        <ErrorView message={error} onRetry={loadProducts} />
+      </Screen>
+    );
+  }
   return (
     <Screen padded={false}>
       <Text style={[typography.heading, { color: theme.text, marginHorizontal: spacing.lg, marginBottom: spacing.lg }]}>
@@ -60,15 +69,7 @@ export default function ProductsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.gold} />
         }
         ListEmptyComponent={
-          error ? (
-            <Text style={[typography.body, { color: theme.danger, textAlign: 'center', marginTop: spacing.xl }]}>
-              {error}
-            </Text>
-          ) : (
-            <Text style={[typography.body, { color: theme.textSecondary, textAlign: 'center', marginTop: spacing.xl }]}>
-              Aucun produit disponible.
-            </Text>
-          )
+          <EmptyView message="Aucun produits disponible pour le moment." icon="sparkles-outline" />
         }
         renderItem={({ item }) => (
           <Card onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}>

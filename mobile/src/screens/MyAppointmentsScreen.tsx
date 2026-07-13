@@ -5,6 +5,8 @@ import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { appointmentsApi, Appointment } from '../api/appointments';
 import Card from '../components/Card';
+import ErrorView from '../components/ErrorView';
+import EmptyView from '../components/EmptyView';
 
 function statusInfo(status: string, theme: any) {
   switch (status) {
@@ -31,14 +33,16 @@ export default function MyAppointmentsScreen({ navigation }: any) {
   const { theme } = useTheme();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     try {
+      setError(null);
       const data = await appointmentsApi.getMine();
       setAppointments(data);
     } catch {
-      // silencieux
+      setError('Impossible de charger vos rendez-vous.');
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -75,6 +79,21 @@ export default function MyAppointmentsScreen({ navigation }: any) {
     );
   }
 
+  if (error) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="chevron-back" size={26} color={theme.text} />
+        </TouchableOpacity>
+        <ErrorView message={error} onRetry={load} />
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <TouchableOpacity
@@ -88,7 +107,7 @@ export default function MyAppointmentsScreen({ navigation }: any) {
       <FlatList
         data={appointments}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: spacing.lg, paddingTop: spacing.xxl * 1.5 }}
+        contentContainerStyle={{ padding: spacing.lg, paddingTop: spacing.xxl * 1.5, flexGrow: 1 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={theme.gold} />
         }
@@ -98,9 +117,7 @@ export default function MyAppointmentsScreen({ navigation }: any) {
           </Text>
         }
         ListEmptyComponent={
-          <Text style={[typography.body, { color: theme.textSecondary, textAlign: 'center', marginTop: spacing.xl }]}>
-            Vous n'avez aucun rendez-vous.
-          </Text>
+          <EmptyView message="Vous n'avez aucun rendez-vous." icon="calendar-outline" />
         }
         renderItem={({ item }) => {
           const info = statusInfo(item.status, theme);

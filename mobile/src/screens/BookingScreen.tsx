@@ -53,20 +53,13 @@ export default function BookingScreen({ route, navigation }: any) {
       .finally(() => setIsLoading(false));
   }, [selectedDate, serviceId]);
 
-  const handleConfirm = async () => {
+  const handleContinue = () => {
     if (!selectedSlot) return;
-    setSubmitting(true);
-    try {
-      const startAt = buildStartAt(selectedDate, selectedSlot);
-      await appointmentsApi.create(serviceId, startAt);
-      Alert.alert('Réservation confirmée', `Votre rendez-vous du ${selectedDate} à ${selectedSlot} est enregistré.`, [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
-    } catch (e: any) {
-      Alert.alert('Erreur', e.response?.data?.message || 'Réservation impossible.');
-    } finally {
-      setSubmitting(false);
-    }
+    navigation.navigate('BookingSummary', {
+      serviceId,
+      date: selectedDate,
+      time: selectedSlot,
+    });
   };
 
   return (
@@ -147,9 +140,8 @@ export default function BookingScreen({ route, navigation }: any) {
       {/* Barre de confirmation */}
       <View style={[styles.bottomBar, { backgroundColor: theme.surface, borderTopColor: theme.border }]}>
         <Button
-          label={submitting ? 'Réservation...' : selectedSlot ? `Confirmer · ${selectedSlot}` : 'Choisir un créneau'}
-          onPress={handleConfirm}
-          loading={submitting}
+          label={selectedSlot ? `Continuer · ${selectedSlot}` : 'Choisir un créneau'}
+          onPress={handleContinue}
           disabled={!selectedSlot}
         />
       </View>
