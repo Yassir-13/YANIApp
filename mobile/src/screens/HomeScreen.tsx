@@ -1,20 +1,25 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
-import { typography, spacing, radius } from '../theme/typography';
+import { typography, spacing } from '../theme/typography';
 import { useAuthStore } from '../stores/authStore';
 import { servicesApi, Service } from '../api/services';
 import { productsApi, Product } from '../api/products';
 import { loyaltyApi } from '../api/loyalty';
-import Screen from '../components/Screen';
-import Card from '../components/Card';
 import ErrorView from '../components/ErrorView';
+import LoyaltyBanner from '../components/LoyaltyBanner';
+import ProductCard from '../components/ProductCard';
+import ServiceCard from '../components/ServiceCard';
+
+const CARD_W = 150; // largeur des cartes en carrousel horizontal
 
 export default function HomeScreen() {
   const { theme } = useTheme();
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
 
   const [services, setServices] = useState<Service[]>([]);
@@ -48,119 +53,135 @@ export default function HomeScreen() {
     }
   }, [user]);
 
+  const goProduct = (id: string) =>
+    navigation.navigate('Produits', { screen: 'ProductDetail', params: { productId: id } });
+  const goService = (id: string) =>
+    navigation.navigate('Services', { screen: 'ServiceDetail', params: { serviceId: id } });
+
   if (isLoading) {
     return (
-      <Screen>
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={theme.gold} />
-        </View>
-      </Screen>
+      <View style={[styles.centered, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={theme.gold} />
+      </View>
     );
   }
 
   if (error) {
     return (
-      <Screen>
+      <View style={[styles.fill, { backgroundColor: theme.background, paddingTop: insets.top + spacing.md }]}>
         <ErrorView message={error} onRetry={load} />
-      </Screen>
+      </View>
     );
   }
 
   return (
-    <Screen scroll>
-      <TouchableOpacity
-        onPress={() => navigation.navigate('Profile')}
-        style={styles.profileBtn}
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-      >
-        <Ionicons name="person-circle-outline" size={30} color={theme.gold} />
-      </TouchableOpacity>
-
-      <Text style={[typography.caption, { color: theme.textSecondary }]}>Bienvenue chez</Text>
-      <Text style={[typography.heading, { color: theme.gold, marginBottom: spacing.lg }]}>
-        Yani Concept
-      </Text>
-
-      <View style={[styles.loyaltyBanner, { backgroundColor: theme.loyaltyBg }]}>
-        <Text style={[typography.small, { color: theme.goldLight, letterSpacing: 1 }]}>FIDÉLITÉ</Text>
-        {user ? (
-          <>
-            <Text style={[styles.points, { color: theme.gold }]}>
-              {points ?? '—'} <Text style={typography.caption}>points</Text>
-            </Text>
-            <Text style={[typography.caption, { color: theme.loyaltyText }]}>
-              Bonjour {user.firstName ?? user.email}
-            </Text>
-          </>
-        ) : (
-          <>
-            <Text style={[typography.title, { color: theme.loyaltyText, marginVertical: spacing.xs }]}>
-              Suivez vos points
-            </Text>
-            <TouchableOpacity
-              style={[styles.connectBtn, { backgroundColor: theme.gold }]}
-              onPress={() => navigation.navigate('Login')}
-            >
-              <Text style={[typography.caption, { color: '#1E1B16', fontWeight: '600' }]}>
-                Se connecter
-              </Text>
-            </TouchableOpacity>
-          </>
-        )}
+    <ScrollView
+      style={{ flex: 1, backgroundColor: theme.background }}
+      contentContainerStyle={{ paddingTop: insets.top + spacing.md, paddingBottom: spacing.xxl }}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* En-tête : salutation serif + bouton profil */}
+      <View style={[styles.headerRow, { paddingHorizontal: spacing.lg }]}>
+        <View style={{ flex: 1 }}>
+          <Text style={[typography.body, { color: theme.textSecondary }]}>Bonjour</Text>
+          <Text style={[typography.headingSm, { color: theme.text }]}>Bienvenue chez Yani</Text>
+        </View>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('Profile')}
+          accessibilityRole="button"
+          accessibilityLabel="Profil"
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={[styles.profileBtn, { borderColor: theme.gold }]}
+        >
+          <Ionicons name="person-outline" size={22} color={theme.gold} />
+        </TouchableOpacity>
       </View>
 
-      <SectionHeader title="Services" onPress={() => navigation.navigate('Services')} theme={theme} />
-      {services.slice(0, 3).map((s) => (
-        <Card key={s.id} onPress={() => navigation.navigate('Services')}>
-          <View style={styles.row}>
-            <Text style={[typography.subtitle, { color: theme.text, flex: 1 }]}>{s.name}</Text>
-            <Text style={[typography.caption, { color: theme.gold }]}>{s.price} dh</Text>
-          </View>
-        </Card>
-      ))}
+      {/* Bandeau fidélité */}
+      <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.lg }}>
+        <LoyaltyBanner
+          points={points ?? 0}
+          guest={!user}
+          subtitle={
+            user
+              ? `Bonjour ${user.firstName}`
+              : 'Mode invité · suivez vos points'
+          }
+          ctaLabel="Se connecter"
+          onCtaPress={() => navigation.navigate('Login')}
+        />
+      </View>
 
-      <SectionHeader title="Produits" onPress={() => navigation.navigate('Produits')} theme={theme} />
-      {products.slice(0, 3).map((p) => (
-        <Card key={p.id} onPress={() => navigation.navigate('Produits')}>
-          <View style={styles.row}>
-            <Text style={[typography.subtitle, { color: theme.text, flex: 1 }]}>{p.name}</Text>
-            <Text style={[typography.caption, { color: theme.gold }]}>{p.price} dh</Text>
-          </View>
-        </Card>
-      ))}
-    </Screen>
+      {/* Produits */}
+      <SectionHeader
+        title="Produits"
+        onPress={() => navigation.navigate('Produits')}
+        theme={theme}
+      />
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.carousel}
+      >
+        {products.slice(0, 6).map((p) => (
+          <ProductCard key={p.id} product={p} width={CARD_W} onPress={() => goProduct(p.id)} />
+        ))}
+      </ScrollView>
+
+      {/* Services */}
+      <SectionHeader
+        title="Services"
+        onPress={() => navigation.navigate('Services')}
+        theme={theme}
+      />
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.carousel}
+      >
+        {services.slice(0, 6).map((s) => (
+          <ServiceCard key={s.id} service={s} width={220} onPress={() => goService(s.id)} />
+        ))}
+      </ScrollView>
+    </ScrollView>
   );
 }
 
 function SectionHeader({ title, onPress, theme }: any) {
   return (
-    <View style={styles.sectionHeader}>
-      <Text style={[typography.title, { color: theme.text }]}>{title}</Text>
-      <TouchableOpacity onPress={onPress}>
-        <Text style={[typography.caption, { color: theme.gold }]}>Voir plus →</Text>
+    <View style={[styles.sectionHeader, { paddingHorizontal: spacing.lg }]}>
+      <Text style={[typography.headingSm, { color: theme.text }]}>{title}</Text>
+      <TouchableOpacity onPress={onPress} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <Text style={[typography.bodyMedium, { color: theme.gold }]}>Voir plus →</Text>
       </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  fill: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  profileBtn: { alignSelf: 'flex-end', marginBottom: spacing.sm },
-  loyaltyBanner: { borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.xl },
-  points: { fontSize: 36, fontWeight: '700', marginVertical: spacing.xs },
-  connectBtn: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    marginTop: spacing.sm,
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  profileBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: spacing.xl,
     marginBottom: spacing.md,
-    marginTop: spacing.sm,
   },
-  row: { flexDirection: 'row', alignItems: 'center' },
+  carousel: {
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
+  },
 });

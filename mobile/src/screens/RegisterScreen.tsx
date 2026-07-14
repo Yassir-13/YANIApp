@@ -12,10 +12,19 @@ export default function RegisterScreen({ navigation }: any) {
   const isLoading = useAuthStore((s) => s.isLoading);
 
   const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleRegister = async () => {
+ const handleRegister = async () => {
+    if (!firstName.trim()) {
+      Alert.alert('Champ requis', 'Le prénom est obligatoire.');
+      return;
+    }
+    if (!lastName.trim()) {
+      Alert.alert('Champ requis', 'Le nom est obligatoire.');
+      return;
+    }
     if (!email || !password) {
       Alert.alert('Champs requis', 'Email et mot de passe sont obligatoires.');
       return;
@@ -25,7 +34,7 @@ export default function RegisterScreen({ navigation }: any) {
       return;
     }
     try {
-      await register(email.trim(), password, firstName.trim() || undefined);
+      await register(email.trim(), password, firstName.trim(), lastName.trim());
       if (navigation.canGoBack()) navigation.goBack();
     } catch (error: any) {
       Alert.alert('Erreur', error.response?.data?.message || 'Inscription impossible. Réessayez.');
@@ -55,10 +64,17 @@ export default function RegisterScreen({ navigation }: any) {
 
         <TextInput
           style={[styles.input, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]}
-          placeholder="Prénom (optionnel)"
+          placeholder="Prénom"
           placeholderTextColor={theme.textMuted}
           value={firstName}
           onChangeText={setFirstName}
+        />
+        <TextInput
+          style={[styles.input, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]}
+          placeholder="Nom"
+          placeholderTextColor={theme.textMuted}
+          value={lastName}
+          onChangeText={setLastName}
         />
         <TextInput
           style={[styles.input, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]}

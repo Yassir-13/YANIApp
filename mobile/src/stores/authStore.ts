@@ -18,9 +18,11 @@ interface AuthState {
   isInitialized: boolean;
 
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, firstName?: string) => Promise<void>;
+  register: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;
   logout: () => Promise<void>;
   loadSession: () => Promise<void>;
+  setUser: (user: User) => void;
+  deleteAccount: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -42,13 +44,14 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  register: async (email, password, firstName) => {
+  register: async (email, password, firstName, lastName) => {
     set({ isLoading: true });
     try {
       await axios.post(`${API_BASE_URL}/auth/register`, {
         email,
         password,
         firstName,
+        lastName,
       });
       // Après inscription, on connecte directement
       const { data } = await axios.post(`${API_BASE_URL}/auth/login`, {
@@ -71,6 +74,17 @@ export const useAuthStore = create<AuthState>((set) => ({
         // on ignore les erreurs de logout côté serveur
       }
     }
+    await secureStorage.clearTokens();
+    set({ user: null });
+  },
+
+  setUser: (user) => {
+    set({ user });
+  },
+
+  deleteAccount: async () => {
+    // Supprime le compte côté serveur puis nettoie la session locale.
+    await apiClient.delete('/users/me');
     await secureStorage.clearTokens();
     set({ user: null });
   },

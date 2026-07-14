@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { appointmentsApi, Slot } from '../api/appointments';
+import { servicesApi, Service } from '../api/services';
+import Header from '../components/Header';
 import Button from '../components/Button';
+import ServiceMiniCard from '../components/ServiceMiniCard';
 
 function getNextDays(count: number) {
   const days = [];
@@ -13,32 +16,30 @@ function getNextDays(count: number) {
     const d = new Date(today);
     d.setDate(today.getDate() + i);
     const dateStr = d.toISOString().split('T')[0];
-    const label = d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
-    days.push({ dateStr, label });
+    const weekday = d.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', '');
+    const dayNum = d.getDate();
+    const month = d.toLocaleDateString('fr-FR', { month: 'long' });
+    days.push({ dateStr, weekday, dayNum, month });
   }
   return days;
 }
 
-function buildStartAt(dateStr: string, time: string): string {
-  const [h, m] = time.split(':').map(Number);
-  const CASABLANCA_OFFSET_HOURS = 1;
-  const utcHour = h - CASABLANCA_OFFSET_HOURS;
-  const [year, month, day] = dateStr.split('-').map(Number);
-  const utcDate = new Date(Date.UTC(year, month - 1, day, utcHour, m, 0));
-  return utcDate.toISOString();
-}
-
 export default function BookingScreen({ route, navigation }: any) {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const { serviceId } = route.params;
 
   const days = getNextDays(14);
+  const [service, setService] = useState<Service | null>(null);
   const [selectedDate, setSelectedDate] = useState(days[0].dateStr);
   const [slots, setSlots] = useState<Slot[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [closed, setClosed] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    servicesApi.getOne(serviceId).then(setService).catch(() => {});
+  }, [serviceId]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -55,43 +56,57 @@ export default function BookingScreen({ route, navigation }: any) {
 
   const handleContinue = () => {
     if (!selectedSlot) return;
-    navigation.navigate('BookingSummary', {
-      serviceId,
-      date: selectedDate,
-      time: selectedSlot,
-    });
+    navigation.navigate('BookingSummary', { serviceId, date: selectedDate, time: selectedSlot });
   };
+
+  // Libellé du mois de la date sélectionnée (ex. « MARS 2026 »)
+  const selectedDay = days.find((d) => d.dateStr === selectedDate)!;
+  const monthLabel = `${selectedDay.month} ${selectedDate.split('-')[0]}`.toUpperCase();
+  const slotsLabel = `Créneaux du ${selectedDay.dayNum} ${selectedDay.month}`;
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => navigation.goBack()}
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-      >
-        <Ionicons name="chevron-back" size={26} color={theme.text} />
-      </TouchableOpacity>
+      <Header title="Choisir un créneau" onBack={() => navigation.goBack()} />
 
-      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingTop: spacing.xxl * 1.5 }}>
-        <Text style={[typography.heading, { color: theme.text, marginBottom: spacing.lg }]}>
-          Choisir un créneau
+      <ScrollView
+        contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.xl }}
+        showsVerticalScrollIndicator={false}
+      >
+        {service && (
+          <View style={{ marginBottom: spacing.xl }}>
+            <ServiceMiniCard service={service} />
+          </View>
+        )}
+
+        {/* Mois */}
+        <Text style={[typography.sectionLabel, { color: theme.gold, marginBottom: spacing.md }]}>
+          {monthLabel}
         </Text>
 
-        {/* Sélecteur de date */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing.lg }}>
+        {/* Sélecteur de dates en cases carrées */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm }}>
           {days.map((day) => {
             const active = day.dateStr === selectedDate;
             return (
               <TouchableOpacity
                 key={day.dateStr}
                 onPress={() => setSelectedDate(day.dateStr)}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
                 style={[
-                  styles.dayChip,
-                  { backgroundColor: active ? theme.gold : theme.surface, borderColor: theme.border },
+                  styles.dayCell,
+                  {
+                    backgroundColor: active ? theme.gold : theme.surface,
+                    borderColor: active ? theme.gold : theme.border,
+                  },
                 ]}
               >
-                <Text style={[typography.caption, { color: active ? '#1E1B16' : theme.text }]}>
-                  {day.label}
+                <Text style={[typography.small, { color: active ? '#1A1712' : theme.textSecondary }]}>
+                  {day.weekday}
+                </Text>
+                <Text style={[typography.title, { color: active ? '#1A1712' : theme.text, marginTop: 2 }]}>
+                  {day.dayNum}
                 </Text>
               </TouchableOpacity>
             );
@@ -99,6 +114,10 @@ export default function BookingScreen({ route, navigation }: any) {
         </ScrollView>
 
         {/* Créneaux */}
+        <Text style={[typography.sectionLabel, { color: theme.gold, marginTop: spacing.xl, marginBottom: spacing.md }]}>
+          {slotsLabel}
+        </Text>
+
         {isLoading ? (
           <ActivityIndicator size="large" color={theme.gold} style={{ marginTop: spacing.xl }} />
         ) : closed ? (
@@ -118,16 +137,27 @@ export default function BookingScreen({ route, navigation }: any) {
                   key={slot.time}
                   disabled={!slot.available}
                   onPress={() => setSelectedSlot(slot.time)}
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active, disabled: !slot.available }}
                   style={[
                     styles.slotChip,
                     {
                       backgroundColor: active ? theme.gold : theme.surface,
-                      borderColor: theme.border,
-                      opacity: slot.available ? 1 : 0.35,
+                      borderColor: active ? theme.gold : theme.border,
+                      opacity: slot.available ? 1 : 0.4,
                     },
                   ]}
                 >
-                  <Text style={[typography.caption, { color: active ? '#1E1B16' : theme.text }]}>
+                  <Text
+                    style={[
+                      typography.bodyMedium,
+                      {
+                        color: active ? '#1A1712' : slot.available ? theme.text : theme.textMuted,
+                        textDecorationLine: slot.available ? 'none' : 'line-through',
+                      },
+                    ]}
+                  >
                     {slot.time}
                   </Text>
                 </TouchableOpacity>
@@ -138,9 +168,14 @@ export default function BookingScreen({ route, navigation }: any) {
       </ScrollView>
 
       {/* Barre de confirmation */}
-      <View style={[styles.bottomBar, { backgroundColor: theme.surface, borderTopColor: theme.border }]}>
+      <View
+        style={[
+          styles.bottomBar,
+          { backgroundColor: theme.background, borderTopColor: theme.border, paddingBottom: insets.bottom + spacing.md },
+        ]}
+      >
         <Button
-          label={selectedSlot ? `Continuer · ${selectedSlot}` : 'Choisir un créneau'}
+          label={selectedSlot ? `Continuer · ${selectedDay.dayNum} ${selectedDay.month}, ${selectedSlot}` : 'Choisir un créneau'}
           onPress={handleContinue}
           disabled={!selectedSlot}
         />
@@ -151,22 +186,28 @@ export default function BookingScreen({ route, navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  backButton: { position: 'absolute', top: spacing.xxl, left: spacing.md, zIndex: 10, padding: spacing.sm },
-  dayChip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+  dayCell: {
+    width: 64,
+    paddingVertical: spacing.md,
     borderRadius: radius.md,
     borderWidth: 1,
-    marginRight: spacing.sm,
-  },
-  slotsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  slotChip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    minWidth: 72,
     alignItems: 'center',
   },
-  bottomBar: { padding: spacing.lg, borderTopWidth: 1 },
+  slotsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  slotChip: {
+    width: '31%',
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  bottomBar: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+  },
 });

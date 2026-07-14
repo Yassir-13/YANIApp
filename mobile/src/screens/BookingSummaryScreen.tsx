@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, ActivityIndicator, Alert, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { servicesApi, Service } from '../api/services';
 import { appointmentsApi } from '../api/appointments';
-import Card from '../components/Card';
+import { formatPrice, formatDuration } from '../utils/format';
+import Header from '../components/Header';
 import Button from '../components/Button';
+import ServiceMiniCard from '../components/ServiceMiniCard';
 
 function buildStartAt(dateStr: string, time: string): string {
   const [h, m] = time.split(':').map(Number);
@@ -19,11 +21,13 @@ function buildStartAt(dateStr: string, time: string): string {
 
 function formatDate(dateStr: string): string {
   const d = new Date(`${dateStr}T12:00:00`);
-  return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const s = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 export default function BookingSummaryScreen({ route, navigation }: any) {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const { serviceId, date, time } = route.params;
 
   const [service, setService] = useState<Service | null>(null);
@@ -39,12 +43,7 @@ export default function BookingSummaryScreen({ route, navigation }: any) {
     try {
       const startAt = buildStartAt(date, time);
       await appointmentsApi.create(serviceId, startAt);
-      // Va vers la confirmation (en remplaçant, pour ne pas revenir en arrière ici)
-      navigation.replace('BookingConfirmation', {
-        serviceName: service?.name,
-        date,
-        time,
-      });
+      navigation.replace('BookingConfirmation', { serviceName: service?.name, date, time });
     } catch (e: any) {
       Alert.alert('Erreur', e.response?.data?.message || 'Réservation impossible.');
     } finally {
@@ -62,35 +61,43 @@ export default function BookingSummaryScreen({ route, navigation }: any) {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => navigation.goBack()}
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      <Header title="Récapitulatif" onBack={() => navigation.goBack()} />
+
+      <ScrollView
+        contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.xl }}
+        showsVerticalScrollIndicator={false}
       >
-        <Ionicons name="chevron-back" size={26} color={theme.text} />
-      </TouchableOpacity>
+        {service && (
+          <View style={{ marginBottom: spacing.lg }}>
+            <ServiceMiniCard service={service} subtitle="Institut Yani Concept" />
+          </View>
+        )}
 
-      <View style={{ flex: 1, padding: spacing.lg, paddingTop: spacing.xxl * 1.5 }}>
-        <Text style={[typography.heading, { color: theme.text, marginBottom: spacing.lg }]}>
-          Récapitulatif
-        </Text>
-
-        <Card>
-          <Row label="Service" value={service?.name ?? '—'} theme={theme} />
-          <Divider theme={theme} />
+        {/* Détails */}
+        <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <Row label="Date" value={formatDate(date)} theme={theme} />
           <Divider theme={theme} />
           <Row label="Heure" value={time} theme={theme} />
           <Divider theme={theme} />
-          <Row label="Durée" value={`${service?.durationMin ?? '—'} min`} theme={theme} />
-          <Divider theme={theme} />
-          <Row label="Prix" value={`${service?.price ?? '—'} dh`} theme={theme} highlight />
-        </Card>
-      </View>
+          <Row label="Durée" value={service ? formatDuration(service.durationMin) : '—'} theme={theme} />
+        </View>
+      </ScrollView>
 
-      <View style={[styles.bottomBar, { backgroundColor: theme.surface, borderTopColor: theme.border }]}>
+      {/* Barre : total + confirmation */}
+      <View
+        style={[
+          styles.bottomBar,
+          { backgroundColor: theme.background, borderTopColor: theme.border, paddingBottom: insets.bottom + spacing.md },
+        ]}
+      >
+        <View style={styles.totalRow}>
+          <Text style={[typography.body, { color: theme.textSecondary }]}>Total à régler sur place</Text>
+          <Text style={[typography.priceLg, { color: theme.gold }]}>
+            {service ? formatPrice(service.price) : '—'}
+          </Text>
+        </View>
         <Button
-          label={submitting ? 'Confirmation...' : 'Confirmer la réservation'}
+          label={submitting ? 'Confirmation…' : 'Confirmer la réservation'}
           onPress={handleConfirm}
           loading={submitting}
         />
@@ -99,25 +106,42 @@ export default function BookingSummaryScreen({ route, navigation }: any) {
   );
 }
 
-function Row({ label, value, theme, highlight }: any) {
+function Row({ label, value, theme }: any) {
   return (
     <View style={styles.row}>
-      <Text style={[typography.caption, { color: theme.textSecondary }]}>{label}</Text>
-      <Text style={[highlight ? typography.subtitle : typography.body, { color: highlight ? theme.gold : theme.text }]}>
-        {value}
-      </Text>
+      <Text style={[typography.body, { color: theme.textSecondary }]}>{label}</Text>
+      <Text style={[typography.subtitle, { color: theme.text }]}>{value}</Text>
     </View>
   );
 }
 
 function Divider({ theme }: any) {
-  return <View style={{ height: 1, backgroundColor: theme.border, marginVertical: spacing.xs }} />;
+  return <View style={{ height: 1, backgroundColor: theme.border }} />;
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  backButton: { position: 'absolute', top: spacing.xxl, left: spacing.md, zIndex: 10, padding: spacing.sm },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.sm },
-  bottomBar: { padding: spacing.lg, borderTopWidth: 1 },
+  card: {
+    borderRadius: radius.md,
+    borderWidth: 1,
+    paddingHorizontal: spacing.lg,
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+  },
+  bottomBar: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
 });

@@ -1,6 +1,7 @@
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../theme/ThemeContext';
-import { typography, spacing, radius } from '../theme/typography';
+import { typography, spacing, radius, shadow } from '../theme/typography';
 
 interface ButtonProps {
   label: string;
@@ -22,23 +23,53 @@ export default function Button({
   const { theme } = useTheme();
   const isDisabled = disabled || loading;
 
-  const variantStyle = {
-    primary: { backgroundColor: theme.gold, borderColor: theme.gold },
-    outline: { backgroundColor: 'transparent', borderColor: theme.border },
-    danger: { backgroundColor: 'transparent', borderColor: theme.danger },
+  // Le variant primary est un dégradé doré avec halo (comme les CTA maquette).
+  if (variant === 'primary') {
+    return (
+      <TouchableOpacity
+        onPress={onPress}
+        disabled={isDisabled}
+        activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: isDisabled }}
+        style={[
+          styles.wrapper,
+          !isDisabled && shadow.gold,
+          { opacity: isDisabled ? 0.5 : 1 },
+          style,
+        ]}
+      >
+        <LinearGradient
+          colors={theme.goldGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.button}
+        >
+          {loading ? (
+            <ActivityIndicator color="#1A1712" />
+          ) : (
+            <Text style={[typography.button, { color: '#1A1712' }]}>{label}</Text>
+          )}
+        </LinearGradient>
+      </TouchableOpacity>
+    );
+  }
+
+  // outline / danger : contour, pas de remplissage.
+  const variantStyle: ViewStyle = {
+    outline: { backgroundColor: 'transparent', borderColor: theme.border, borderWidth: 1 },
+    danger: { backgroundColor: 'transparent', borderColor: theme.danger, borderWidth: 1 },
   }[variant];
 
-  const textColor = {
-    primary: '#1E1B16',
-    outline: theme.text,
-    danger: theme.danger,
-  }[variant];
+  const textColor = variant === 'danger' ? theme.danger : theme.text;
 
   return (
     <TouchableOpacity
       onPress={onPress}
       disabled={isDisabled}
-      activeOpacity={0.8}
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: isDisabled }}
       style={[
         styles.button,
         variantStyle,
@@ -49,20 +80,22 @@ export default function Button({
       {loading ? (
         <ActivityIndicator color={textColor} />
       ) : (
-        <Text style={[typography.subtitle, { color: textColor }]}>{label}</Text>
+        <Text style={[typography.button, { color: textColor }]}>{label}</Text>
       )}
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    borderRadius: radius.md,
+  },
   button: {
     borderRadius: radius.md,
-    borderWidth: 1,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 48, // respecte le minimum touch target du guide UI (44pt+)
+    minHeight: 52, // > 44pt touch target (guide UI)
   },
 });

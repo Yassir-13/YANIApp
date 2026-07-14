@@ -21,8 +21,16 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [
-      "expo-secure-store"
+     "plugins": [
+      "expo-secure-store",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#080808",
+          "image": "./assets/logo-full.png",
+          "imageWidth": 200
+        }
+      ]
     ]
   }
 }

@@ -8,6 +8,8 @@ import ProfileScreen from '../screens/ProfileScreen';
 import { useAuthStore } from '../stores/authStore';
 import { useTheme } from '../theme/ThemeContext';
 import MyAppointmentsScreen from '../screens/MyAppointmentsScreen';
+import EditProfileScreen from '../screens/EditProfileScreen';
+import ChangePasswordScreen from '../screens/ChangePasswordScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -49,6 +51,17 @@ export default function RootNavigator() {
       <Stack.Screen
         name="MyAppointments"
         component={MyAppointmentsScreen}
+        options={{ presentation: 'modal' }}
+      />
+
+      <Stack.Screen
+        name="EditProfile"
+        component={EditProfileScreen}
+        options={{ presentation: 'modal' }}
+      />
+      <Stack.Screen
+        name="ChangePassword"
+        component={ChangePasswordScreen}
         options={{ presentation: 'modal' }}
       />
     </Stack.Navigator>
