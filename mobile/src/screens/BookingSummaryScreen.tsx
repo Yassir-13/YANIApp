@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator,ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
@@ -9,6 +9,7 @@ import { formatPrice, formatDuration } from '../utils/format';
 import Header from '../components/Header';
 import Button from '../components/Button';
 import ServiceMiniCard from '../components/ServiceMiniCard';
+import { useAlert } from '../components/AlertProvider';
 
 function buildStartAt(dateStr: string, time: string): string {
   const [h, m] = time.split(':').map(Number);
@@ -28,6 +29,7 @@ function formatDate(dateStr: string): string {
 export default function BookingSummaryScreen({ route, navigation }: any) {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const { alert } = useAlert();
   const { serviceId, date, time } = route.params;
 
   const [service, setService] = useState<Service | null>(null);
@@ -45,7 +47,7 @@ export default function BookingSummaryScreen({ route, navigation }: any) {
       await appointmentsApi.create(serviceId, startAt);
       navigation.replace('BookingConfirmation', { serviceName: service?.name, date, time });
     } catch (e: any) {
-      Alert.alert('Erreur', e.response?.data?.message || 'Réservation impossible.');
+      alert('Erreur', e.response?.data?.message || 'Réservation impossible.');
     } finally {
       setSubmitting(false);
     }

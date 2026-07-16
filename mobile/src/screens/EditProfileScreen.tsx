@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Alert, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
@@ -7,12 +7,14 @@ import { useAuthStore } from '../stores/authStore';
 import { usersApi } from '../api/users';
 import Header from '../components/Header';
 import Button from '../components/Button';
+import { useAlert } from '../components/AlertProvider';
 
 export default function EditProfileScreen({ navigation }: any) {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
+  const { alert, show } = useAlert();
 
   const [firstName, setFirstName] = useState(user?.firstName ?? '');
   const [lastName, setLastName] = useState(user?.lastName ?? '');
@@ -21,11 +23,11 @@ export default function EditProfileScreen({ navigation }: any) {
 
   const handleSave = async () => {
     if (!firstName.trim()) {
-      Alert.alert('Champ requis', 'Le prénom est obligatoire.');
+      alert('Champ requis', 'Le prénom est obligatoire.');
       return;
     }
     if (!lastName.trim()) {
-      Alert.alert('Champ requis', 'Le nom est obligatoire.');
+      alert('Champ requis', 'Le nom est obligatoire.');
       return;
     }
     setSaving(true);
@@ -36,10 +38,10 @@ export default function EditProfileScreen({ navigation }: any) {
         phone: phone.trim() || undefined,
       });
       if (user) setUser({ ...user, ...updated });
-      Alert.alert('Enregistré', 'Votre profil a été mis à jour.');
+      alert('Enregistré', 'Votre profil a été mis à jour.');
       navigation.goBack();
     } catch (e: any) {
-      Alert.alert('Erreur', e.response?.data?.message || 'Mise à jour impossible.');
+      alert('Erreur', e.response?.data?.message || 'Mise à jour impossible.');
     } finally {
       setSaving(false);
     }

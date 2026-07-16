@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, RefreshControl } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { appointmentsApi, Appointment } from '../api/appointments';
+import { useAlert } from '../components/AlertProvider';
 import Card from '../components/Card';
 import ErrorView from '../components/ErrorView';
 import EmptyView from '../components/EmptyView';
@@ -31,6 +32,7 @@ function formatDateTime(iso: string): string {
 
 export default function MyAppointmentsScreen({ navigation }: any) {
   const { theme } = useTheme();
+  const { alert, show } = useAlert();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,21 +56,25 @@ export default function MyAppointmentsScreen({ navigation }: any) {
   }, [load]);
 
   const handleCancel = (appt: Appointment) => {
-    Alert.alert('Annuler le rendez-vous', "Confirmez-vous l'annulation ?", [
-      { text: 'Non', style: 'cancel' },
-      {
-        text: 'Oui, annuler',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await appointmentsApi.cancel(appt.id);
-            load();
-          } catch (e: any) {
-            Alert.alert('Erreur', e.response?.data?.message || 'Annulation impossible.');
-          }
+    show({
+      title: 'Annuler le rendez-vous',
+      message: "Confirmez-vous l'annulation ?",
+      buttons: [
+        { text: 'Non', style: 'cancel' },
+        {
+          text: 'Oui, annuler',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await appointmentsApi.cancel(appt.id);
+              load();
+            } catch (e: any) {
+              alert('Erreur', e.response?.data?.message || 'Annulation impossible.');
+            }
+          },
         },
-      },
-    ]);
+      ],
+    });
   };
 
   if (isLoading) {

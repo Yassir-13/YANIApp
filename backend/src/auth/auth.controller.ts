@@ -48,7 +48,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Get('me')
   getMe(@Req() req: any) {
-    return req.user;
+    return this.authService.me(req.user.id);
   }
 
   @ApiOperation({ summary: "Renouveler l'access token (rotation)" })

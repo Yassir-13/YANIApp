@@ -1,8 +1,9 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Appointment, LoyaltyTxType } from '@prisma/client';
+import { Appointment, Order, LoyaltyTxType } from '@prisma/client';
 import { CreateRewardDto } from './dto/create-reward.dto';
 import { ManualPointsDto } from './dto/manual-points.dto';
+
 
 // Taux de fidélité : 5% du montant dépensé, converti en points
 const LOYALTY_RATE = 0.05;
@@ -56,6 +57,38 @@ export class LoyaltyService {
           pointsDelta: points,
           type: LoyaltyTxType.EARN,
           appointmentId: appointment.id,
+        },
+      }),
+      this.prisma.loyaltyAccount.update({
+        where: { id: account.id },
+        data: {
+          pointsBalance: { increment: points },
+          visitCount: { increment: 1 },
+        },
+      }),
+    ]);
+  }
+
+  // Crédite les points d'une COMMANDE terminée (5% du total, comme les RDV).
+  // La transaction est liée à la commande via orderId (idempotence garantie
+  // par la contrainte unique sur order_id).
+  async earnFromOrder(order: Order) {
+    const account = await this.prisma.loyaltyAccount.findUnique({
+      where: { userId: order.userId },
+    });
+    if (!account) return;
+
+    const points = Math.round(Number(order.total) * LOYALTY_RATE);
+    if (points <= 0) return;
+
+    return this.prisma.$transaction([
+      this.prisma.loyaltyTransaction.create({
+        data: {
+          accountId: account.id,
+          ownerId: order.userId,
+          pointsDelta: points,
+          type: LoyaltyTxType.EARN,
+          orderId: order.id,
         },
       }),
       this.prisma.loyaltyAccount.update({

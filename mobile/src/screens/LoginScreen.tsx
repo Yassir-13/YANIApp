@@ -1,29 +1,31 @@
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { useAuthStore } from '../stores/authStore';
 import Button from '../components/Button';
+import { useAlert } from '../components/AlertProvider';
 
 export default function LoginScreen({ navigation }: any) {
   const { theme } = useTheme();
   const login = useAuthStore((s) => s.login);
   const isLoading = useAuthStore((s) => s.isLoading);
+  const { alert } = useAlert();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Champs requis', 'Merci de saisir votre email et mot de passe.');
+      alert('Champs requis', 'Merci de saisir votre email et mot de passe.');
       return;
     }
     try {
       await login(email.trim(), password);
       if (navigation.canGoBack()) navigation.goBack();
     } catch (error: any) {
-      Alert.alert('Erreur', error.response?.data?.message || 'Connexion impossible. Réessayez.');
+      alert('Erreur', error.response?.data?.message || 'Connexion impossible. Réessayez.');
     }
   };
 

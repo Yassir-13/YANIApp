@@ -1,5 +1,5 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEmail, IsString, MinLength, IsOptional, MaxLength } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsEmail, IsString, MinLength, MaxLength, Matches } from 'class-validator';
 
 export class RegisterDto {
   @ApiProperty({ example: 'cliente@exemple.ma' })
@@ -23,8 +23,10 @@ export class RegisterDto {
   @MaxLength(50, { message: 'Le nom ne doit pas dépasser 50 caractères.' })
   lastName!: string;
 
-  @ApiPropertyOptional({ example: '0612345678' })
-  @IsOptional()
+  @ApiProperty({ example: '0612345678' })
   @IsString()
-  phone?: string;
+  @Matches(/^(?:\+212|0)([5-7]\d{8})$/, {
+    message: 'Le numéro de téléphone doit être un numéro marocain valide (ex. 0612345678 ou +212612345678).',
+  })
+  phone!: string;
 }

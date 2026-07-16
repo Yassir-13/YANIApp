@@ -7,6 +7,8 @@ import { typography, spacing, radius } from '../theme/typography';
 import { productsApi, Product } from '../api/products';
 import Badge from '../components/Badge';
 import DetailBottomBar from '../components/DetailBottomBar';
+import { useCartStore } from '../stores/cartStore';
+import { useAlert } from '../components/AlertProvider';
 
 const { width } = Dimensions.get('window');
 const HERO_H = width * 0.9;
@@ -15,6 +17,10 @@ export default function ProductDetailScreen({ route, navigation }: any) {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { productId } = route.params;
+
+  const addToCart = useCartStore((s) => s.add);
+  const cartCount = useCartStore((s) => s.count());
+  const { alert } = useAlert();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -41,6 +47,11 @@ export default function ProductDetailScreen({ route, navigation }: any) {
   }
 
   const inStock = product.stockQty > 0;
+
+  const handleAddToCart = () => {
+    addToCart(product, 1);
+    alert('Ajouté au panier', `« ${product.name} » a été ajouté à votre panier.`);
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -104,7 +115,7 @@ export default function ProductDetailScreen({ route, navigation }: any) {
         priceLabel="Prix"
         price={product.price}
         ctaLabel={inStock ? 'Ajouter au panier' : 'Indisponible'}
-        onPress={() => {}}
+        onPress={handleAddToCart}
         disabled={!inStock}
       />
     </View>

@@ -1,15 +1,17 @@
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { useAuthStore } from '../stores/authStore';
+import { useAlert } from '../components/AlertProvider';
 import Button from '../components/Button';
 import SettingsRow from '../components/SettingsRow';
 
 export default function ProfileScreen({ navigation }: any) {
   const { theme, preference, setPreference } = useTheme();
   const insets = useSafeAreaInsets();
+  const { alert, show } = useAlert();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const deleteAccount = useAuthStore((s) => s.deleteAccount);
@@ -20,36 +22,52 @@ export default function ProfileScreen({ navigation }: any) {
     { key: 'dark', label: 'Sombre' },
   ];
 
+  const confirmLogout = () => {
+    show({
+      title: 'Se déconnecter',
+      message: 'Voulez-vous vraiment vous déconnecter ?',
+      buttons: [
+        { text: 'Annuler', style: 'cancel' },
+        { text: 'Se déconnecter', style: 'destructive', onPress: () => logout() },
+      ],
+    });
+  };
+
   const confirmDelete = () => {
-    Alert.alert(
-      'Supprimer le compte',
-      'Cette action est définitive. Toutes vos données (rendez-vous, points de fidélité) seront supprimées. Voulez-vous continuer ?',
-      [
+    show({
+      title: 'Supprimer le compte',
+      message:
+        'Cette action est définitive. Toutes vos données (rendez-vous, points de fidélité) seront supprimées. Voulez-vous continuer ?',
+      buttons: [
         { text: 'Annuler', style: 'cancel' },
         {
           text: 'Supprimer',
           style: 'destructive',
           onPress: () => {
             // Seconde confirmation forte avant l'irréversible
-            Alert.alert('Confirmer', 'Confirmez-vous la suppression définitive de votre compte ?', [
-              { text: 'Annuler', style: 'cancel' },
-              {
-                text: 'Oui, supprimer',
-                style: 'destructive',
-                onPress: async () => {
-                  try {
-                    await deleteAccount();
-                    navigation.goBack();
-                  } catch (e: any) {
-                    Alert.alert('Erreur', e.response?.data?.message || 'Suppression impossible.');
-                  }
+            show({
+              title: 'Confirmer',
+              message: 'Confirmez-vous la suppression définitive de votre compte ?',
+              buttons: [
+                { text: 'Annuler', style: 'cancel' },
+                {
+                  text: 'Oui, supprimer',
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      await deleteAccount();
+                      navigation.goBack();
+                    } catch (e: any) {
+                      alert('Erreur', e.response?.data?.message || 'Suppression impossible.');
+                    }
+                  },
                 },
-              },
-            ]);
+              ],
+            });
           },
         },
-      ]
-    );
+      ],
+    });
   };
 
   const displayName =
@@ -99,6 +117,7 @@ export default function ProfileScreen({ navigation }: any) {
           <SectionLabel theme={theme}>Compte</SectionLabel>
           <Group theme={theme}>
             <SettingsRow icon="person-outline" label="Modifier le profil" onPress={() => navigation.navigate('EditProfile')} />
+            <SettingsRow icon="bag-outline" label="Mes commandes" onPress={() => navigation.navigate('MyOrders')} /> <SettingsRow icon="bag-outline" label="Mes commandes" onPress={() => navigation.navigate('MyOrders')} />
             <SettingsRow icon="calendar-outline" label="Mes rendez-vous" onPress={() => navigation.navigate('MyAppointments')} />
             <SettingsRow icon="heart-outline" label="Ma fidélité" onPress={() => { navigation.goBack(); navigation.navigate('Main', { screen: 'Fidélité' }); }} last />
           </Group>
@@ -134,7 +153,7 @@ export default function ProfileScreen({ navigation }: any) {
       {/* Actions de compte */}
       {user && (
         <>
-          <Button label="Se déconnecter" variant="outline" onPress={logout} style={{ marginTop: spacing.xl }} />
+          <Button label="Se déconnecter" variant="outline" onPress={confirmLogout} style={{ marginTop: spacing.xl }} />
           <TouchableOpacity onPress={confirmDelete} accessibilityRole="button" style={{ marginTop: spacing.lg, alignItems: 'center' }}>
             <Text style={[typography.caption, { color: theme.danger }]}>Supprimer mon compte</Text>
           </TouchableOpacity>

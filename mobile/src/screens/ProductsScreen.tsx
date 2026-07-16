@@ -12,6 +12,7 @@ import ErrorView from '../components/ErrorView';
 import EmptyView from '../components/EmptyView';
 import Chip from '../components/Chip';
 import ProductCard from '../components/ProductCard';
+import { useCartStore } from '../stores/cartStore';
 
 const ALL = '__all__';
 
@@ -19,6 +20,7 @@ export default function ProductsScreen() {
   const { theme } = useTheme();
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
+  const cartCount = useCartStore((s) => s.count());
 
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,7 +50,6 @@ export default function ProductsScreen() {
     load();
   };
 
-  // Catégories présentes dans les données (ordre d'apparition)
   const categories = useMemo(() => {
     const map = new Map<string, string>();
     for (const p of products) {
@@ -57,13 +58,11 @@ export default function ProductsScreen() {
     return Array.from(map, ([id, name]) => ({ id, name }));
   }, [products]);
 
-  // Produits filtrés par la puce active
   const visible = useMemo(
     () => (activeCat === ALL ? products : products.filter((p) => p.categoryId === activeCat)),
     [products, activeCat]
   );
 
-  // Regroupement par catégorie pour l'affichage en sections
   const sections = useMemo(() => {
     const groups = new Map<string, { name: string; items: Product[] }>();
     for (const p of visible) {
@@ -102,16 +101,22 @@ export default function ProductsScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.gold} />
       }
     >
-      {/* Titre + recherche */}
+      {/* Titre + panier */}
       <View style={[styles.headerRow, { paddingHorizontal: spacing.lg }]}>
         <Text style={[typography.display, { color: theme.text, flex: 1 }]}>Produits</Text>
         <TouchableOpacity
+          onPress={() => navigation.navigate('Cart')}
           accessibilityRole="button"
-          accessibilityLabel="Rechercher"
+          accessibilityLabel="Panier"
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           style={[styles.searchBtn, { backgroundColor: theme.surface, borderColor: theme.border }]}
         >
-          <Ionicons name="search" size={20} color={theme.text} />
+          <Ionicons name="bag-outline" size={20} color={theme.text} />
+          {cartCount > 0 && (
+            <View style={[styles.cartBadge, { backgroundColor: theme.gold }]}>
+              <Text style={styles.cartBadgeText}>{cartCount}</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -172,6 +177,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  cartBadgeText: {
+    color: '#1A1712',
+    fontSize: 11,
+    fontFamily: 'Inter_700Bold',
   },
   chips: {
     paddingHorizontal: spacing.lg,

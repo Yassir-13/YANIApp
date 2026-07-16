@@ -21,7 +21,7 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-     "plugins": [
+    "plugins": [
       "expo-secure-store",
       [
         "expo-splash-screen",
@@ -30,7 +30,9 @@
           "image": "./assets/logo-full.png",
           "imageWidth": 200
         }
-      ]
+      ],
+      "expo-font",
+      "expo-status-bar"
     ]
   }
 }

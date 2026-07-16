@@ -1,15 +1,17 @@
 import { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Alert, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { usersApi } from '../api/users';
 import Header from '../components/Header';
 import Button from '../components/Button';
+import { useAlert } from '../components/AlertProvider';
 
 export default function ChangePasswordScreen({ navigation }: any) {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const { alert, show } = useAlert();
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -18,24 +20,24 @@ export default function ChangePasswordScreen({ navigation }: any) {
 
   const handleSave = async () => {
     if (!currentPassword || !newPassword) {
-      Alert.alert('Champs requis', 'Tous les champs sont obligatoires.');
+      alert('Champs requis', 'Tous les champs sont obligatoires.');
       return;
     }
     if (newPassword.length < 8) {
-      Alert.alert('Mot de passe trop court', 'Le nouveau mot de passe doit faire au moins 8 caractères.');
+      alert('Mot de passe trop court', 'Le nouveau mot de passe doit faire au moins 8 caractères.');
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert('Non concordant', 'La confirmation ne correspond pas au nouveau mot de passe.');
+      alert('Non concordant', 'La confirmation ne correspond pas au nouveau mot de passe.');
       return;
     }
     setSaving(true);
     try {
       await usersApi.changePassword(currentPassword, newPassword);
-      Alert.alert('Mot de passe modifié', 'Votre mot de passe a été mis à jour.');
+      alert('Mot de passe modifié', 'Votre mot de passe a été mis à jour.');
       navigation.goBack();
     } catch (e: any) {
-      Alert.alert('Erreur', e.response?.data?.message || 'Modification impossible. Vérifiez votre mot de passe actuel.');
+      alert('Erreur', e.response?.data?.message || 'Modification impossible. Vérifiez votre mot de passe actuel.');
     } finally {
       setSaving(false);
     }

@@ -43,6 +43,19 @@ enum AppointmentStatus {
   CANCELLED
 }
 
+enum OrderStatus {
+  PENDING     // commande passée, en attente de confirmation staff
+  CONFIRMED   // staff a validé (appel client) — stock décrémenté
+  READY       // préparée / prête au retrait
+  COMPLETED   // remise ou livrée — points crédités
+  CANCELLED   // annulée
+}
+
+enum FulfillmentType {
+  PICKUP    // retrait à l'institut
+  DELIVERY  // livraison à domicile
+}
+
 // ─────────────────────────────────────────────
 //  UTILISATEURS
 // ─────────────────────────────────────────────
@@ -63,6 +76,7 @@ model User {
   refreshTokens RefreshToken[]
   loyaltyTx          LoyaltyTransaction[] @relation("AccountOwner")
   createdTransactions LoyaltyTransaction[] @relation("TransactionCreator")
+  orders             Order[]
 
   @@map("users")
 }
@@ -95,12 +109,14 @@ model LoyaltyTransaction {
   appointmentId String?     @unique @map("appointment_id")
   createdAt   DateTime      @default(now()) @map("created_at")
   rewardId    String?       @map("reward_id")
+  orderId     String?       @unique @map("order_id")
 
   account     LoyaltyAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
   owner       User           @relation("AccountOwner", fields: [ownerId], references: [id])
   createdBy   User?          @relation("TransactionCreator", fields: [createdById], references: [id])
   appointment Appointment?   @relation(fields: [appointmentId], references: [id])
   reward      Reward?       @relation(fields: [rewardId], references: [id])
+  order       Order?         @relation(fields: [orderId], references: [id])
   
   @@index([accountId])
   @@map("loyalty_transactions")
@@ -191,6 +207,7 @@ model Product {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   category    ProductCategory @relation(fields: [categoryId], references: [id])
+  orderItems  OrderItem[]
 
   @@index([categoryId])
   @@map("products")
@@ -247,4 +264,46 @@ model RefreshToken {
   @@index([userId])
   @@index([familyId])
   @@map("refresh_tokens")
+}
+
+// ─────────────────────────────────────────────
+//  COMMANDES (produits · paiement à la remise/livraison)
+// ─────────────────────────────────────────────
+
+model Order {
+  id           String          @id @default(uuid())
+  userId       String          @map("user_id")
+  status       OrderStatus     @default(PENDING)
+  fulfillment  FulfillmentType
+  // Adresse de livraison (requise uniquement si fulfillment = DELIVERY)
+  address      String?
+  // Total figé à la commande (somme des lignes)
+  total        Decimal         @db.Decimal(10, 2)
+  note         String?         // note optionnelle du client
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items        OrderItem[]
+  loyaltyTx    LoyaltyTransaction?
+
+  @@index([userId])
+  @@index([status])
+  @@map("orders")
+}
+
+model OrderItem {
+  id         String   @id @default(uuid())
+  orderId    String   @map("order_id")
+  productId  String   @map("product_id")
+  quantity   Int
+  // Prix unitaire figé au moment de la commande (immuable si le produit change ensuite)
+  unitPrice  Decimal  @db.Decimal(10, 2) @map("unit_price")
+
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
 }

@@ -9,6 +9,7 @@ interface User {
   email: string;
   firstName: string | null;
   lastName: string | null;
+  phone: string | null;
   role: 'CLIENT' | 'STAFF' | 'ADMIN';
 }
 
@@ -18,8 +19,7 @@ interface AuthState {
   isInitialized: boolean;
 
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;
-  logout: () => Promise<void>;
+  register: (email: string, password: string, firstName: string, lastName: string, phone: string) => Promise<void>;  logout: () => Promise<void>;
   loadSession: () => Promise<void>;
   setUser: (user: User) => void;
   deleteAccount: () => Promise<void>;
@@ -44,7 +44,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  register: async (email, password, firstName, lastName) => {
+ register: async (email, password, firstName, lastName, phone) => {
     set({ isLoading: true });
     try {
       await axios.post(`${API_BASE_URL}/auth/register`, {
@@ -52,6 +52,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         password,
         firstName,
         lastName,
+        phone,
       });
       // Après inscription, on connecte directement
       const { data } = await axios.post(`${API_BASE_URL}/auth/login`, {

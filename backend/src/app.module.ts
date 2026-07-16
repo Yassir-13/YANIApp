@@ -10,6 +10,7 @@ import { ProductsModule } from './products/products.module';
 import { AppointmentsModule } from './appointments/appointments.module';
 import { OpeningHoursModule } from './opening-hours/opening-hours.module';
 import { LoyaltyModule } from './loyalty/loyalty.module';
+import { OrdersModule } from './orders/orders.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { LoyaltyModule } from './loyalty/loyalty.module';
     AppointmentsModule,
     OpeningHoursModule,
     LoyaltyModule,
+    OrdersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

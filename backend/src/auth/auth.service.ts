@@ -86,10 +86,21 @@ export class AuthService {
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
+      phone: user.phone,
       role: user.role,
     };
   }
 
+  // ─────────────────────────────────────────
+  //  Profil complet de l'utilisateur connecté
+  // ─────────────────────────────────────────
+
+  async me(userId: string) {
+    // Renvoie le profil complet (avec phone, prénom, nom) depuis la base,
+    // et non le simple payload JWT qui ne contient que id/email/role.
+    return this.usersService.getProfile(userId);
+  }
+  
   // ─────────────────────────────────────────
   //  Connexion : émet les deux tokens
   // ─────────────────────────────────────────
@@ -119,6 +130,7 @@ export class AuthService {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
+        phone: user.phone,
         role: user.role,
       },
     };

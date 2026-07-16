@@ -8,6 +8,7 @@ import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import { useYaniFonts } from './src/theme/fonts';
 import RootNavigator from './src/navigation/RootNavigator';
 import SplashScreen from './src/screens/SplashScreen';
+import { AlertProvider } from './src/components/AlertProvider';
 
 // Garde le splash natif visible jusqu'à ce que React soit prêt à peindre.
 ExpoSplashScreen.preventAutoHideAsync().catch(() => {});
@@ -45,7 +46,9 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        {splashDone ? <AppContent /> : <SplashScreen onFinish={handleSplashFinish} />}
+        <AlertProvider>
+          {splashDone ? <AppContent /> : <SplashScreen onFinish={handleSplashFinish} />}
+        </AlertProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );

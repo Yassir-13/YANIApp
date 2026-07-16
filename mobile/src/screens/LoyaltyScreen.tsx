@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Alert, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -9,6 +9,7 @@ import { typography, spacing, radius } from '../theme/typography';
 import { useAuthStore } from '../stores/authStore';
 import { loyaltyApi, LoyaltyAccount, LoyaltyTransaction, Reward } from '../api/loyalty';
 import { formatShortDate } from '../utils/format';
+import { useAlert } from '../components/AlertProvider';
 import Button from '../components/Button';
 import ErrorView from '../components/ErrorView';
 import Drop from '../components/Drop';
@@ -17,6 +18,7 @@ export default function LoyaltyScreen() {
   const { theme } = useTheme();
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
+  const { alert, show } = useAlert();
   const user = useAuthStore((s) => s.user);
 
   const [account, setAccount] = useState<LoyaltyAccount | null>(null);
@@ -63,21 +65,25 @@ export default function LoyaltyScreen() {
   const remaining = nextReward ? nextReward.pointsCost - balance : 0;
 
   const handleRedeem = (reward: Reward) => {
-    Alert.alert('Échanger', `Échanger « ${reward.name} » contre ${reward.pointsCost} points ?`, [
-      { text: 'Annuler', style: 'cancel' },
-      {
-        text: 'Confirmer',
-        onPress: async () => {
-          try {
-            await loyaltyApi.redeem(reward.id);
-            Alert.alert('Succès', `« ${reward.name} » échangée !`);
-            load();
-          } catch (e: any) {
-            Alert.alert('Erreur', e.response?.data?.message || 'Échange impossible.');
-          }
+    show({
+      title: 'Échanger',
+      message: `Échanger « ${reward.name} » contre ${reward.pointsCost} points ?`,
+      buttons: [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Confirmer',
+          onPress: async () => {
+            try {
+              await loyaltyApi.redeem(reward.id);
+              alert('Succès', `« ${reward.name} » échangée !`);
+              load();
+            } catch (e: any) {
+              alert('Erreur', e.response?.data?.message || 'Échange impossible.');
+            }
+          },
         },
-      },
-    ]);
+      ],
+    });
   };
 
   // ── États non nominaux ──────────────────────────────────────────────

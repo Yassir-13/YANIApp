@@ -10,6 +10,10 @@ import { useTheme } from '../theme/ThemeContext';
 import MyAppointmentsScreen from '../screens/MyAppointmentsScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import ChangePasswordScreen from '../screens/ChangePasswordScreen';
+import CartScreen from '../screens/CartScreen';
+import CheckoutScreen from '../screens/CheckoutScreen';
+import OrderConfirmationScreen from '../screens/OrderConfirmationScreen';
+import MyOrdersScreen from '../screens/MyOrdersScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -64,6 +68,26 @@ export default function RootNavigator() {
         component={ChangePasswordScreen}
         options={{ presentation: 'modal' }}
       />
+
+      <Stack.Screen name="Cart" 
+      component={CartScreen} 
+      options={{ presentation: 'modal' }} 
+      />
+
+      <Stack.Screen name="Checkout"
+       component={CheckoutScreen}
+        options={{ presentation: 'modal' }}
+      />
+
+      <Stack.Screen name="OrderConfirmation"
+       component={OrderConfirmationScreen}
+        options={{ presentation: 'modal' }} 
+      />
+      <Stack.Screen name="MyOrders"
+       component={MyOrdersScreen}
+        options={{ presentation: 'modal' }}
+       />
+
     </Stack.Navigator>
   );
 }
