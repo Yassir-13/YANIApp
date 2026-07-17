@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing } from '../theme/typography';
@@ -28,7 +28,7 @@ export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       setError(null);
       const [srv, prd] = await Promise.all([servicesApi.getAll(), productsApi.getAll()]);
@@ -39,19 +39,25 @@ export default function HomeScreen() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  useEffect(() => {
-    load();
   }, []);
 
-  useEffect(() => {
-    if (user) {
-      loyaltyApi.getMyAccount().then((acc) => setPoints(acc.pointsBalance)).catch(() => {});
-    } else {
-      setPoints(null);
-    }
-  }, [user]);
+  // Recharge le catalogue ET le solde à chaque fois que l'écran reprend le
+  // focus : le catalogue peut avoir changé côté institut (prix, stock, élément
+  // désactivé) et les points évoluent quand le staff termine une commande.
+  useFocusEffect(
+    useCallback(() => {
+      load();
+
+      if (user) {
+        loyaltyApi
+          .getMyAccount()
+          .then((acc) => setPoints(acc.pointsBalance))
+          .catch(() => {});
+      } else {
+        setPoints(null);
+      }
+    }, [load, user])
+  );
 
   const goProduct = (id: string) =>
     navigation.navigate('Produits', { screen: 'ProductDetail', params: { productId: id } });
@@ -118,15 +124,21 @@ export default function HomeScreen() {
         onPress={() => navigation.navigate('Produits')}
         theme={theme}
       />
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.carousel}
-      >
-        {products.slice(0, 6).map((p) => (
-          <ProductCard key={p.id} product={p} width={CARD_W} onPress={() => goProduct(p.id)} />
-        ))}
-      </ScrollView>
+      {products.length === 0 ? (
+        <Text style={[typography.caption, styles.emptyMsg, { color: theme.textMuted }]}>
+          Aucun produit disponible pour le moment.
+        </Text>
+      ) : (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.carousel}
+        >
+          {products.slice(0, 6).map((p) => (
+            <ProductCard key={p.id} product={p} width={CARD_W} onPress={() => goProduct(p.id)} />
+          ))}
+        </ScrollView>
+      )}
 
       {/* Services */}
       <SectionHeader
@@ -134,15 +146,21 @@ export default function HomeScreen() {
         onPress={() => navigation.navigate('Services')}
         theme={theme}
       />
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.carousel}
-      >
-        {services.slice(0, 6).map((s) => (
-          <ServiceCard key={s.id} service={s} width={220} onPress={() => goService(s.id)} />
-        ))}
-      </ScrollView>
+      {services.length === 0 ? (
+        <Text style={[typography.caption, styles.emptyMsg, { color: theme.textMuted }]}>
+          Aucun service disponible pour le moment.
+        </Text>
+      ) : (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.carousel}
+        >
+          {services.slice(0, 6).map((s) => (
+            <ServiceCard key={s.id} service={s} width={220} onPress={() => goService(s.id)} />
+          ))}
+        </ScrollView>
+      )}
     </ScrollView>
   );
 }
@@ -183,5 +201,10 @@ const styles = StyleSheet.create({
   carousel: {
     paddingHorizontal: spacing.lg,
     gap: spacing.md,
+  },
+
+   emptyMsg: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
   },
 });

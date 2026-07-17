@@ -1,0 +1,162 @@
+/* ── Design tokens : accents Yani, base sobre et dense ─────────────────── */
+:root {
+  /* Or de marque (accents uniquement) */
+  --gold: #d8a848;
+  --gold-light: #e4c15e;
+  --gold-deep: #886028;
+  --gold-soft: rgba(216, 168, 72, 0.12);
+
+  /* Base neutre : un backoffice est un outil de travail, pas une vitrine */
+  --bg: #f7f6f4;
+  --surface: #ffffff;
+  --surface-alt: #f1efeb;
+  --border: #e2ded6;
+
+  --text: #1a1712;
+  --text-secondary: #6b6252;
+  --text-muted: #9c927e;
+
+  /* Statuts */
+  --success: #4e7c4d;
+  --success-bg: rgba(78, 124, 77, 0.12);
+  --warning: #b07e1e;
+  --warning-bg: rgba(216, 168, 72, 0.14);
+  --danger: #b4544a;
+  --danger-bg: rgba(180, 84, 74, 0.12);
+  --info: #4a6fa5;
+  --info-bg: rgba(74, 111, 165, 0.12);
+
+  /* Échelle d'espacement dense */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+
+  --radius: 8px;
+  --radius-sm: 6px;
+
+  --font-serif: 'Cormorant Garamond', Georgia, serif;
+  --font-sans: 'Inter', -apple-system, system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Typo ─────────────────────────────────────────────────────────────── */
+.serif { font-family: var(--font-serif); font-weight: 600; }
+h1 { font-family: var(--font-serif); font-weight: 600; font-size: 26px; letter-spacing: 0.2px; }
+h2 { font-size: 16px; font-weight: 600; }
+.label {
+  font-size: 11px; font-weight: 600; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--text-muted);
+}
+.muted { color: var(--text-secondary); }
+.small { font-size: 12px; }
+
+/* ── Surfaces ─────────────────────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.card-pad { padding: var(--sp-4); }
+
+/* ── Boutons ──────────────────────────────────────────────────────────── */
+.btn {
+  font-family: var(--font-sans);
+  font-size: 13px; font-weight: 600;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: filter 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-gold {
+  background: linear-gradient(135deg, var(--gold-light), var(--gold));
+  color: #1a1712;
+}
+.btn-gold:hover:not(:disabled) { filter: brightness(1.06); }
+.btn-outline {
+  background: transparent; border-color: var(--border); color: var(--text);
+}
+.btn-outline:hover:not(:disabled) { background: var(--surface-alt); }
+.btn-danger {
+  background: transparent; border-color: var(--danger); color: var(--danger);
+}
+.btn-danger:hover:not(:disabled) { background: var(--danger-bg); }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+
+/* ── Badges de statut ─────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 600;
+  padding: 3px 8px; border-radius: 999px;
+}
+.badge::before {
+  content: ''; width: 5px; height: 5px; border-radius: 50%;
+  background: currentColor;
+}
+.badge-success { background: var(--success-bg); color: var(--success); }
+.badge-warning { background: var(--warning-bg); color: var(--warning); }
+.badge-danger  { background: var(--danger-bg);  color: var(--danger); }
+.badge-info    { background: var(--info-bg);    color: var(--info); }
+.badge-muted   { background: var(--surface-alt); color: var(--text-secondary); }
+
+/* ── Tableaux denses ──────────────────────────────────────────────────── */
+table { width: 100%; border-collapse: collapse; }
+th {
+  text-align: left; font-size: 11px; font-weight: 600;
+  letter-spacing: 0.5px; text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 10px var(--sp-3);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+td {
+  padding: 10px var(--sp-3);
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+tbody tr:hover { background: var(--surface-alt); }
+tbody tr:last-child td { border-bottom: none; }
+
+/* ── Champs ───────────────────────────────────────────────────────────── */
+input, select, textarea {
+  font-family: var(--font-sans); font-size: 14px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  width: 100%;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none; border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-soft);
+}
+
+/* ── Utilitaires ──────────────────────────────────────────────────────── */
+.row { display: flex; align-items: center; }
+.between { justify-content: space-between; }
+.gap-2 { gap: var(--sp-2); }
+.gap-3 { gap: var(--sp-3); }
+.gap-4 { gap: var(--sp-4); }
+.grid { display: grid; gap: var(--sp-4); }
+.spinner {
+  width: 20px; height: 20px;
+  border: 2px solid var(--border); border-top-color: var(--gold);
+  border-radius: 50%; animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }

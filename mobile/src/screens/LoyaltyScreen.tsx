@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
@@ -45,10 +45,14 @@ export default function LoyaltyScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    if (user) load();
-    else setIsLoading(false);
-  }, [user, load]);
+  // Recharge solde, historique et récompenses à chaque focus : les points
+  // peuvent avoir changé côté institut pendant que l'app était ouverte.
+  useFocusEffect(
+    useCallback(() => {
+      if (user) load();
+      else setIsLoading(false);
+    }, [user, load])
+  );
 
   const balance = account?.pointsBalance ?? 0;
 

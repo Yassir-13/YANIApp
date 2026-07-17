@@ -117,7 +117,7 @@ export default function ProfileScreen({ navigation }: any) {
           <SectionLabel theme={theme}>Compte</SectionLabel>
           <Group theme={theme}>
             <SettingsRow icon="person-outline" label="Modifier le profil" onPress={() => navigation.navigate('EditProfile')} />
-            <SettingsRow icon="bag-outline" label="Mes commandes" onPress={() => navigation.navigate('MyOrders')} /> <SettingsRow icon="bag-outline" label="Mes commandes" onPress={() => navigation.navigate('MyOrders')} />
+            <SettingsRow icon="bag-outline" label="Mes commandes" onPress={() => navigation.navigate('MyOrders')} />
             <SettingsRow icon="calendar-outline" label="Mes rendez-vous" onPress={() => navigation.navigate('MyAppointments')} />
             <SettingsRow icon="heart-outline" label="Ma fidélité" onPress={() => { navigation.goBack(); navigation.navigate('Main', { screen: 'Fidélité' }); }} last />
           </Group>

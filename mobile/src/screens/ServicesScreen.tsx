@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useCallback, useMemo, useState } from 'react';
 import {
   Text, StyleSheet, ActivityIndicator, RefreshControl, View, ScrollView, TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing } from '../theme/typography';
@@ -26,7 +26,7 @@ export default function ServicesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [activeCat, setActiveCat] = useState<string>(ALL);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       setError(null);
       const data = await servicesApi.getAll();
@@ -37,11 +37,14 @@ export default function ServicesScreen() {
       setIsLoading(false);
       setRefreshing(false);
     }
-  };
-
-  useEffect(() => {
-    load();
   }, []);
+
+  
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);

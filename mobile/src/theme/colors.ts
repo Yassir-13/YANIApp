@@ -75,7 +75,7 @@ export const darkTheme = {
   mode: 'dark' as const,
 
   // Fonds
-  background: '#080808',   // noir profond (fond app)
+  background: '#080808f0',   // noir profond (fond app)
   surface: '#14100C',      // cartes
   surfaceAlt: '#201810',   // surfaces secondaires (chips inactives, champs)
 

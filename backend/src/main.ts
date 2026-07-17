@@ -8,6 +8,14 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const config = app.get(ConfigService);
 
+  // ── CORS : autorise le backoffice web à consommer l'API ──
+  // En dev, Vite tourne sur 5173. En prod, définir CORS_ORIGINS dans le .env
+  // (liste séparée par des virgules, ex. https://admin.yaniconcept.ma).
+  app.enableCors({
+    origin: config.get<string>('CORS_ORIGINS')?.split(',') ?? ['http://localhost:5173'],
+    credentials: true,
+  });
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -40,6 +48,7 @@ async function bootstrap() {
       .addTag('services', 'Catalogue de prestations')
       .addTag('products', 'Catalogue de produits')
       .addTag('appointments', 'Rendez-vous')
+      .addTag('orders', 'Commandes de produits')
       .addTag('loyalty', 'Programme de fidélité')
       .addTag('opening-hours', "Horaires d'ouverture")
       .build();
