@@ -1,7 +1,8 @@
 import { apiClient } from './client';
 
 export interface Slot {
-  time: string;
+  time: string; // « 14:00 » — heure locale du centre, pour l'affichage
+  startAt: string; // instant UTC exact (ISO 8601), à renvoyer tel quel à la réservation
   available: boolean;
 }
 

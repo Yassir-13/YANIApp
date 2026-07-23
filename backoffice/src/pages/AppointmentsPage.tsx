@@ -2,10 +2,10 @@ import { useEffect, useState, useMemo } from 'react';
 import { appointmentsApi, Appointment, AppointmentStatus } from '../api/appointments';
 import { formatPrice, formatDateTime, formatTime, fullName, isToday } from '../utils';
 import Confirm from '../components/Confirm';
+import AppointmentBookingModal from '../components/AppointmentBookingModal';
 
-// Actions proposées selon le statut courant.
-// Le backend n'impose pas de machine à états stricte sur les RDV : on propose
-// ici les transitions qui ont un sens métier, et rien depuis les états finaux.
+// Actions proposées selon le statut courant. Ce tableau reflète la machine à
+// états du backend : COMPLETED et CANCELLED sont des états finaux.
 const NEXT_ACTIONS: Record<AppointmentStatus, { status: AppointmentStatus; label: string; danger?: boolean }[]> = {
   PENDING: [
     { status: 'CONFIRMED', label: 'Confirmer' },
@@ -56,6 +56,11 @@ export default function AppointmentsPage() {
     danger?: boolean;
   } | null>(null);
   const [acting, setActing] = useState(false);
+
+  // Modal de réservation : soit création (booking sans RDV), soit
+  // reprogrammation (RDV existant à déplacer).
+  const [booking, setBooking] = useState(false);
+  const [rescheduling, setRescheduling] = useState<Appointment | null>(null);
 
   const load = async () => {
     setIsLoading(true);
@@ -131,7 +136,12 @@ export default function AppointmentsPage() {
             Confirmez les demandes, puis marquez les prestations réalisées.
           </div>
         </div>
-        <button className="btn btn-outline btn-sm" onClick={load}>Actualiser</button>
+        <div className="row gap-2">
+          <button className="btn btn-outline btn-sm" onClick={load}>Actualiser</button>
+          <button className="btn btn-gold btn-sm" onClick={() => setBooking(true)}>
+            + Nouveau RDV
+          </button>
+        </div>
       </div>
 
       {/* Onglets de filtre */}
@@ -221,6 +231,15 @@ export default function AppointmentsPage() {
                         <span className="muted small">—</span>
                       ) : (
                         <div className="row gap-2" style={{ justifyContent: 'flex-end' }}>
+                          {/* Reprogrammer : seulement depuis un état actif */}
+                          {(a.status === 'PENDING' || a.status === 'CONFIRMED') && (
+                            <button
+                              className="btn btn-outline btn-sm"
+                              onClick={() => setRescheduling(a)}
+                            >
+                              Reprogrammer
+                            </button>
+                          )}
                           {actions.map((act) => (
                             <button
                               key={act.status}
@@ -261,6 +280,23 @@ export default function AppointmentsPage() {
         loading={acting}
         onConfirm={runAction}
         onCancel={() => setPendingAction(null)}
+      />
+
+      {/* Réservation pour une cliente */}
+      <AppointmentBookingModal
+        open={booking}
+        mode="create"
+        onClose={() => setBooking(false)}
+        onDone={load}
+      />
+
+      {/* Reprogrammation d'un RDV existant */}
+      <AppointmentBookingModal
+        open={!!rescheduling}
+        mode="reschedule"
+        appointment={rescheduling}
+        onClose={() => setRescheduling(null)}
+        onDone={load}
       />
     </div>
   );

@@ -7,12 +7,12 @@ import Layout from './components/Layout';
 import RequireAuth from './components/RequireAuth';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
-import Placeholder from './pages/Placeholder';
 import OrdersPage from './pages/OrdersPage';
 import AppointmentsPage from './pages/AppointmentsPage';
 import CatalogPage from './pages/CatalogPage';
 import LoyaltyPage from './pages/LoyaltyPage';
 import UsersPage from './pages/UsersPage';
+import OpeningHoursPage from './pages/OpeningHoursPage';
 
 function App() {
   const loadSession = useAuthStore((s) => s.loadSession);
@@ -39,6 +39,7 @@ function App() {
           <Route path="/appointments" element={<AppointmentsPage />} />
           <Route path="/catalog" element={<CatalogPage />} />
           <Route path="/loyalty" element={<LoyaltyPage />} />
+          <Route path="/hours" element={<OpeningHoursPage />} />
           <Route path="/users" element={<UsersPage />} />
         </Route>
 

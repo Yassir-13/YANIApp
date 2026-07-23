@@ -9,10 +9,21 @@ import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { AppointmentStatus, Role } from '@prisma/client';
 import { LoyaltyService } from '../loyalty/loyalty.service';
 import { ConfigService } from '@nestjs/config';
-import { toZonedTime, format } from 'date-fns-tz';
+import { toZonedTime, fromZonedTime, format } from 'date-fns-tz';
 
 // Capacité applicative : 2 cabines réservées à l'app
 const CENTER_CAPACITY = 2;
+
+// Transitions de statut autorisées (machine à états, miroir de celle des
+// commandes). COMPLETED et CANCELLED sont des états finaux : on n'en sort plus.
+// Sans cette table, un RDV annulé pouvait passer à COMPLETED et créditer des
+// points de fidélité pour une prestation jamais réalisée.
+const ALLOWED_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]> = {
+  PENDING: [AppointmentStatus.CONFIRMED, AppointmentStatus.CANCELLED],
+  CONFIRMED: [AppointmentStatus.COMPLETED, AppointmentStatus.CANCELLED],
+  COMPLETED: [],
+  CANCELLED: [],
+};
 
 @Injectable()
 export class AppointmentsService {
@@ -116,10 +127,16 @@ export class AppointmentsService {
 
   async create(userId: string, dto: CreateAppointmentDto) {
     const startAt = new Date(dto.startAt);
-    await this.assertSlotAvailable(dto.serviceId, startAt);
+    // assertSlotAvailable renvoie la prestation validée : on fige son prix.
+    const { service } = await this.assertSlotAvailable(dto.serviceId, startAt);
 
     return this.prisma.appointment.create({
-      data: { userId, serviceId: dto.serviceId, startAt },
+      data: {
+        userId,
+        serviceId: dto.serviceId,
+        startAt,
+        priceAtBooking: service.price,
+      },
       include: { service: true },
     });
   }
@@ -137,10 +154,15 @@ export class AppointmentsService {
     }
 
     const startAt = new Date(dto.startAt);
-    await this.assertSlotAvailable(dto.serviceId, startAt);
+    const { service } = await this.assertSlotAvailable(dto.serviceId, startAt);
 
     return this.prisma.appointment.create({
-      data: { userId: targetUserId, serviceId: dto.serviceId, startAt },
+      data: {
+        userId: targetUserId,
+        serviceId: dto.serviceId,
+        startAt,
+        priceAtBooking: service.price,
+      },
       include: { service: true },
     });
   }
@@ -189,6 +211,17 @@ export class AppointmentsService {
     if (role === Role.CLIENT && appointment.userId !== userId) {
       throw new ForbiddenException('Ce rendez-vous ne vous appartient pas.');
     }
+
+    // Même machine à états que updateStatus : un RDV terminé ou déjà annulé
+    // ne peut plus être annulé. Message orienté cliente, pas technique.
+    if (!ALLOWED_TRANSITIONS[appointment.status].includes(AppointmentStatus.CANCELLED)) {
+      throw new BadRequestException(
+        appointment.status === AppointmentStatus.CANCELLED
+          ? 'Ce rendez-vous est déjà annulé.'
+          : "Ce rendez-vous ne peut plus être annulé. Contactez l'institut.",
+      );
+    }
+
     return this.prisma.appointment.update({
       where: { id },
       data: { status: AppointmentStatus.CANCELLED },
@@ -207,21 +240,31 @@ export class AppointmentsService {
       throw new NotFoundException('Rendez-vous introuvable.');
     }
 
-    const updated = await this.prisma.appointment.update({
-      where: { id },
-      data: { status },
-    });
-
-    // ── Automatisation fidélité ──
-    // Crédite les points UNIQUEMENT à la transition vers COMPLETED
-    if (
-      status === AppointmentStatus.COMPLETED &&
-      appointment.status !== AppointmentStatus.COMPLETED
-    ) {
-      await this.loyaltyService.earnFromAppointment(updated);
+    // Refusé AVANT toute écriture : la base n'est jamais touchée pour rien.
+    const allowed = ALLOWED_TRANSITIONS[appointment.status];
+    if (!allowed.includes(status)) {
+      throw new BadRequestException(
+        `Transition impossible de ${appointment.status} vers ${status}.`,
+      );
     }
 
-    return updated;
+    // Le statut et le crédit fidélité forment un tout : si le crédit échoue,
+    // le RDV ne doit pas rester marqué COMPLETED sans ses points.
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.appointment.update({
+        where: { id },
+        data: { status },
+      });
+
+      // ── Automatisation fidélité ──
+      // Seul CONFIRMED mène à COMPLETED, et COMPLETED est un état final :
+      // ce crédit ne peut donc plus être joué deux fois pour le même RDV.
+      if (status === AppointmentStatus.COMPLETED) {
+        await this.loyaltyService.earnFromAppointment(updated, tx);
+      }
+
+      return updated;
+    });
   }
 
   // ─────────────────────────────────────────
@@ -234,6 +277,14 @@ export class AppointmentsService {
     });
     if (!appointment) {
       throw new NotFoundException('Rendez-vous introuvable.');
+    }
+
+    // Reprogrammer un RDV terminé ou annulé n'a pas de sens : ce sont des
+    // états finaux. Sans ce garde-fou, un RDV annulé redevenait actif.
+    if (ALLOWED_TRANSITIONS[appointment.status].length === 0) {
+      throw new BadRequestException(
+        'Un rendez-vous terminé ou annulé ne peut pas être reprogrammé.',
+      );
     }
 
     const startAt = new Date(newStartAt);
@@ -271,9 +322,11 @@ export class AppointmentsService {
       return { date: dateStr, closed: true, slots: [] };
     }
 
-    // 3. Récupère les RDV actifs de ce jour (pour vérifier la capacité)
-    const dayStart = new Date(`${dateStr}T00:00:00.000Z`);
-    const dayEnd = new Date(`${dateStr}T23:59:59.999Z`);
+    // 3. Récupère les RDV actifs de ce jour (pour vérifier la capacité).
+    // La journée est bornée en heure LOCALE puis convertie : un « 00:00 UTC »
+    // ne correspond pas à minuit à Casablanca et décalait la fenêtre d'une heure.
+    const dayStart = fromZonedTime(`${dateStr}T00:00:00`, this.timezone);
+    const dayEnd = fromZonedTime(`${dateStr}T23:59:59.999`, this.timezone);
     const dayAppointments = await this.prisma.appointment.findMany({
       where: {
         status: {
@@ -285,7 +338,12 @@ export class AppointmentsService {
     });
 
     // 4. Génère les créneaux de l'ouverture à la fermeture
-    const slots: { time: string; available: boolean }[] = [];
+    //
+    // Chaque créneau porte DEUX valeurs : `time` pour l'affichage (heure locale)
+    // et `startAt`, l'instant UTC exact à renvoyer tel quel lors de la réservation.
+    // Le client n'a ainsi aucun calcul de fuseau à refaire — c'est le serveur,
+    // qui possède la base IANA, qui fait autorité.
+    const slots: { time: string; startAt: string; available: boolean }[] = [];
     const [openH, openM] = hours.openTime.split(':').map(Number);
     const [closeH, closeM] = hours.closeTime.split(':').map(Number);
     const openMinutes = openH * 60 + openM;
@@ -302,7 +360,11 @@ export class AppointmentsService {
 
       // Passé ? indisponible
       if (slotStart.getTime() < Date.now()) {
-        slots.push({ time: this.minutesToHHMM(m), available: false });
+        slots.push({
+          time: this.minutesToHHMM(m),
+          startAt: slotStart.toISOString(),
+          available: false,
+        });
         continue;
       }
 
@@ -315,6 +377,7 @@ export class AppointmentsService {
 
       slots.push({
         time: this.minutesToHHMM(m),
+        startAt: slotStart.toISOString(),
         available: overlapping.length < CENTER_CAPACITY,
       });
     }
@@ -322,19 +385,17 @@ export class AppointmentsService {
     return { date: dateStr, closed: false, slots };
   }
 
-  // Convertit "HH:MM" (minutes locales) + date en instant UTC
+  // Convertit "HH:MM" (heure LOCALE du centre) + date en instant UTC.
+  //
+  // Le calcul d'offset à la main donnait un résultat qui dépendait du fuseau
+  // système du serveur (juste en TZ=UTC, faux d'une heure en TZ=Africa/Casablanca)
+  // et ignorait le passage du Maroc à UTC+0 pendant le Ramadan.
+  // fromZonedTime interroge la base IANA : correct quel que soit le serveur,
+  // et correct toute l'année.
   private localTimeToUtc(dateStr: string, minutesFromMidnight: number): Date {
-    const h = Math.floor(minutesFromMidnight / 60);
-    const m = minutesFromMidnight % 60;
-    const hh = String(h).padStart(2, '0');
-    const mm = String(m).padStart(2, '0');
-    // On construit une date locale puis on la convertit en UTC via le fuseau
-    const localStr = `${dateStr}T${hh}:${mm}:00`;
-    const asUtc = new Date(`${localStr}Z`); // interprété comme UTC d'abord
-    // Ajuste selon le décalage du fuseau à cette date
-    const zoned = toZonedTime(asUtc, this.timezone);
-    const offset = asUtc.getTime() - zoned.getTime();
-    return new Date(asUtc.getTime() + offset);
+    const hh = String(Math.floor(minutesFromMidnight / 60)).padStart(2, '0');
+    const mm = String(minutesFromMidnight % 60).padStart(2, '0');
+    return fromZonedTime(`${dateStr}T${hh}:${mm}:00`, this.timezone);
   }
 
   private minutesToHHMM(minutes: number): string {

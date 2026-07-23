@@ -43,6 +43,7 @@ async function bootstrap() {
         },
         'access-token',
       )
+      .addTag('health', 'Sonde de santé (déploiement, supervision)')
       .addTag('auth', 'Authentification et sessions')
       .addTag('users', 'Gestion des utilisateurs')
       .addTag('services', 'Catalogue de prestations')

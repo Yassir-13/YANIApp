@@ -13,7 +13,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: config.get<string>('JWT_SECRET') ?? 'fallback',
+      // Doit être strictement le même secret que celui de la signature
+      // (auth.module). Une valeur de repli en dur rendrait les tokens forgeables.
+      secretOrKey: config.getOrThrow<string>('JWT_SECRET'),
     });
   }
 

@@ -56,7 +56,16 @@ export default function BookingScreen({ route, navigation }: any) {
 
   const handleContinue = () => {
     if (!selectedSlot) return;
-    navigation.navigate('BookingSummary', { serviceId, date: selectedDate, time: selectedSlot });
+    // On transmet l'instant UTC calculé par le serveur : le client ne refait
+    // aucun calcul de fuseau (source unique de vérité = le backend).
+    const slot = slots.find((s) => s.time === selectedSlot);
+    if (!slot) return;
+    navigation.navigate('BookingSummary', {
+      serviceId,
+      date: selectedDate,
+      time: selectedSlot,
+      startAt: slot.startAt,
+    });
   };
 
   // Libellé du mois de la date sélectionnée (ex. « MARS 2026 »)

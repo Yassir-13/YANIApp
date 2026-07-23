@@ -15,7 +15,9 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('JWT_SECRET'),
+        // getOrThrow : le secret de signature doit être identique à celui
+        // de vérification (jwt.strategy). Jamais de valeur de repli ici.
+        secret: config.getOrThrow<string>('JWT_SECRET'),
         signOptions: {
           expiresIn: (config.get<string>('JWT_EXPIRES_IN') ?? '15m') as any,
         },

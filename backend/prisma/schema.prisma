@@ -106,6 +106,7 @@ model LoyaltyTransaction {
   pointsDelta Int           @map("points_delta")
   type        LoyaltyTxType
   createdById String?       @map("created_by")
+  reason      String?       @db.VarChar(255)
   appointmentId String?     @unique @map("appointment_id")
   createdAt   DateTime      @default(now()) @map("created_at")
   rewardId    String?       @map("reward_id")
@@ -132,6 +133,12 @@ model Appointment {
   serviceId String            @map("service_id")
   startAt   DateTime          @map("start_at")
   status    AppointmentStatus @default(PENDING)
+  // Prix de la prestation figé au moment de la réservation, comme
+  // OrderItem.unitPrice pour les commandes. Sert de base au crédit fidélité,
+  // pour qu'un changement de tarif ultérieur ne modifie pas les points d'un
+  // RDV déjà réservé. Nullable : les RDV créés avant cette colonne n'en ont pas
+  // (repli sur le prix courant côté service).
+  priceAtBooking Decimal?     @db.Decimal(10, 2) @map("price_at_booking")
   createdAt DateTime          @default(now()) @map("created_at")
   updatedAt DateTime          @updatedAt @map("updated_at")
 

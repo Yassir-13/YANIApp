@@ -83,18 +83,33 @@ export default function CatalogForm({
 
         <div style={styles.fields}>
           <Field label="Catégorie">
-            <select
-              value={values.categoryId}
-              onChange={(e) => set('categoryId', e.target.value)}
-              required
-            >
-              <option value="">— Choisir —</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+            {categories.length === 0 ? (
+              <div
+                className="small"
+                style={{
+                  padding: '8px 10px',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'var(--warning-bg)',
+                  color: 'var(--warning)',
+                }}
+              >
+                Aucune catégorie. Fermez cette fenêtre et créez d'abord une
+                catégorie avec le bouton « + Catégorie ».
+              </div>
+            ) : (
+              <select
+                value={values.categoryId}
+                onChange={(e) => set('categoryId', e.target.value)}
+                required
+              >
+                <option value="">— Choisir —</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </Field>
 
           <Field label="Nom">

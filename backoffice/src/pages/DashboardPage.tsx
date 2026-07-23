@@ -20,6 +20,7 @@ export default function DashboardPage() {
 
   const load = async () => {
     try {
+      setIsLoading(true);
       setError(null);
       const [o, a, p] = await Promise.all([
         ordersApi.getAll(),

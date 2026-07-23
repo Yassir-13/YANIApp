@@ -24,6 +24,11 @@ export interface ServicePayload {
 }
 
 export const servicesApi = {
+  // Prestations actives uniquement (pour proposer une réservation)
+  async getActive(): Promise<Service[]> {
+    const { data } = await apiClient.get('/services');
+    return data;
+  },
   async getAllIncludingInactive(): Promise<Service[]> {
     const { data } = await apiClient.get('/services/all');
     return data;

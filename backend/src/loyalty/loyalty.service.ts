@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Appointment, Order, LoyaltyTxType } from '@prisma/client';
+import { Appointment, Order, LoyaltyTxType, Prisma } from '@prisma/client';
 import { CreateRewardDto } from './dto/create-reward.dto';
 import { ManualPointsDto } from './dto/manual-points.dto';
 
@@ -30,27 +30,41 @@ export class LoyaltyService {
     });
   }
 
-  // Crédite les points gagnés sur un RDV complété
-  async earnFromAppointment(appointment: Appointment) {
-    // Récupère le service pour connaître le prix
-    const service = await this.prisma.service.findUnique({
-      where: { id: appointment.serviceId },
-    });
-    if (!service) return;
+  // Crédite les points gagnés sur un RDV complété.
+  // `tx` : transaction ouverte par l'appelant. Fournie, le crédit et le
+  // changement de statut du RDV réussissent ou échouent ensemble.
+  async earnFromAppointment(
+    appointment: Appointment,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const db: Prisma.TransactionClient = tx ?? this.prisma;
+
+    // Prix de référence : celui figé à la réservation (priceAtBooking).
+    // Un changement de tarif après la réservation ne doit pas modifier les
+    // points gagnés. Repli sur le prix courant du service pour les RDV
+    // antérieurs à la colonne (priceAtBooking null).
+    let price = appointment.priceAtBooking;
+    if (price == null) {
+      const service = await db.service.findUnique({
+        where: { id: appointment.serviceId },
+      });
+      if (!service) return;
+      price = service.price;
+    }
 
     // Récupère le compte fidélité du client
-    const account = await this.prisma.loyaltyAccount.findUnique({
+    const account = await db.loyaltyAccount.findUnique({
       where: { userId: appointment.userId },
     });
     if (!account) return;
 
     // Calcule les points : 5% du prix, arrondi à l'entier
-    const points = Math.round(Number(service.price) * LOYALTY_RATE);
+    const points = Math.round(Number(price) * LOYALTY_RATE);
     if (points <= 0) return;
 
-    // Transaction atomique : créer le mouvement + mettre à jour le solde + le compteur de visites
-    return this.prisma.$transaction([
-      this.prisma.loyaltyTransaction.create({
+    // Créer le mouvement + mettre à jour le solde et le compteur de visites
+    const credit = async (client: Prisma.TransactionClient) => {
+      await client.loyaltyTransaction.create({
         data: {
           accountId: account.id,
           ownerId: appointment.userId,
@@ -58,15 +72,18 @@ export class LoyaltyService {
           type: LoyaltyTxType.EARN,
           appointmentId: appointment.id,
         },
-      }),
-      this.prisma.loyaltyAccount.update({
+      });
+      return client.loyaltyAccount.update({
         where: { id: account.id },
         data: {
           pointsBalance: { increment: points },
           visitCount: { increment: 1 },
         },
-      }),
-    ]);
+      });
+    };
+
+    // Déjà dans une transaction : on y participe. Sinon, on en ouvre une.
+    return tx ? credit(tx) : this.prisma.$transaction(credit);
   }
 
   // Crédite les points d'une COMMANDE terminée (5% du total, comme les RDV).
@@ -201,6 +218,7 @@ export class LoyaltyService {
           pointsDelta: dto.points,
           type: LoyaltyTxType.MANUAL,
           createdById, // ← QUI a fait cet ajout (audit)
+          reason: dto.reason?.trim() || null, // ← POURQUOI (audit)
         },
       }),
       this.prisma.loyaltyAccount.update({

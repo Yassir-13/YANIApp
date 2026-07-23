@@ -34,6 +34,13 @@ export default function CatalogPage() {
   const [toDeactivate, setToDeactivate] = useState<Product | Service | null>(null);
   const [acting, setActing] = useState(false);
 
+  // Création de catégorie (indispensable : le formulaire produit/prestation
+  // exige une catégorie, et sur une base neuve il n'en existe aucune)
+  const [catFormOpen, setCatFormOpen] = useState(false);
+  const [catName, setCatName] = useState('');
+  const [catSaving, setCatSaving] = useState(false);
+  const [catError, setCatError] = useState<string | null>(null);
+
   const load = async () => {
     setIsLoading(true);
     try {
@@ -157,6 +164,31 @@ export default function CatalogPage() {
     }
   };
 
+  // ── Création de catégorie ───────────────────────────────────────────
+  const submitCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = catName.trim();
+    if (!name) return;
+    setCatSaving(true);
+    setCatError(null);
+    try {
+      const created =
+        kind === 'product'
+          ? await productsApi.createCategory(name)
+          : await servicesApi.createCategory(name);
+      // Recharge les catégories et sélectionne la nouvelle comme filtre
+      await load();
+      setCatFilter(created.id);
+      setCatName('');
+      setCatFormOpen(false);
+    } catch (e: any) {
+      const msg = e.response?.data?.message;
+      setCatError(Array.isArray(msg) ? msg.join(', ') : msg || 'Création impossible.');
+    } finally {
+      setCatSaving(false);
+    }
+  };
+
   const reactivate = async (item: Product | Service) => {
     try {
       if (kind === 'product') await productsApi.update(item.id, { active: true });
@@ -182,6 +214,18 @@ export default function CatalogPage() {
         </div>
         <div className="row gap-2">
           <button className="btn btn-outline btn-sm" onClick={load}>Actualiser</button>
+          {isAdmin && (
+            <button
+              className="btn btn-outline btn-sm"
+              onClick={() => {
+                setCatError(null);
+                setCatName('');
+                setCatFormOpen(true);
+              }}
+            >
+              + Catégorie
+            </button>
+          )}
           {isAdmin && (
             <button className="btn btn-gold btn-sm" onClick={openCreate}>
               + Nouveau {noun}
@@ -352,6 +396,66 @@ export default function CatalogPage() {
         }}
       />
 
+      {/* Modal : nouvelle catégorie */}
+      {catFormOpen && (
+        <div style={styles.backdrop} onClick={() => setCatFormOpen(false)}>
+          <form
+            className="card"
+            style={styles.catCard}
+            onClick={(e) => e.stopPropagation()}
+            onSubmit={submitCategory}
+          >
+            <div style={styles.accent} />
+            <h2 style={{ marginBottom: 'var(--sp-2)' }}>
+              Nouvelle catégorie {kind === 'product' ? 'de produit' : 'de prestation'}
+            </h2>
+            <div className="muted small" style={{ marginBottom: 'var(--sp-4)' }}>
+              Elle deviendra disponible dans le formulaire {noun}.
+            </div>
+
+            <label className="label" style={{ display: 'block', marginBottom: 5 }}>
+              Nom de la catégorie
+            </label>
+            <input
+              autoFocus
+              value={catName}
+              onChange={(e) => setCatName(e.target.value)}
+              placeholder={kind === 'product' ? 'Soins capillaires' : 'Soins du visage'}
+              required
+            />
+
+            {catError && (
+              <div
+                style={{
+                  marginTop: 'var(--sp-3)',
+                  padding: '8px 10px',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'var(--danger-bg)',
+                  color: 'var(--danger)',
+                  fontSize: 13,
+                }}
+              >
+                {catError}
+              </div>
+            )}
+
+            <div className="row gap-2" style={{ justifyContent: 'flex-end', marginTop: 'var(--sp-5)' }}>
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => setCatFormOpen(false)}
+                disabled={catSaving}
+              >
+                Annuler
+              </button>
+              <button type="submit" className="btn btn-gold" disabled={catSaving}>
+                {catSaving ? 'Création…' : 'Créer'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       <Confirm
         open={!!toDeactivate}
         title={`Désactiver « ${toDeactivate?.name ?? ''} »`}
@@ -367,6 +471,32 @@ export default function CatalogPage() {
 }
 
 const styles: Record<string, React.CSSProperties> = {
+  backdrop: {
+    position: 'fixed',
+    inset: 0,
+    background: 'rgba(20,16,12,0.55)',
+    display: 'grid',
+    placeItems: 'center',
+    zIndex: 100,
+    padding: 'var(--sp-4)',
+    overflowY: 'auto',
+  },
+  catCard: {
+    width: '100%',
+    maxWidth: 420,
+    padding: 'var(--sp-5)',
+    position: 'relative',
+    overflow: 'hidden',
+    margin: 'auto',
+  },
+  accent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    background: 'linear-gradient(90deg, var(--gold-light), var(--gold))',
+  },
   thumb: {
     width: 36,
     height: 36,

@@ -11,15 +11,6 @@ import Button from '../components/Button';
 import ServiceMiniCard from '../components/ServiceMiniCard';
 import { useAlert } from '../components/AlertProvider';
 
-function buildStartAt(dateStr: string, time: string): string {
-  const [h, m] = time.split(':').map(Number);
-  const CASABLANCA_OFFSET_HOURS = 1;
-  const utcHour = h - CASABLANCA_OFFSET_HOURS;
-  const [year, month, day] = dateStr.split('-').map(Number);
-  const utcDate = new Date(Date.UTC(year, month - 1, day, utcHour, m, 0));
-  return utcDate.toISOString();
-}
-
 function formatDate(dateStr: string): string {
   const d = new Date(`${dateStr}T12:00:00`);
   const s = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
@@ -30,7 +21,8 @@ export default function BookingSummaryScreen({ route, navigation }: any) {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { alert } = useAlert();
-  const { serviceId, date, time } = route.params;
+  // startAt : instant UTC fourni par le serveur (voir BookingScreen).
+  const { serviceId, date, time, startAt } = route.params;
 
   const [service, setService] = useState<Service | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -43,7 +35,6 @@ export default function BookingSummaryScreen({ route, navigation }: any) {
   const handleConfirm = async () => {
     setSubmitting(true);
     try {
-      const startAt = buildStartAt(date, time);
       await appointmentsApi.create(serviceId, startAt);
       navigation.replace('BookingConfirmation', { serviceName: service?.name, date, time });
     } catch (e: any) {
