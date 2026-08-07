@@ -9,6 +9,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing } from '../theme/typography';
 import { productsApi, Product } from '../api/products';
 import ErrorView from '../components/ErrorView';
+import ErrorBanner from '../components/ErrorBanner';
 import EmptyView from '../components/EmptyView';
 import Chip from '../components/Chip';
 import ProductCard from '../components/ProductCard';
@@ -68,15 +69,24 @@ export default function ProductsScreen() {
   );
 
   const sections = useMemo(() => {
-    const groups = new Map<string, { name: string; items: Product[] }>();
+    const groups = new Map<string, { id: string; name: string; items: Product[] }>();
     for (const p of visible) {
       const key = p.category?.id ?? 'autres';
       const name = p.category?.name ?? 'Autres';
-      if (!groups.has(key)) groups.set(key, { name, items: [] });
+      if (!groups.has(key)) groups.set(key, { id: key, name, items: [] });
       groups.get(key)!.items.push(p);
     }
     return Array.from(groups.values());
   }, [visible]);
+
+  // Un filtre peut pointer vers une catégorie qui n'existe plus après un
+  // rechargement : aucun chip ne paraîtrait alors sélectionné, et la liste
+  // serait vide sans explication. On revient sur « Tous ».
+  useEffect(() => {
+    if (activeCat !== ALL && !categories.some((c) => c.id === activeCat)) {
+      setActiveCat(ALL);
+    }
+  }, [categories, activeCat]);
 
   const goDetail = (id: string) => navigation.navigate('ProductDetail', { productId: id });
 
@@ -88,7 +98,10 @@ export default function ProductsScreen() {
     );
   }
 
-  if (error) {
+  // Écran d'erreur plein UNIQUEMENT si l'on n'a rien à montrer.
+  // Si le catalogue est déjà chargé, une coupure passagère ne doit pas le
+  // faire disparaître : on garde la liste et on signale l'échec par un bandeau.
+  if (error && products.length === 0) {
     return (
       <View style={[styles.fill, { backgroundColor: theme.background, paddingTop: insets.top + spacing.md }]}>
         <ErrorView message={error} onRetry={load} />
@@ -124,6 +137,11 @@ export default function ProductsScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Échec du rafraîchissement, sans masquer le catalogue déjà affiché */}
+      {error && (
+        <ErrorBanner message="Catalogue non actualisé (connexion)." onRetry={load} />
+      )}
+
       {/* Chips de filtres */}
       <ScrollView
         horizontal
@@ -144,11 +162,18 @@ export default function ProductsScreen() {
       {/* Sections par catégorie, grille 2 colonnes */}
       {visible.length === 0 ? (
         <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl }}>
-          <EmptyView message="Aucun produit disponible pour le moment." icon="sparkles-outline" />
+          <EmptyView
+            message={
+              activeCat === ALL
+                ? 'Aucun produit disponible pour le moment.'
+                : 'Aucun produit dans cette catégorie.'
+            }
+            icon="sparkles-outline"
+          />
         </View>
       ) : (
         sections.map((section) => (
-          <View key={section.name} style={{ marginTop: spacing.lg }}>
+          <View key={section.id} style={{ marginTop: spacing.lg }}>
             <Text style={[typography.sectionLabel, styles.sectionLabel, { color: theme.gold }]}>
               {section.name}
             </Text>

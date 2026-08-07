@@ -1,8 +1,9 @@
-import { useEffect, useState, useMemo, FormEvent } from 'react';
+import { useEffect, useState, FormEvent } from 'react';
 import { usersApi, AppUser, Role } from '../api/users';
 import { useAuthStore } from '../stores/authStore';
 import { formatDate, fullName } from '../utils';
 import Confirm from '../components/Confirm';
+import Pagination from '../components/Pagination';
 
 const ROLE_META: Record<Role, { label: string; badge: string }> = {
   CLIENT: { label: 'Cliente', badge: 'badge-muted' },
@@ -26,15 +27,47 @@ export default function UsersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Pagination servie par le backend (le filtre par rôle et la recherche
+  // sont appliqués côté serveur : filtrer la page affichée donnerait faux).
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // Nombre d'administrateurs, sur TOUTE la base et non sur la page courante.
+  // Sert à ne proposer « Promouvoir gérant » que si le poste est libre.
+  const [adminCount, setAdminCount] = useState(0);
+
   // Changement de rôle en attente de confirmation
   const [pending, setPending] = useState<{ user: AppUser; role: Role } | null>(null);
   const [acting, setActing] = useState(false);
 
-  const load = async (q?: string) => {
+  // `submittedSearch` est le terme réellement envoyé au serveur : taper dans
+  // le champ ne relance pas la requête, seule la validation le fait.
+  const [submittedSearch, setSubmittedSearch] = useState('');
+
+  const load = async (opts?: { page?: number; search?: string; role?: Role | 'ALL' }) => {
+    const p = opts?.page ?? page;
+    const s = opts?.search ?? submittedSearch;
+    const r = opts?.role ?? roleFilter;
+
     setIsLoading(true);
     try {
       setError(null);
-      setUsers(await usersApi.findAll(q));
+      const res = await usersApi.findAll({
+        search: s || undefined,
+        role: r === 'ALL' ? undefined : r,
+        page: p,
+      });
+      setUsers(res.data);
+      setTotal(res.total);
+      setTotalPages(res.totalPages);
+
+      // Une page vidée par une suppression ou un changement de filtre :
+      // on recule plutôt que d'afficher un tableau vide trompeur.
+      if (res.data.length === 0 && res.total > 0 && p > 1) {
+        setPage(1);
+        return load({ page: 1, search: s, role: r });
+      }
     } catch {
       setError('Impossible de charger les utilisateurs.');
     } finally {
@@ -42,27 +75,45 @@ export default function UsersPage() {
     }
   };
 
+  // Compte les administrateurs sur l'ensemble de la base (limit=1 : seul
+  // `total` nous intéresse, on ne rapatrie aucune ligne inutile).
+  const loadAdminCount = async () => {
+    try {
+      const res = await usersApi.findAll({ role: 'ADMIN', limit: 1 });
+      setAdminCount(res.total);
+    } catch {
+      // Sans ce compteur, on n'affichera simplement pas « Promouvoir gérant » :
+      // le backend refuse de toute façon un second administrateur.
+      setAdminCount(0);
+    }
+  };
+
   useEffect(() => {
-    load();
+    load({ page: 1 });
+    loadAdminCount();
   }, []);
 
   const runSearch = (e: FormEvent) => {
     e.preventDefault();
-    load(search.trim() || undefined);
+    const s = search.trim();
+    setSubmittedSearch(s);
+    setPage(1);
+    load({ page: 1, search: s });
   };
 
-  const visible = useMemo(
-    () => (roleFilter === 'ALL' ? users : users.filter((u) => u.role === roleFilter)),
-    [users, roleFilter]
-  );
+  const changeRoleFilter = (r: Role | 'ALL') => {
+    setRoleFilter(r);
+    setPage(1);
+    load({ page: 1, role: r });
+  };
 
-  const counts = useMemo(() => {
-    const c: Record<string, number> = { ALL: users.length };
-    for (const u of users) c[u.role] = (c[u.role] ?? 0) + 1;
-    return c;
-  }, [users]);
+  const goToPage = (p: number) => {
+    setPage(p);
+    load({ page: p });
+  };
 
-  const adminCount = counts.ADMIN ?? 0;
+  // La liste affichée est déjà filtrée et paginée par le serveur.
+  const visible = users;
 
   const runRoleChange = async () => {
     if (!pending) return;
@@ -70,7 +121,9 @@ export default function UsersPage() {
     try {
       await usersApi.updateRole(pending.user.id, pending.role);
       setPending(null);
-      await load(search.trim() || undefined);
+      await load();
+      // Un changement de rôle peut créer ou libérer le poste d'administrateur.
+      await loadAdminCount();
     } catch (e: any) {
       setError(e.response?.data?.message || 'Changement de rôle impossible.');
       setPending(null);
@@ -110,7 +163,7 @@ export default function UsersPage() {
             Clientes et personnel de l'institut. Un seul administrateur est autorisé.
           </div>
         </div>
-        <button className="btn btn-outline btn-sm" onClick={() => load(search.trim() || undefined)}>
+        <button className="btn btn-outline btn-sm" onClick={() => load()}>
           Actualiser
         </button>
       </div>
@@ -131,7 +184,9 @@ export default function UsersPage() {
               className="btn btn-outline"
               onClick={() => {
                 setSearch('');
-                load();
+                setSubmittedSearch('');
+                setPage(1);
+                load({ page: 1, search: '' });
               }}
             >
               Réinitialiser
@@ -143,11 +198,10 @@ export default function UsersPage() {
           {ROLE_FILTERS.map((f) => (
             <button
               key={f.key}
-              onClick={() => setRoleFilter(f.key)}
+              onClick={() => changeRoleFilter(f.key)}
               className={roleFilter === f.key ? 'btn btn-gold btn-sm' : 'btn btn-outline btn-sm'}
             >
               {f.label}
-              {counts[f.key] > 0 && <span style={{ marginLeft: 6, opacity: 0.7 }}>{counts[f.key]}</span>}
             </button>
           ))}
         </div>
@@ -226,6 +280,14 @@ export default function UsersPage() {
               })}
             </tbody>
           </table>
+
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            onChange={goToPage}
+            label="utilisateur(s)"
+          />
         </div>
       )}
 

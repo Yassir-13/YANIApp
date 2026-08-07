@@ -45,8 +45,27 @@ export default function TabNavigator() {
       })}
     >
       <Tab.Screen name="Accueil" component={HomeScreen} />
-      <Tab.Screen name="Services" component={ServicesStack} />
-      <Tab.Screen name="Produits" component={ProductsStack} />
+      <Tab.Screen
+        name="Services"
+        component={ServicesStack}
+        listeners={({ navigation }) => ({
+          // Un onglet conserve l'état de sa pile : après avoir consulté une
+          // prestation, revenir sur l'onglet réaffichait cette fiche au lieu
+          // de la liste. Toucher l'onglet ramène toujours au catalogue.
+          tabPress: () => {
+            navigation.navigate('Services', { screen: 'ServicesList' });
+          },
+        })}
+      />
+      <Tab.Screen
+        name="Produits"
+        component={ProductsStack}
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            navigation.navigate('Produits', { screen: 'ProductsList' });
+          },
+        })}
+      />
       <Tab.Screen name="Fidélité" component={LoyaltyScreen} />
     </Tab.Navigator>
   );

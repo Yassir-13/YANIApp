@@ -6,8 +6,13 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 import { PrismaService } from '../prisma/prisma.service';
 
+// Exemptée du rate limiting : Docker et la supervision interrogent cette route
+// en continu (toutes les 30 s). La bloquer ferait passer une API saine pour
+// morte, et déclencherait des redémarrages en boucle.
+@SkipThrottle()
 @ApiTags('health')
 @Controller('health')
 export class HealthController {

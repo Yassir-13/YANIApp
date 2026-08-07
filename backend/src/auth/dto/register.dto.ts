@@ -1,14 +1,22 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsString, MinLength, MaxLength, Matches } from 'class-validator';
+import { IsEmail, IsString, MinLength, MaxLength } from 'class-validator';
+import {
+  IsAppPassword,
+  PASSWORD_MIN_LENGTH,
+} from '../../common/validators/password.validator';
+import { IsMoroccanPhone } from '../../common/validators/phone.validator';
 
 export class RegisterDto {
   @ApiProperty({ example: 'cliente@exemple.ma' })
-  @IsEmail()
+  @IsEmail({}, { message: 'Adresse email invalide.' })
   email!: string;
 
-  @ApiProperty({ example: 'motdepasse123', minLength: 8 })
-  @IsString()
-  @MinLength(8, { message: 'Le mot de passe doit faire au moins 8 caractères.' })
+  @ApiProperty({
+    example: 'MonMotDePasse',
+    minLength: PASSWORD_MIN_LENGTH,
+    description: 'Au moins 8 caractères, dont une majuscule et une minuscule.',
+  })
+  @IsAppPassword()
   password!: string;
 
   @ApiProperty({ example: 'Sarah' })
@@ -24,9 +32,6 @@ export class RegisterDto {
   lastName!: string;
 
   @ApiProperty({ example: '0612345678' })
-  @IsString()
-  @Matches(/^(?:\+212|0)([5-7]\d{8})$/, {
-    message: 'Le numéro de téléphone doit être un numéro marocain valide (ex. 0612345678 ou +212612345678).',
-  })
+  @IsMoroccanPhone()
   phone!: string;
 }

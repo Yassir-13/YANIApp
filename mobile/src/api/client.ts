@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { API_BASE_URL } from './config';
 import { secureStorage } from '../utils/secureStorage';
+import { notifySessionExpired } from './sessionEvents';
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -68,10 +69,15 @@ apiClient.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
         return apiClient(originalRequest);
       } catch (refreshError) {
-        // Le refresh a échoué : session morte, on nettoie
+        // Le refresh a échoué : session morte, on nettoie.
         pendingRequests = [];
         await secureStorage.clearTokens();
-        // (plus tard : rediriger vers l'écran de login)
+        // Effacer les tokens ne suffisait pas : l'application restait affichée
+        // comme connectée jusqu'au prochain redémarrage. On prévient le store
+        // pour qu'il repasse en invité et que l'interface suive.
+        // Cas fréquent depuis que le changement de mot de passe révoque
+        // toutes les sessions.
+        notifySessionExpired();
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

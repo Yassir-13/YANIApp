@@ -3,6 +3,8 @@ import { apiClient } from '../api/client';
 import { API_BASE_URL } from '../api/config';
 import axios from 'axios';
 import { secureStorage } from '../utils/secureStorage';
+import { setSessionExpiredHandler } from '../api/sessionEvents';
+import { useCartStore } from './cartStore';
 
 interface User {
   id: string;
@@ -76,6 +78,10 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
     }
     await secureStorage.clearTokens();
+    // Le panier est désormais persisté sur le téléphone : sans ce vidage,
+    // la cliente suivante à se connecter sur le même appareil retrouverait
+    // le panier de la précédente.
+    useCartStore.getState().clear();
     set({ user: null });
   },
 
@@ -87,6 +93,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     // Supprime le compte côté serveur puis nettoie la session locale.
     await apiClient.delete('/users/me');
     await secureStorage.clearTokens();
+    useCartStore.getState().clear();
     set({ user: null });
   },
 
@@ -94,6 +101,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const token = await secureStorage.getAccessToken();
       const refreshToken = await secureStorage.getRefreshToken();
+
 
       // Pas de tokens du tout → invité, rien à faire
       if (!token && !refreshToken) {
@@ -114,3 +122,11 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 }));
+
+// Quand l'intercepteur constate qu'un refresh token n'est plus valide
+// (expiré, révoqué après un changement de mot de passe, session tuée pour
+// réutilisation suspecte), l'utilisateur redevient invité immédiatement.
+// L'interface suit sans attendre un redémarrage de l'application.
+setSessionExpiredHandler(() => {
+  useAuthStore.setState({ user: null });
+});

@@ -17,6 +17,10 @@ export interface Appointment {
   serviceId: string;
   startAt: string;
   status: 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
+  // Prix annoncé à la cliente au moment de la réservation. Il ne bouge plus,
+  // même si le tarif de la prestation change ensuite. C'est ce montant qui
+  // fait foi (facturation, points de fidélité) — jamais service.price.
+  priceAtBooking: string | null;
   service?: {
     id: string;
     name: string;

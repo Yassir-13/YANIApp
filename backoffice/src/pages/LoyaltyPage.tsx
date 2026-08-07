@@ -10,6 +10,10 @@ import { usersApi, AppUser } from '../api/users';
 import { useAuthStore } from '../stores/authStore';
 import { formatDateTime, fullName } from '../utils';
 import Confirm from '../components/Confirm';
+import Pagination from '../components/Pagination';
+
+// Lignes d'audit affichées par page (le cumul de points reste global).
+const AUDIT_PAGE_SIZE = 20;
 
 type Tab = 'credit' | 'rewards' | 'audit';
 
@@ -82,9 +86,9 @@ function CreditTab() {
     setSearching(true);
     setMessage(null);
     try {
-      const data = await usersApi.findAll(search.trim() || undefined);
+      const res = await usersApi.findAll({ search: search.trim() || undefined, limit: 50 });
       // Le personnel n'a pas de compte fidélité à créditer
-      setResults(data.filter((u) => u.role === 'CLIENT'));
+      setResults(res.data.filter((u) => u.role === 'CLIENT'));
     } catch {
       setMessage({ text: 'Recherche impossible.', ok: false });
     } finally {
@@ -447,6 +451,7 @@ function AuditTab() {
   const [rows, setRows] = useState<ManualTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   const load = async () => {
     setIsLoading(true);
@@ -464,7 +469,12 @@ function AuditTab() {
     load();
   }, []);
 
+  // Le cumul porte sur TOUTES les opérations, pas sur la page affichée :
+  // un total d'audit partiel serait trompeur.
   const total = rows.reduce((n, r) => n + r.pointsDelta, 0);
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / AUDIT_PAGE_SIZE));
+  const visible = rows.slice((page - 1) * AUDIT_PAGE_SIZE, page * AUDIT_PAGE_SIZE);
 
   return (
     <section className="card">
@@ -498,7 +508,7 @@ function AuditTab() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
+            {visible.map((r) => (
               <tr key={r.id}>
                 <td className="small muted">{formatDateTime(r.createdAt)}</td>
                 <td>
@@ -521,6 +531,16 @@ function AuditTab() {
             ))}
           </tbody>
         </table>
+      )}
+
+      {!isLoading && rows.length > 0 && (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          total={rows.length}
+          onChange={setPage}
+          label="opération(s)"
+        />
       )}
     </section>
   );

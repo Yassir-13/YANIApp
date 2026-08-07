@@ -10,6 +10,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, User, Role } from '@prisma/client';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { FindUsersQueryDto } from './dto/find-users-query.dto';
+import { Paginated } from '../common/dto/pagination-query.dto';
 
 // Champs sûrs à exposer (jamais le passwordHash)
 const SAFE_USER_SELECT = {
@@ -20,7 +22,12 @@ const SAFE_USER_SELECT = {
   phone: true,
   role: true,
   createdAt: true,
-};
+} satisfies Prisma.UserSelect;
+
+// Forme exacte d'un utilisateur exposé, dérivée du select ci-dessus :
+// ajouter un champ sensible au select ferait échouer la compilation ailleurs
+// plutôt que de le laisser fuiter silencieusement.
+type SafeUser = Prisma.UserGetPayload<{ select: typeof SAFE_USER_SELECT }>;
 
 @Injectable()
 export class UsersService {
@@ -87,12 +94,29 @@ export class UsersService {
     }
 
     const passwordHash = await argon2.hash(dto.newPassword);
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { passwordHash },
-    });
 
-    return { message: 'Mot de passe modifié avec succès.' };
+    // Changer son mot de passe DOIT couper les sessions existantes.
+    // Sans cette révocation, une session volée survivait au changement :
+    // la victime faisait le geste attendu (changer son mot de passe) et
+    // l'attaquant restait connecté jusqu'à l'expiration du refresh token.
+    //
+    // Les deux écritures sont atomiques : jamais de mot de passe changé
+    // sans révocation, ni l'inverse.
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: userId },
+        data: { passwordHash },
+      }),
+      this.prisma.refreshToken.updateMany({
+        where: { userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+    ]);
+
+    return {
+      message:
+        'Mot de passe modifié. Toutes vos sessions ont été déconnectées, y compris sur vos autres appareils.',
+    };
   }
 
   // Suppression de compte (droit à l'effacement — CNDP)
@@ -114,25 +138,48 @@ export class UsersService {
 
   // ----- STAFF / ADMIN -----
 
-  // Liste des utilisateurs (recherche au comptoir)
-  findAll(search?: string) {
-    const where: Prisma.UserWhereInput = search
-      ? {
-          OR: [
-            { email: { contains: search, mode: 'insensitive' } },
-            { firstName: { contains: search, mode: 'insensitive' } },
-            { lastName: { contains: search, mode: 'insensitive' } },
-            { phone: { contains: search } },
-          ],
-        }
-      : {};
+  // Liste paginée des utilisateurs (recherche au comptoir).
+  //
+  // Auparavant : `take: 50` en dur, sans indication. Au-delà de 50 comptes,
+  // les suivants étaient purement invisibles — une cliente pouvait exister
+  // en base et rester introuvable dans le backoffice, sans le moindre signal.
+  async findAll(query: FindUsersQueryDto): Promise<Paginated<SafeUser>> {
+    const { search, role, page, limit } = query;
 
-    return this.prisma.user.findMany({
-      where,
-      select: SAFE_USER_SELECT,
-      orderBy: { createdAt: 'desc' },
-      take: 50,
-    });
+    const where: Prisma.UserWhereInput = {
+      ...(role ? { role } : {}),
+      ...(search
+        ? {
+            OR: [
+              { email: { contains: search, mode: 'insensitive' } },
+              { firstName: { contains: search, mode: 'insensitive' } },
+              { lastName: { contains: search, mode: 'insensitive' } },
+              { phone: { contains: search } },
+            ],
+          }
+        : {}),
+    };
+
+    // Les deux requêtes partagent le même `where` : le total décrit toujours
+    // le même ensemble que la page renvoyée.
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.user.findMany({
+        where,
+        select: SAFE_USER_SELECT,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    };
   }
 
   // ----- ADMIN seul -----

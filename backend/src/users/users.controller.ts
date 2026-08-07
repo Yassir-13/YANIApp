@@ -12,10 +12,12 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { UsersService } from './users.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
+import { FindUsersQueryDto } from './dto/find-users-query.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -39,6 +41,9 @@ export class UsersController {
     return this.usersService.updateProfile(req.user.id, dto);
   }
 
+  // Double coût argon2 (vérification de l'ancien + hachage du nouveau), et
+  // cible d'un test massif de mots de passe si un token est compromis.
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Patch('me/password')
   changePassword(@Req() req: any, @Body() dto: ChangePasswordDto) {
     return this.usersService.changePassword(req.user.id, dto);
@@ -55,8 +60,8 @@ export class UsersController {
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
   @Get()
-  findAll(@Query('search') search?: string) {
-    return this.usersService.findAll(search);
+  findAll(@Query() query: FindUsersQueryDto) {
+    return this.usersService.findAll(query);
   }
 
   // ----- ADMIN seul : gestion des rôles -----

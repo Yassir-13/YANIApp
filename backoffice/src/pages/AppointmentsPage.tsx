@@ -3,6 +3,11 @@ import { appointmentsApi, Appointment, AppointmentStatus } from '../api/appointm
 import { formatPrice, formatDateTime, formatTime, fullName, isToday } from '../utils';
 import Confirm from '../components/Confirm';
 import AppointmentBookingModal from '../components/AppointmentBookingModal';
+import Pagination from '../components/Pagination';
+
+// Lignes affichées par page. Les filtres et compteurs continuent de porter
+// sur l'ensemble des rendez-vous : seul l'affichage est découpé.
+const PAGE_SIZE = 20;
 
 // Actions proposées selon le statut courant. Ce tableau reflète la machine à
 // états du backend : COMPLETED et CANCELLED sont des états finaux.
@@ -48,6 +53,7 @@ export default function AppointmentsPage() {
   const [filter, setFilter] = useState<Filter>('TODAY');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   const [pendingAction, setPendingAction] = useState<{
     appt: Appointment;
@@ -93,7 +99,7 @@ export default function AppointmentsPage() {
     return c;
   }, [appointments]);
 
-  const visible = useMemo(() => {
+  const filtered = useMemo(() => {
     const now = Date.now();
     let list = appointments;
 
@@ -111,6 +117,18 @@ export default function AppointmentsPage() {
       desc ? y.startAt.localeCompare(x.startAt) : x.startAt.localeCompare(y.startAt)
     );
   }, [appointments, filter]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+
+  // Changer de filtre remet à la première page.
+  useEffect(() => {
+    setPage(1);
+  }, [filter]);
+
+  const visible = useMemo(
+    () => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [filtered, page]
+  );
 
   const runAction = async () => {
     if (!pendingAction) return;
@@ -190,6 +208,16 @@ export default function AppointmentsPage() {
                 const actions = NEXT_ACTIONS[a.status];
                 const today = isToday(a.startAt);
 
+                // Montant à facturer = celui annoncé à la cliente lors de la
+                // réservation. Si le tarif a changé depuis, on affiche l'écart
+                // pour que le staff comprenne pourquoi les deux diffèrent.
+                const billed = a.priceAtBooking ?? a.service?.price ?? null;
+                const current = a.service?.price ?? null;
+                const priceChanged =
+                  a.priceAtBooking != null &&
+                  current != null &&
+                  parseFloat(a.priceAtBooking) !== parseFloat(current);
+
                 return (
                   <tr key={a.id}>
                     <td>
@@ -220,8 +248,22 @@ export default function AppointmentsPage() {
                         <div className="small muted">{a.service.durationMin} min</div>
                       )}
                     </td>
-                    <td style={{ textAlign: 'right', fontWeight: 600 }}>
-                      {a.service ? formatPrice(a.service.price) : '—'}
+                    <td style={{ textAlign: 'right' }}>
+                      {billed === null ? (
+                        <span className="muted">—</span>
+                      ) : (
+                        <>
+                          <div style={{ fontWeight: 600 }}>{formatPrice(billed)}</div>
+                          {priceChanged && (
+                            <div
+                              className="small muted"
+                              title="Le tarif de la prestation a changé depuis la réservation. Le montant à facturer reste celui annoncé à la cliente."
+                            >
+                              tarif actuel {formatPrice(current!)}
+                            </div>
+                          )}
+                        </>
+                      )}
                     </td>
                     <td>
                       <span className={`badge ${meta.badge}`}>{meta.label}</span>
@@ -257,6 +299,14 @@ export default function AppointmentsPage() {
               })}
             </tbody>
           </table>
+
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            total={filtered.length}
+            onChange={setPage}
+            label="rendez-vous"
+          />
         </div>
       )}
 

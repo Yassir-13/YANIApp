@@ -2,6 +2,11 @@ import { useEffect, useState, useMemo, Fragment } from 'react';
 import { ordersApi, Order, OrderStatus } from '../api/orders';
 import { formatPrice, formatDateTime, fullName } from '../utils';
 import Confirm from '../components/Confirm';
+import Pagination from '../components/Pagination';
+
+// Lignes affichées par page. Les filtres et compteurs portent sur l'ensemble
+// des commandes, pas sur la page : seul l'affichage est découpé.
+const PAGE_SIZE = 20;
 
 // ── Machine à états : miroir exact du backend (orders.service.ts) ────────
 const NEXT_ACTIONS: Record<OrderStatus, { status: OrderStatus; label: string; danger?: boolean }[]> = {
@@ -51,6 +56,7 @@ export default function OrdersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   const [pendingAction, setPendingAction] = useState<{
     order: Order;
@@ -83,9 +89,22 @@ export default function OrdersPage() {
     return c;
   }, [orders]);
 
-  const visible = useMemo(
+  const filtered = useMemo(
     () => (filter === 'ALL' ? orders : orders.filter((o) => o.status === filter)),
     [orders, filter]
+  );
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+
+  // Changer de filtre remet à la première page : rester en page 4 alors que
+  // le nouveau filtre n'a qu'une page afficherait un tableau vide.
+  useEffect(() => {
+    setPage(1);
+  }, [filter]);
+
+  const visible = useMemo(
+    () => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [filtered, page]
   );
 
   const runAction = async () => {
@@ -278,6 +297,14 @@ export default function OrdersPage() {
               })}
             </tbody>
           </table>
+
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            total={filtered.length}
+            onChange={setPage}
+            label="commande(s)"
+          />
         </div>
       )}
 

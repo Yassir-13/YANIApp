@@ -14,6 +14,7 @@ import {
   ApiBearerAuth,
   ApiResponse,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -28,6 +29,10 @@ export class AuthController {
   @ApiOperation({ summary: 'Créer un compte client' })
   @ApiResponse({ status: 201, description: 'Compte créé.' })
   @ApiResponse({ status: 409, description: 'Email déjà utilisé.' })
+  @ApiResponse({ status: 429, description: 'Trop de tentatives.' })
+  // argon2.hash est volontairement lent : sans plafond, une rafale
+  // d'inscriptions suffirait à saturer le CPU du serveur.
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   register(@Body() dto: RegisterDto) {
@@ -37,6 +42,9 @@ export class AuthController {
   @ApiOperation({ summary: 'Se connecter (access + refresh tokens)' })
   @ApiResponse({ status: 200, description: 'Connexion réussie.' })
   @ApiResponse({ status: 401, description: 'Identifiants incorrects.' })
+  @ApiResponse({ status: 429, description: 'Trop de tentatives.' })
+  // Protection contre le test massif de mots de passe.
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('login')
   @HttpCode(HttpStatus.OK)
   login(@Body() dto: LoginDto) {

@@ -47,6 +47,13 @@ class EnvironmentVariables {
     { message: 'JWT_REFRESH_EXPIRES_IN_DAYS doit être un nombre de jours.' },
   )
   JWT_REFRESH_EXPIRES_IN_DAYS?: string;
+
+  // '1' uniquement si un reverse proxy de confiance est devant l'API.
+  // Détermine si X-Forwarded-For est cru pour identifier l'IP cliente
+  // (rate limiting). Voir le commentaire dans main.ts.
+  @IsOptional()
+  @IsIn(['0', '1'], { message: "TRUST_PROXY doit valoir '0' ou '1'." })
+  TRUST_PROXY?: string;
 }
 
 // Appelée par ConfigModule au démarrage : toute erreur ici empêche l'application

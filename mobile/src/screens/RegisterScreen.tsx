@@ -11,6 +11,19 @@ import { useAlert } from '../components/AlertProvider';
 // Validation basique d'un numéro marocain (0XXXXXXXXX ou +212XXXXXXXXX)
 const PHONE_RE = /^(?:\+212|0)([5-7]\d{8})$/;
 
+// Mêmes règles que le backend (IsAppPassword) : au moins 8 caractères,
+// une majuscule et une minuscule. Dupliqué ici pour donner un message
+// immédiat plutôt que d'attendre le refus du serveur.
+const PASSWORD_MIN = 8;
+const HAS_UPPER = /[A-Z]/;
+const HAS_LOWER = /[a-z]/;
+
+// « 0612345678 » → « 06 12 34 56 78 », plus lisible pour une relecture.
+function formatPhoneForDisplay(raw: string): string {
+  const national = raw.startsWith('+212') ? '0' + raw.slice(4) : raw;
+  return national.replace(/(\d{2})(?=\d)/g, '$1 ').trim();
+}
+
 export default function RegisterScreen({ navigation }: any) {
   const { theme } = useTheme();
   const register = useAuthStore((s) => s.register);
@@ -39,15 +52,38 @@ export default function RegisterScreen({ navigation }: any) {
       alert('Champs requis', 'Email et mot de passe sont obligatoires.');
       return;
     }
-    if (password.length < 8) {
-      alert('Mot de passe trop court', 'Au moins 8 caractères.');
+    if (password.length < PASSWORD_MIN) {
+      alert('Mot de passe trop court', `Au moins ${PASSWORD_MIN} caractères.`);
       return;
     }
+    if (!HAS_UPPER.test(password) || !HAS_LOWER.test(password)) {
+      alert(
+        'Mot de passe trop simple',
+        'Il doit contenir au moins une majuscule et une minuscule.',
+      );
+      return;
+    }
+
+    // Dernière relecture du numéro avant de créer le compte.
+    // C'est le seul moyen de contact de l'institut : une faute de frappe et
+    // la cliente ne peut être ni rappelée pour sa commande, ni pour son RDV.
+    show({
+      title: 'Vérifiez votre numéro',
+      message: `${formatPhoneForDisplay(phone.trim())}\n\nC'est avec ce numéro que l'institut vous contactera pour vos commandes et vos rendez-vous.`,
+      buttons: [
+        { text: 'Modifier', style: 'cancel' },
+        { text: "C'est correct", onPress: submitRegistration },
+      ],
+    });
+  };
+
+  const submitRegistration = async () => {
     try {
       await register(email.trim(), password, firstName.trim(), lastName.trim(), phone.trim());
       if (navigation.canGoBack()) navigation.goBack();
     } catch (error: any) {
-      alert('Erreur', error.response?.data?.message || 'Inscription impossible. Réessayez.');
+      const msg = error.response?.data?.message;
+      alert('Erreur', Array.isArray(msg) ? msg.join('\n') : msg || 'Inscription impossible. Réessayez.');
     }
   };
 

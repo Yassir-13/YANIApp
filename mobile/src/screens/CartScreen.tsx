@@ -1,6 +1,10 @@
-import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { useEffect, useState } from 'react';
+import {
+  View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAlert } from '../components/AlertProvider';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { useCartStore } from '../stores/cartStore';
@@ -18,12 +22,68 @@ export default function CartScreen({ navigation }: any) {
   const increment = useCartStore((s) => s.increment);
   const decrement = useCartStore((s) => s.decrement);
   const subtotal = useCartStore((s) => s.subtotal);
+  const sync = useCartStore((s) => s.sync);
+  const hasHydrated = useCartStore((s) => s.hasHydrated);
   const user = useAuthStore((s) => s.user);
+  const { alert } = useAlert();
+
+  const [syncing, setSyncing] = useState(true);
+
+  // Le panier survit désormais à la fermeture de l'app : il peut donc être
+  // ancien. On le confronte au catalogue avant que la cliente ne commande,
+  // et on la prévient si quelque chose a changé entre-temps.
+  useEffect(() => {
+    if (!hasHydrated) return;
+    let annule = false;
+
+    (async () => {
+      try {
+        const { removed, repriced } = await sync();
+        if (annule) return;
+
+        if (removed.length > 0) {
+          alert(
+            removed.length > 1 ? 'Produits indisponibles' : 'Produit indisponible',
+            `${removed.join(', ')} ${removed.length > 1 ? 'ne sont plus disponibles' : "n'est plus disponible"} et ${removed.length > 1 ? 'ont' : 'a'} été retiré${removed.length > 1 ? 's' : ''} de votre panier.`
+          );
+        } else if (repriced.length > 0) {
+          alert(
+            'Prix mis à jour',
+            repriced
+              .map((r) => `${r.name} : ${formatPrice(r.before)} → ${formatPrice(r.after)}`)
+              .join('\n')
+          );
+        }
+      } catch {
+        // Hors ligne ou API injoignable : on garde le panier tel quel.
+        // Le serveur revalidera de toute façon au moment de la commande.
+      } finally {
+        if (!annule) setSyncing(false);
+      }
+    })();
+
+    return () => {
+      annule = true;
+    };
+  }, [hasHydrated, sync, alert]);
 
   const total = subtotal();
   const pointsToEarn = Math.round(total * 0.05);
 
   const goCheckout = () => navigation.navigate('Checkout');
+
+  // Tant que le panier n'est pas relu depuis le disque, afficher « vide »
+  // ferait croire à la cliente qu'elle a tout perdu.
+  if (!hasHydrated || syncing) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <Header title="Mon panier" onBack={() => navigation.goBack()} />
+        <View style={{ flex: 1, justifyContent: 'center' }}>
+          <ActivityIndicator size="large" color={theme.gold} />
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>

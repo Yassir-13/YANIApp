@@ -55,6 +55,23 @@ export class AuthService {
     return token;
   }
 
+  // ─────────────────────────────────────────
+  //  Défense contre l'énumération par mesure du temps
+  // ─────────────────────────────────────────
+
+  // Hash de référence, calculé une seule fois au premier besoin, sur une
+  // valeur aléatoire que personne ne connaît. Il ne protège rien : il sert
+  // uniquement à faire travailler argon2 aussi longtemps qu'une vraie
+  // vérification, pour qu'un email inconnu réponde au même rythme.
+  private dummyHashPromise?: Promise<string>;
+
+  private async burnPasswordComparison(candidate: string): Promise<void> {
+    this.dummyHashPromise ??= argon2.hash(randomBytes(32).toString('hex'));
+    const dummyHash = await this.dummyHashPromise;
+    // Échoue toujours : seul le temps consommé nous intéresse.
+    await argon2.verify(dummyHash, candidate).catch(() => false);
+  }
+
   // Génère l'access token (JWT court)
   private async issueAccessToken(user: { id: string; email: string; role: string }) {
     const payload = { sub: user.id, email: user.email, role: user.role };
@@ -108,6 +125,14 @@ export class AuthService {
   async login(dto: LoginDto) {
     const user = await this.usersService.findByEmail(dto.email);
     if (!user) {
+      // Hachage factice avant de refuser.
+      //
+      // Le message d'erreur est déjà identique dans les deux cas, mais le
+      // TEMPS de réponse, lui, trahissait tout : email inconnu = réponse
+      // immédiate (~5 ms), email connu = ~100 ms le temps qu'argon2 vérifie.
+      // En comparant les délais, on pouvait donc déterminer qui est cliente
+      // du centre. On paie ici le même coût pour égaliser les deux chemins.
+      await this.burnPasswordComparison(dto.password);
       throw new UnauthorizedException('Email ou mot de passe incorrect.');
     }
 

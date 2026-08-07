@@ -10,6 +10,7 @@ import { servicesApi, Service } from '../api/services';
 import { productsApi, Product } from '../api/products';
 import { loyaltyApi } from '../api/loyalty';
 import ErrorView from '../components/ErrorView';
+import ErrorBanner from '../components/ErrorBanner';
 import LoyaltyBanner from '../components/LoyaltyBanner';
 import ProductCard from '../components/ProductCard';
 import ServiceCard from '../components/ServiceCard';
@@ -72,7 +73,9 @@ export default function HomeScreen() {
     );
   }
 
-  if (error) {
+  // Plein écran seulement si l'accueil est vide de bout en bout : une coupure
+  // passagère au retour sur l'onglet ne doit pas effacer ce qui est affiché.
+  if (error && services.length === 0 && products.length === 0) {
     return (
       <View style={[styles.fill, { backgroundColor: theme.background, paddingTop: insets.top + spacing.md }]}>
         <ErrorView message={error} onRetry={load} />
@@ -86,6 +89,9 @@ export default function HomeScreen() {
       contentContainerStyle={{ paddingTop: insets.top + spacing.md, paddingBottom: spacing.xxl }}
       showsVerticalScrollIndicator={false}
     >
+      {/* Échec du rafraîchissement, sans masquer le contenu déjà chargé */}
+      {error && <ErrorBanner message="Contenu non actualisé (connexion)." onRetry={load} />}
+
       {/* En-tête : salutation serif + bouton profil */}
       <View style={[styles.headerRow, { paddingHorizontal: spacing.lg }]}>
         <View style={{ flex: 1 }}>
@@ -121,7 +127,11 @@ export default function HomeScreen() {
       {/* Produits */}
       <SectionHeader
         title="Produits"
-        onPress={() => navigation.navigate('Produits')}
+        // On cible explicitement la LISTE. Sans `screen`, React Navigation
+        // restaure l'état de l'onglet — qui contient encore la fiche produit
+        // ouverte précédemment : la cliente retombait sur ce détail au lieu
+        // du catalogue, sans comprendre pourquoi.
+        onPress={() => navigation.navigate('Produits', { screen: 'ProductsList' })}
         theme={theme}
       />
       {products.length === 0 ? (
@@ -143,7 +153,9 @@ export default function HomeScreen() {
       {/* Services */}
       <SectionHeader
         title="Services"
-        onPress={() => navigation.navigate('Services')}
+        // Même raison que pour les produits : on vise la liste, pas l'état
+        // résiduel de l'onglet.
+        onPress={() => navigation.navigate('Services', { screen: 'ServicesList' })}
         theme={theme}
       />
       {services.length === 0 ? (

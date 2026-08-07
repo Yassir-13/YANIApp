@@ -7,6 +7,10 @@ export interface Appointment {
   startAt: string;
   endAt: string;
   status: AppointmentStatus;
+  // Prix figé au moment de la réservation : c'est CE montant qui a été annoncé
+  // à la cliente, et donc celui à lui facturer — même si le tarif de la
+  // prestation a changé depuis. Null pour les RDV antérieurs à ce champ.
+  priceAtBooking: string | null;
   service?: { id: string; name: string; durationMin: number; price: string };
   user?: {
     id: string;

@@ -9,6 +9,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing } from '../theme/typography';
 import { servicesApi, Service } from '../api/services';
 import ErrorView from '../components/ErrorView';
+import ErrorBanner from '../components/ErrorBanner';
 import EmptyView from '../components/EmptyView';
 import Chip from '../components/Chip';
 import ServiceRow from '../components/ServiceRow';
@@ -65,15 +66,23 @@ export default function ServicesScreen() {
   );
 
   const sections = useMemo(() => {
-    const groups = new Map<string, { name: string; items: Service[] }>();
+    const groups = new Map<string, { id: string; name: string; items: Service[] }>();
     for (const s of visible) {
       const key = s.category?.id ?? 'autres';
       const name = s.category?.name ?? 'Autres';
-      if (!groups.has(key)) groups.set(key, { name, items: [] });
+      if (!groups.has(key)) groups.set(key, { id: key, name, items: [] });
       groups.get(key)!.items.push(s);
     }
     return Array.from(groups.values());
   }, [visible]);
+
+  // Filtre pointant vers une catégorie disparue après rechargement : on
+  // revient sur « Tous » plutôt que d'afficher une liste vide inexplicable.
+  useEffect(() => {
+    if (activeCat !== ALL && !categories.some((c) => c.id === activeCat)) {
+      setActiveCat(ALL);
+    }
+  }, [categories, activeCat]);
 
   const goDetail = (id: string) => navigation.navigate('ServiceDetail', { serviceId: id });
 
@@ -85,7 +94,9 @@ export default function ServicesScreen() {
     );
   }
 
-  if (error) {
+  // Plein écran seulement si l'on n'a rien à montrer : une coupure passagère
+  // ne doit pas effacer un catalogue déjà chargé.
+  if (error && services.length === 0) {
     return (
       <View style={[styles.fill, { backgroundColor: theme.background, paddingTop: insets.top + spacing.md }]}>
         <ErrorView message={error} onRetry={load} />
@@ -115,6 +126,11 @@ export default function ServicesScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Échec du rafraîchissement, sans masquer les prestations affichées */}
+      {error && (
+        <ErrorBanner message="Prestations non actualisées (connexion)." onRetry={load} />
+      )}
+
       {/* Chips de filtres */}
       <ScrollView
         horizontal
@@ -135,11 +151,18 @@ export default function ServicesScreen() {
       {/* Sections par catégorie, liste de lignes */}
       {visible.length === 0 ? (
         <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl }}>
-          <EmptyView message="Aucun service disponible pour le moment." icon="sparkles-outline" />
+          <EmptyView
+            message={
+              activeCat === ALL
+                ? 'Aucun service disponible pour le moment.'
+                : 'Aucun service dans cette catégorie.'
+            }
+            icon="sparkles-outline"
+          />
         </View>
       ) : (
         sections.map((section) => (
-          <View key={section.name} style={{ marginTop: spacing.lg }}>
+          <View key={section.id} style={{ marginTop: spacing.lg }}>
             <Text style={[typography.sectionLabel, styles.sectionLabel, { color: theme.gold }]}>
               {section.name}
             </Text>

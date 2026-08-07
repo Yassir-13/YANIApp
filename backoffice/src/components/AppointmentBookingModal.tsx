@@ -98,8 +98,10 @@ export default function AppointmentBookingModal({
     setSearching(true);
     setError(null);
     try {
-      const data = await usersApi.findAll(search.trim() || undefined);
-      setResults(data.filter((u) => u.role === 'CLIENT'));
+      // Recherche au comptoir : les premiers résultats suffisent, on affine
+      // en tapant plus de caractères plutôt qu'en paginant.
+      const res = await usersApi.findAll({ search: search.trim() || undefined, limit: 50 });
+      setResults(res.data.filter((u) => u.role === 'CLIENT'));
     } catch {
       setError('Recherche impossible.');
     } finally {

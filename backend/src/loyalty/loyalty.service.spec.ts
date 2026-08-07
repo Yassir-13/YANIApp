@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Prisma } from '@prisma/client';
+import { Appointment, AppointmentStatus, Prisma } from '@prisma/client';
 import { LoyaltyService } from './loyalty.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -11,11 +11,17 @@ describe('LoyaltyService — earnFromAppointment (prix figé)', () => {
 
   const account = { id: 'compte-1' };
 
-  const appointment = (over: Partial<any> = {}) => ({
+  // RDV complet : le type Appointment garantit qu'aucun champ ne manque,
+  // et que le mock reste aligné si le schéma évolue.
+  const appointment = (over: Partial<Appointment> = {}): Appointment => ({
     id: 'rdv-1',
     userId: 'cliente-1',
     serviceId: 'service-1',
+    startAt: new Date('2099-01-01T10:00:00.000Z'),
+    status: AppointmentStatus.COMPLETED,
     priceAtBooking: new Prisma.Decimal(400),
+    createdAt: new Date('2099-01-01T09:00:00.000Z'),
+    updatedAt: new Date('2099-01-01T09:00:00.000Z'),
     ...over,
   });
 
