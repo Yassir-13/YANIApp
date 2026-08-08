@@ -2,9 +2,12 @@ import { useEffect, useState, FormEvent } from 'react';
 import {
   loyaltyApi,
   Reward,
+  Milestone,
   LoyaltyAccount,
   ManualTransaction,
   MANUAL_POINTS_CAP,
+  MIN_VISIT_THRESHOLD,
+  MAX_VISIT_THRESHOLD,
 } from '../api/loyalty';
 import { usersApi, AppUser } from '../api/users';
 import { useAuthStore } from '../stores/authStore';
@@ -15,7 +18,7 @@ import Pagination from '../components/Pagination';
 // Lignes d'audit affichées par page (le cumul de points reste global).
 const AUDIT_PAGE_SIZE = 20;
 
-type Tab = 'credit' | 'rewards' | 'audit';
+type Tab = 'credit' | 'rewards' | 'milestones' | 'audit';
 
 export default function LoyaltyPage() {
   const user = useAuthStore((s) => s.user);
@@ -41,6 +44,9 @@ export default function LoyaltyPage() {
             <TabBtn active={tab === 'rewards'} onClick={() => setTab('rewards')}>
               Récompenses
             </TabBtn>
+            <TabBtn active={tab === 'milestones'} onClick={() => setTab('milestones')}>
+              Paliers de visites
+            </TabBtn>
             <TabBtn active={tab === 'audit'} onClick={() => setTab('audit')}>
               Audit
             </TabBtn>
@@ -50,6 +56,7 @@ export default function LoyaltyPage() {
 
       {tab === 'credit' && <CreditTab />}
       {tab === 'rewards' && isAdmin && <RewardsTab />}
+      {tab === 'milestones' && isAdmin && <MilestonesTab />}
       {tab === 'audit' && isAdmin && <AuditTab />}
     </div>
   );
@@ -203,6 +210,9 @@ function CreditTab() {
                 <div>
                   <div className="label">Cliente</div>
                   <div style={{ fontWeight: 600 }}>{fullName(selected)}</div>
+                  <div className="small muted" style={{ marginTop: 4 }}>
+                    {account ? `${account.visitCount} visite(s)` : '—'}
+                  </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div className="label">Solde actuel</div>
@@ -211,6 +221,24 @@ function CreditTab() {
                   </div>
                 </div>
               </div>
+
+              {/* Récompenses offertes non réclamées : à honorer si la cliente
+                  se présente sans être passée par l'application. */}
+              {account && account.grants && account.grants.length > 0 && (
+                <div style={styles.grantsBox}>
+                  <div className="label" style={{ marginBottom: 6 }}>
+                    Récompense(s) offerte(s) en attente
+                  </div>
+                  {account.grants.map((g) => (
+                    <div key={g.id} className="row between" style={{ marginTop: 4 }}>
+                      <span style={{ fontWeight: 500 }}>{g.reward.name}</span>
+                      <span className="small muted">
+                        débloquée le {formatDateTime(g.createdAt)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <form onSubmit={submitCredit} style={{ marginTop: 'var(--sp-4)' }}>
                 <label className="label" style={{ display: 'block', marginBottom: 5 }}>
@@ -281,8 +309,27 @@ function RewardsTab() {
   const [cost, setCost] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Récompense en cours d'édition : le formulaire sert à la fois à créer et à
+  // modifier, plutôt que de dupliquer les champs dans une modale.
+  const [editing, setEditing] = useState<Reward | null>(null);
+
   const [toDeactivate, setToDeactivate] = useState<Reward | null>(null);
   const [acting, setActing] = useState(false);
+
+  const resetForm = () => {
+    setEditing(null);
+    setName('');
+    setDescription('');
+    setCost('');
+  };
+
+  const startEdit = (r: Reward) => {
+    setEditing(r);
+    setName(r.name);
+    setDescription(r.description ?? '');
+    setCost(String(r.pointsCost));
+    setError(null);
+  };
 
   const load = async () => {
     setIsLoading(true);
@@ -305,20 +352,37 @@ function RewardsTab() {
     setSaving(true);
     setError(null);
     try {
-      await loyaltyApi.createReward({
+      const payload = {
         name: name.trim(),
         description: description.trim() || undefined,
         pointsCost: parseInt(cost, 10),
-      });
-      setName('');
-      setDescription('');
-      setCost('');
+      };
+      if (editing) {
+        await loyaltyApi.updateReward(editing.id, payload);
+      } else {
+        await loyaltyApi.createReward(payload);
+      }
+      resetForm();
       await load();
     } catch (e: any) {
       const msg = e.response?.data?.message;
-      setError(Array.isArray(msg) ? msg.join(', ') : msg || 'Création impossible.');
+      setError(
+        Array.isArray(msg)
+          ? msg.join(', ')
+          : msg || (editing ? 'Modification impossible.' : 'Création impossible.'),
+      );
     } finally {
       setSaving(false);
+    }
+  };
+
+  const reactivate = async (r: Reward) => {
+    setError(null);
+    try {
+      await loyaltyApi.updateReward(r.id, { active: true });
+      await load();
+    } catch (e: any) {
+      setError(e.response?.data?.message || 'Action impossible.');
     }
   };
 
@@ -340,8 +404,13 @@ function RewardsTab() {
   return (
     <div style={styles.twoCols}>
       <section className="card">
-        <div className="card-pad" style={styles.sectionHead}>
-          <h2>Nouvelle récompense</h2>
+        <div className="row between card-pad" style={styles.sectionHead}>
+          <h2>{editing ? 'Modifier la récompense' : 'Nouvelle récompense'}</h2>
+          {editing && (
+            <button type="button" className="btn btn-outline btn-sm" onClick={resetForm}>
+              Annuler
+            </button>
+          )}
         </div>
         <form onSubmit={submit} className="card-pad">
           <label className="label" style={{ display: 'block', marginBottom: 5 }}>Nom</label>
@@ -370,7 +439,11 @@ function RewardsTab() {
           />
 
           <button type="submit" className="btn btn-gold" style={{ marginTop: 'var(--sp-4)', width: '100%' }} disabled={saving}>
-            {saving ? 'Création…' : 'Créer la récompense'}
+            {saving
+              ? 'Enregistrement…'
+              : editing
+                ? 'Enregistrer les modifications'
+                : 'Créer la récompense'}
           </button>
 
           {error && <div style={{ ...styles.message, background: 'var(--danger-bg)', color: 'var(--danger)' }}>{error}</div>}
@@ -415,13 +488,20 @@ function RewardsTab() {
                     </span>
                   </td>
                   <td style={{ textAlign: 'right' }}>
-                    {r.active ? (
-                      <button className="btn btn-danger btn-sm" onClick={() => setToDeactivate(r)}>
-                        Désactiver
+                    <div className="row gap-2" style={{ justifyContent: 'flex-end' }}>
+                      <button className="btn btn-outline btn-sm" onClick={() => startEdit(r)}>
+                        Modifier
                       </button>
-                    ) : (
-                      <span className="muted small">—</span>
-                    )}
+                      {r.active ? (
+                        <button className="btn btn-danger btn-sm" onClick={() => setToDeactivate(r)}>
+                          Désactiver
+                        </button>
+                      ) : (
+                        <button className="btn btn-outline btn-sm" onClick={() => reactivate(r)}>
+                          Réactiver
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -445,7 +525,285 @@ function RewardsTab() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-//  Onglet 3 : audit des ajouts manuels
+//  Onglet 3 : paliers de visites
+// ─────────────────────────────────────────────────────────────────────────
+function MilestonesTab() {
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [rewards, setRewards] = useState<Reward[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [threshold, setThreshold] = useState('10');
+  const [rewardId, setRewardId] = useState('');
+  const [recurring, setRecurring] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const [editing, setEditing] = useState<Milestone | null>(null);
+  const [toDeactivate, setToDeactivate] = useState<Milestone | null>(null);
+  const [acting, setActing] = useState(false);
+
+  const load = async () => {
+    setIsLoading(true);
+    try {
+      setError(null);
+      const [ms, rw] = await Promise.all([
+        loyaltyApi.getAllMilestones(),
+        loyaltyApi.getAllRewards(),
+      ]);
+      setMilestones(ms);
+      setRewards(rw);
+    } catch {
+      setError('Impossible de charger les paliers.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  // Une récompense désactivée ne peut pas être proposée à un nouveau palier :
+  // elle n'aurait jamais l'occasion d'être débloquée.
+  const selectableRewards = rewards.filter((r) => r.active);
+
+  const resetForm = () => {
+    setEditing(null);
+    setThreshold('10');
+    setRewardId('');
+    setRecurring(true);
+  };
+
+  const startEdit = (m: Milestone) => {
+    setEditing(m);
+    setThreshold(String(m.visitThreshold));
+    setRewardId(m.rewardId);
+    setRecurring(m.recurring);
+    setError(null);
+  };
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    const n = parseInt(threshold, 10);
+    if (!n || n < MIN_VISIT_THRESHOLD || n > MAX_VISIT_THRESHOLD) {
+      setError(
+        `Le seuil doit être compris entre ${MIN_VISIT_THRESHOLD} et ${MAX_VISIT_THRESHOLD} visites.`,
+      );
+      return;
+    }
+    if (!rewardId) {
+      setError('Choisissez la récompense offerte.');
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    try {
+      const payload = { visitThreshold: n, rewardId, recurring };
+      if (editing) {
+        await loyaltyApi.updateMilestone(editing.id, payload);
+      } else {
+        await loyaltyApi.createMilestone(payload);
+      }
+      resetForm();
+      await load();
+    } catch (e: any) {
+      const msg = e.response?.data?.message;
+      setError(Array.isArray(msg) ? msg.join(', ') : msg || 'Enregistrement impossible.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const reactivate = async (m: Milestone) => {
+    setError(null);
+    try {
+      await loyaltyApi.updateMilestone(m.id, { active: true });
+      await load();
+    } catch (e: any) {
+      setError(e.response?.data?.message || 'Action impossible.');
+    }
+  };
+
+  const runDeactivate = async () => {
+    if (!toDeactivate) return;
+    setActing(true);
+    try {
+      await loyaltyApi.deactivateMilestone(toDeactivate.id);
+      setToDeactivate(null);
+      await load();
+    } catch (e: any) {
+      setError(e.response?.data?.message || 'Action impossible.');
+      setToDeactivate(null);
+    } finally {
+      setActing(false);
+    }
+  };
+
+  return (
+    <div style={styles.twoCols}>
+      <section className="card">
+        <div className="row between card-pad" style={styles.sectionHead}>
+          <h2>{editing ? 'Modifier le palier' : 'Nouveau palier'}</h2>
+          {editing && (
+            <button type="button" className="btn btn-outline btn-sm" onClick={resetForm}>
+              Annuler
+            </button>
+          )}
+        </div>
+
+        <form onSubmit={submit} className="card-pad">
+          <label className="label" style={{ display: 'block', marginBottom: 5 }}>
+            Nombre de visites
+          </label>
+          <input
+            type="number"
+            min={MIN_VISIT_THRESHOLD}
+            max={MAX_VISIT_THRESHOLD}
+            value={threshold}
+            onChange={(e) => setThreshold(e.target.value)}
+            placeholder="10"
+            required
+          />
+
+          <label className="label" style={{ display: 'block', margin: '12px 0 5px' }}>
+            Récompense offerte
+          </label>
+          {selectableRewards.length === 0 ? (
+            <div className="small muted">
+              Créez d'abord une récompense dans l'onglet « Récompenses ».
+            </div>
+          ) : (
+            <select value={rewardId} onChange={(e) => setRewardId(e.target.value)} required>
+              <option value="">Choisir…</option>
+              {selectableRewards.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
+          )}
+
+          <label className="row gap-2" style={{ margin: '14px 0 0', alignItems: 'center' }}>
+            <input
+              type="checkbox"
+              checked={recurring}
+              onChange={(e) => setRecurring(e.target.checked)}
+              style={{ width: 'auto' }}
+            />
+            <span className="small">Rejouer à chaque multiple (10e, 20e, 30e…)</span>
+          </label>
+
+          <button
+            type="submit"
+            className="btn btn-gold"
+            style={{ marginTop: 'var(--sp-4)', width: '100%' }}
+            disabled={saving || selectableRewards.length === 0}
+          >
+            {saving
+              ? 'Enregistrement…'
+              : editing
+                ? 'Enregistrer les modifications'
+                : 'Créer le palier'}
+          </button>
+
+          {error && (
+            <div style={{ ...styles.message, background: 'var(--danger-bg)', color: 'var(--danger)' }}>
+              {error}
+            </div>
+          )}
+
+          <div className="small muted" style={{ marginTop: 'var(--sp-3)' }}>
+            Une visite correspond à une prestation réalisée à l'institut. Les commandes de
+            produits ne comptent pas. Modifier un palier n'affecte que les prochains
+            déblocages : les récompenses déjà offertes restent celles annoncées aux clientes.
+          </div>
+        </form>
+      </section>
+
+      <section className="card">
+        <div className="row between card-pad" style={styles.sectionHead}>
+          <h2>Paliers existants</h2>
+          <button className="btn btn-outline btn-sm" onClick={load}>Actualiser</button>
+        </div>
+
+        {isLoading ? (
+          <div style={{ display: 'grid', placeItems: 'center', height: 120 }}>
+            <div className="spinner" />
+          </div>
+        ) : milestones.length === 0 ? (
+          <div className="card-pad muted small">Aucun palier configuré.</div>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>Déclenchement</th>
+                <th>Récompense</th>
+                <th>Statut</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {milestones.map((m) => (
+                <tr key={m.id} style={{ opacity: m.active ? 1 : 0.55 }}>
+                  <td>
+                    <div style={{ fontWeight: 500 }}>{m.visitThreshold} visites</div>
+                    <div className="small muted">
+                      {m.recurring ? 'À chaque multiple' : 'Une seule fois'}
+                    </div>
+                  </td>
+                  <td>
+                    <div style={{ fontWeight: 500 }}>{m.reward.name}</div>
+                    {!m.reward.active && (
+                      <div className="small" style={{ color: 'var(--danger)' }}>
+                        Récompense désactivée — palier sans effet
+                      </div>
+                    )}
+                  </td>
+                  <td>
+                    <span className={`badge ${m.active ? 'badge-success' : 'badge-muted'}`}>
+                      {m.active ? 'Actif' : 'Désactivé'}
+                    </span>
+                  </td>
+                  <td style={{ textAlign: 'right' }}>
+                    <div className="row gap-2" style={{ justifyContent: 'flex-end' }}>
+                      <button className="btn btn-outline btn-sm" onClick={() => startEdit(m)}>
+                        Modifier
+                      </button>
+                      {m.active ? (
+                        <button className="btn btn-danger btn-sm" onClick={() => setToDeactivate(m)}>
+                          Désactiver
+                        </button>
+                      ) : (
+                        <button className="btn btn-outline btn-sm" onClick={() => reactivate(m)}>
+                          Réactiver
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      <Confirm
+        open={!!toDeactivate}
+        title={`Désactiver le palier ${toDeactivate?.visitThreshold ?? ''} visites`}
+        message="Plus aucune cliente ne débloquera cette récompense. Celles déjà débloquées restent réclamables."
+        confirmLabel="Désactiver"
+        danger
+        loading={acting}
+        onConfirm={runDeactivate}
+        onCancel={() => setToDeactivate(null)}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+//  Onglet 4 : audit des ajouts manuels
 // ─────────────────────────────────────────────────────────────────────────
 function AuditTab() {
   const [rows, setRows] = useState<ManualTransaction[]>([]);
@@ -574,6 +932,13 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 'var(--sp-3)',
     borderRadius: 'var(--radius-sm)',
     background: 'var(--surface-alt)',
+  },
+  grantsBox: {
+    marginTop: 'var(--sp-3)',
+    padding: 'var(--sp-3)',
+    borderRadius: 'var(--radius-sm)',
+    background: 'var(--gold-soft)',
+    border: '1px solid var(--border)',
   },
   message: {
     marginTop: 'var(--sp-3)',

@@ -7,7 +7,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { useAuthStore } from '../stores/authStore';
-import { loyaltyApi, LoyaltyAccount, LoyaltyTransaction, Reward } from '../api/loyalty';
+import {
+  loyaltyApi,
+  LoyaltyAccount,
+  LoyaltyTransaction,
+  Reward,
+  Milestone,
+  MilestoneGrant,
+} from '../api/loyalty';
 import { formatShortDate } from '../utils/format';
 import { useAlert } from '../components/AlertProvider';
 import Button from '../components/Button';
@@ -24,20 +31,27 @@ export default function LoyaltyScreen() {
   const [account, setAccount] = useState<LoyaltyAccount | null>(null);
   const [history, setHistory] = useState<LoyaltyTransaction[]>([]);
   const [rewards, setRewards] = useState<Reward[]>([]);
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [grants, setGrants] = useState<MilestoneGrant[]>([]);
+  const [claimingId, setClaimingId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
       setError(null);
-      const [acc, hist, rwd] = await Promise.all([
+      const [acc, hist, rwd, mil, grt] = await Promise.all([
         loyaltyApi.getMyAccount(),
         loyaltyApi.getMyHistory(),
         loyaltyApi.getRewards(),
+        loyaltyApi.getMilestones(),
+        loyaltyApi.getMyGrants(),
       ]);
       setAccount(acc);
       setHistory(hist);
       setRewards(rwd);
+      setMilestones(mil);
+      setGrants(grt);
     } catch {
       setError('Impossible de charger votre fidélité.');
     } finally {
@@ -67,6 +81,58 @@ export default function LoyaltyScreen() {
 
   const progress = nextReward ? Math.min(balance / nextReward.pointsCost, 1) : 1;
   const remaining = nextReward ? nextReward.pointsCost - balance : 0;
+
+  const visits = account?.visitCount ?? 0;
+
+  // Prochain palier de visites à atteindre : le plus proche en nombre de
+  // visites restantes. Un palier non récurrent déjà franchi est écarté.
+  const nextMilestone = useMemo(() => {
+    let best: { milestone: Milestone; remaining: number } | null = null;
+    for (const m of milestones) {
+      if (m.visitThreshold <= 0) continue;
+      const cycle = Math.floor(visits / m.visitThreshold);
+      if (!m.recurring && cycle >= 1) continue;
+      const left = (cycle + 1) * m.visitThreshold - visits;
+      if (!best || left < best.remaining) best = { milestone: m, remaining: left };
+    }
+    return best;
+  }, [milestones, visits]);
+
+  // Progression dans le cycle en cours (7 visites sur 10)
+  const visitsInCycle = nextMilestone
+    ? nextMilestone.milestone.visitThreshold - nextMilestone.remaining
+    : 0;
+  const visitProgress = nextMilestone
+    ? visitsInCycle / nextMilestone.milestone.visitThreshold
+    : 0;
+
+  // Récompenses offertes en attente : mises en avant, elles ne coûtent rien.
+  const unclaimed = useMemo(() => grants.filter((g) => !g.claimedAt), [grants]);
+
+  const handleClaim = (grant: MilestoneGrant) => {
+    show({
+      title: 'Récompense offerte',
+      message: `Réclamer « ${grant.reward.name} » ? Présentez-la ensuite à l'institut.`,
+      buttons: [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Réclamer',
+          onPress: async () => {
+            setClaimingId(grant.id);
+            try {
+              await loyaltyApi.claimGrant(grant.id);
+              alert('Récompense réclamée', `« ${grant.reward.name} » vous attend à l'institut.`);
+              await load();
+            } catch (e: any) {
+              alert('Erreur', e.response?.data?.message || 'Réclamation impossible.');
+            } finally {
+              setClaimingId(null);
+            }
+          },
+        },
+      ],
+    });
+  };
 
   const handleRedeem = (reward: Reward) => {
     show({
@@ -159,7 +225,80 @@ export default function LoyaltyScreen() {
             </Text>
           </>
         )}
+
+        {/* Carte de visites : la récompense s'obtient sans dépenser de points */}
+        {nextMilestone && (
+          <View style={styles.visitBlock}>
+            <View style={styles.visitHeader}>
+              <Text style={[typography.sectionLabel, { color: theme.goldLight, letterSpacing: 1.5 }]}>
+                Vos visites
+              </Text>
+              <Text style={[typography.caption, { color: theme.loyaltyText }]}>
+                {visitsInCycle} / {nextMilestone.milestone.visitThreshold}
+              </Text>
+            </View>
+
+            {/* Une pastille par visite du cycle en cours */}
+            <View style={styles.stampRow}>
+              {Array.from({ length: nextMilestone.milestone.visitThreshold }).map((_, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.stamp,
+                    {
+                      backgroundColor: i < visitsInCycle ? theme.gold : 'transparent',
+                      borderColor: i < visitsInCycle ? theme.gold : 'rgba(245,239,225,0.25)',
+                    },
+                  ]}
+                />
+              ))}
+            </View>
+
+            <Text style={[typography.caption, { color: 'rgba(245,239,225,0.7)', marginTop: spacing.sm }]}>
+              {nextMilestone.remaining === 1
+                ? `Encore 1 visite et « ${nextMilestone.milestone.reward.name} » vous est offert`
+                : `Encore ${nextMilestone.remaining} visites pour « ${nextMilestone.milestone.reward.name} » offert`}
+            </Text>
+          </View>
+        )}
       </View>
+
+      {/* Récompenses offertes débloquées, en attente de réclamation */}
+      {unclaimed.length > 0 && (
+        <>
+          <Text style={[typography.headingSm, { color: theme.text, marginTop: spacing.xl, marginBottom: spacing.md }]}>
+            Offert pour vous
+          </Text>
+          {unclaimed.map((g) => (
+            <View
+              key={g.id}
+              style={[styles.grantCard, { backgroundColor: theme.goldSoft, borderColor: theme.gold }]}
+            >
+              <View style={[styles.rewardIcon, { backgroundColor: theme.surface }]}>
+                <Ionicons name="ribbon-outline" size={22} color={theme.gold} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[typography.subtitle, { color: theme.text }]}>{g.reward.name}</Text>
+                <Text style={[typography.small, { color: theme.textSecondary, marginTop: 2 }]}>
+                  Débloqué à votre {g.cycle * g.milestone.visitThreshold}e visite
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => handleClaim(g)}
+                disabled={claimingId === g.id}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel={`Réclamer ${g.reward.name}`}
+                style={[styles.claimBtn, { backgroundColor: theme.gold, opacity: claimingId === g.id ? 0.6 : 1 }]}
+              >
+                <Text style={[typography.subtitle, { color: theme.surface }]}>
+                  {claimingId === g.id ? '…' : 'Réclamer'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+        </>
+      )}
 
       {/* Récompenses en grille 2 colonnes */}
       <Text style={[typography.headingSm, { color: theme.text, marginTop: spacing.xl, marginBottom: spacing.md }]}>
@@ -203,27 +342,34 @@ export default function LoyaltyScreen() {
         <Text style={[typography.caption, { color: theme.textMuted }]}>Aucune transaction.</Text>
       ) : (
         history.map((tx) => {
+          // Une récompense de palier ne bouge pas le solde : ni gain ni dépense.
+          const offered = tx.type === 'MILESTONE';
           const positive = tx.pointsDelta >= 0;
           return (
             <View key={tx.id} style={[styles.txRow, { borderBottomColor: theme.border }]}>
               <View
                 style={[
                   styles.txIcon,
-                  { backgroundColor: positive ? theme.badgeInStockBg : theme.badgeSoonBg },
+                  { backgroundColor: offered || positive ? theme.badgeInStockBg : theme.badgeSoonBg },
                 ]}
               >
                 <Ionicons
-                  name={positive ? 'add' : 'remove'}
+                  name={offered ? 'ribbon-outline' : positive ? 'add' : 'remove'}
                   size={18}
-                  color={positive ? theme.success : theme.gold}
+                  color={offered ? theme.gold : positive ? theme.success : theme.gold}
                 />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[typography.bodyMedium, { color: theme.text }]}>{labelForType(tx.type)}</Text>
                 <Text style={[typography.small, { color: theme.textMuted }]}>{formatShortDate(tx.createdAt)}</Text>
               </View>
-              <Text style={[typography.subtitle, { color: positive ? theme.success : theme.danger }]}>
-                {positive ? '+' : ''}{tx.pointsDelta}
+              <Text
+                style={[
+                  typography.subtitle,
+                  { color: offered ? theme.gold : positive ? theme.success : theme.danger },
+                ]}
+              >
+                {offered ? 'Offert' : `${positive ? '+' : ''}${tx.pointsDelta}`}
               </Text>
             </View>
           );
@@ -239,6 +385,7 @@ function labelForType(type: string): string {
     case 'REDEEM': return 'Récompense échangée';
     case 'MANUAL': return 'Ajout manuel';
     case 'ADJUSTMENT': return 'Ajustement';
+    case 'MILESTONE': return 'Récompense offerte';
     default: return type;
   }
 }
@@ -275,6 +422,43 @@ const styles = StyleSheet.create({
   progressFill: {
     height: '100%',
     borderRadius: 3,
+  },
+  visitBlock: {
+    marginTop: spacing.lg,
+    paddingTop: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(255,255,255,0.12)',
+  },
+  visitHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  stampRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: spacing.sm,
+  },
+  stamp: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 1,
+  },
+  grantCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    marginBottom: spacing.md,
+  },
+  claimBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.sm,
   },
   grid: {
     flexDirection: 'row',

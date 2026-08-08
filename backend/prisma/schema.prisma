@@ -34,6 +34,7 @@ enum LoyaltyTxType {
   REDEEM      // points dépensés (échange récompense)
   MANUAL      // ajout manuel par le staff
   ADJUSTMENT  // correction par l'admin
+  MILESTONE   // récompense de palier réclamée (offerte, 0 point dépensé)
 }
 
 enum AppointmentStatus {
@@ -95,6 +96,7 @@ model LoyaltyAccount {
 
   user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions LoyaltyTransaction[]
+  grants       MilestoneGrant[]
 
   @@map("loyalty_accounts")
 }
@@ -249,8 +251,59 @@ model Reward {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   transactions LoyaltyTransaction[]
+  milestones   LoyaltyMilestone[]
+  grants       MilestoneGrant[]
 
   @@map("rewards")
+}
+
+// ─────────────────────────────────────────────
+//  PALIERS DE VISITES
+// ─────────────────────────────────────────────
+
+// Un palier offre une récompense du catalogue au bout d'un certain nombre de
+// visites (ex : la 10e). `recurring` le rejoue à chaque multiple du seuil.
+// La récompense pointe vers le catalogue existant : l'admin n'édite le libellé
+// qu'à un seul endroit.
+model LoyaltyMilestone {
+  id             String   @id @default(uuid())
+  visitThreshold Int      @map("visit_threshold")
+  rewardId       String   @map("reward_id")
+  recurring      Boolean  @default(true)
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  reward Reward           @relation(fields: [rewardId], references: [id])
+  grants MilestoneGrant[]
+
+  @@map("loyalty_milestones")
+}
+
+// Récompense débloquée par une cliente, en attente de réclamation.
+// `cycle` = combien de fois le seuil a été franchi (1 = 10e visite, 2 = 20e…) ;
+// il rend le palier récurrent tout en gardant chaque déblocage unique.
+// `rewardId` est figé ici : si l'admin change la récompense du palier plus tard,
+// ce qui a déjà été débloqué ne se transforme pas dans le dos des clientes
+// (même logique que Appointment.priceAtBooking).
+model MilestoneGrant {
+  id          String    @id @default(uuid())
+  accountId   String    @map("account_id")
+  milestoneId String    @map("milestone_id")
+  rewardId    String    @map("reward_id")
+  cycle       Int
+  claimedAt   DateTime? @map("claimed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  account   LoyaltyAccount   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  milestone LoyaltyMilestone @relation(fields: [milestoneId], references: [id])
+  reward    Reward           @relation(fields: [rewardId], references: [id])
+
+  // Idempotence : un palier ne peut être débloqué qu'une fois par cycle et par
+  // compte, même si la logique de crédit est rejouée.
+  @@unique([accountId, milestoneId, cycle])
+  @@index([accountId])
+  @@map("milestone_grants")
 }
 
 // ─────────────────────────────────────────────

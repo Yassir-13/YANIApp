@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Delete,
   Body,
   Param,
@@ -11,6 +12,9 @@ import {
 } from '@nestjs/common';
 import { LoyaltyService } from './loyalty.service';
 import { CreateRewardDto } from './dto/create-reward.dto';
+import { UpdateRewardDto } from './dto/update-reward.dto';
+import { CreateMilestoneDto } from './dto/create-milestone.dto';
+import { UpdateMilestoneDto } from './dto/update-milestone.dto';
 import { RedeemDto } from './dto/redeem.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -48,6 +52,24 @@ export class LoyaltyController {
     return this.loyaltyService.redeem(req.user.id, dto.rewardId);
   }
 
+  // Paliers en vigueur : sert à afficher l'objectif de visites en cours
+  @Get('milestones')
+  findMilestones() {
+    return this.loyaltyService.findActiveMilestones();
+  }
+
+  // Récompenses offertes débloquées par la cliente
+  @Get('me/grants')
+  getMyGrants(@Req() req: any) {
+    return this.loyaltyService.getMyGrants(req.user.id);
+  }
+
+  // Réclamer une récompense offerte (aucun point dépensé)
+  @Post('grants/:id/claim')
+  claimGrant(@Req() req: any, @Param('id', ParseUUIDPipe) id: string) {
+    return this.loyaltyService.claimGrant(req.user.id, id);
+  }
+
   // ----- ADMIN -----
 
   @UseGuards(RolesGuard)
@@ -66,9 +88,52 @@ export class LoyaltyController {
 
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
+  @Patch('rewards/:id')
+  updateReward(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateRewardDto,
+  ) {
+    return this.loyaltyService.updateReward(id, dto);
+  }
+
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
   @Delete('rewards/:id')
   deactivateReward(@Param('id', ParseUUIDPipe) id: string) {
     return this.loyaltyService.deactivateReward(id);
+  }
+
+  // ----- ADMIN : paliers de visites -----
+
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  @Get('milestones/all')
+  findAllMilestones() {
+    return this.loyaltyService.findAllMilestones();
+  }
+
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  @Post('milestones')
+  createMilestone(@Body() dto: CreateMilestoneDto) {
+    return this.loyaltyService.createMilestone(dto);
+  }
+
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  @Patch('milestones/:id')
+  updateMilestone(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateMilestoneDto,
+  ) {
+    return this.loyaltyService.updateMilestone(id, dto);
+  }
+
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  @Delete('milestones/:id')
+  deactivateMilestone(@Param('id', ParseUUIDPipe) id: string) {
+    return this.loyaltyService.deactivateMilestone(id);
   }
 
    // Consulter le compte fidélité d'un client (lecture au comptoir)

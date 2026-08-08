@@ -1,6 +1,6 @@
 import { apiClient } from './client';
 
-export type LoyaltyTxType = 'EARN' | 'REDEEM' | 'MANUAL' | 'ADJUSTMENT';
+export type LoyaltyTxType = 'EARN' | 'REDEEM' | 'MANUAL' | 'ADJUSTMENT' | 'MILESTONE';
 
 export interface LoyaltyAccount {
   id: string;
@@ -8,6 +8,8 @@ export interface LoyaltyAccount {
   pointsBalance: number;
   tier: string;
   visitCount: number;
+  // Récompenses offertes non encore réclamées (fiche cliente au comptoir)
+  grants?: MilestoneGrant[];
 }
 
 export interface Reward {
@@ -17,6 +19,29 @@ export interface Reward {
   pointsCost: number;
   active: boolean;
 }
+
+// Palier de visites : au bout de N visites, une récompense du catalogue est
+// offerte. `recurring` la rejoue à chaque multiple du seuil.
+export interface Milestone {
+  id: string;
+  visitThreshold: number;
+  rewardId: string;
+  recurring: boolean;
+  active: boolean;
+  reward: Reward;
+}
+
+export interface MilestoneGrant {
+  id: string;
+  cycle: number;
+  claimedAt: string | null;
+  createdAt: string;
+  reward: Reward;
+}
+
+// Bornes du seuil — miroir de create-milestone.dto.ts côté backend
+export const MIN_VISIT_THRESHOLD = 2;
+export const MAX_VISIT_THRESHOLD = 100;
 
 export interface AuditPerson {
   id: string;
@@ -49,8 +74,40 @@ export const loyaltyApi = {
     const { data } = await apiClient.post('/loyalty/rewards', payload);
     return data;
   },
+  async updateReward(
+    id: string,
+    payload: { name?: string; description?: string; pointsCost?: number; active?: boolean },
+  ): Promise<Reward> {
+    const { data } = await apiClient.patch(`/loyalty/rewards/${id}`, payload);
+    return data;
+  },
   async deactivateReward(id: string): Promise<Reward> {
     const { data } = await apiClient.delete(`/loyalty/rewards/${id}`);
+    return data;
+  },
+
+  // Paliers de visites (ADMIN)
+  async getAllMilestones(): Promise<Milestone[]> {
+    const { data } = await apiClient.get('/loyalty/milestones/all');
+    return data;
+  },
+  async createMilestone(payload: {
+    visitThreshold: number;
+    rewardId: string;
+    recurring?: boolean;
+  }): Promise<Milestone> {
+    const { data } = await apiClient.post('/loyalty/milestones', payload);
+    return data;
+  },
+  async updateMilestone(
+    id: string,
+    payload: { visitThreshold?: number; rewardId?: string; recurring?: boolean; active?: boolean },
+  ): Promise<Milestone> {
+    const { data } = await apiClient.patch(`/loyalty/milestones/${id}`, payload);
+    return data;
+  },
+  async deactivateMilestone(id: string): Promise<Milestone> {
+    const { data } = await apiClient.delete(`/loyalty/milestones/${id}`);
     return data;
   },
 
