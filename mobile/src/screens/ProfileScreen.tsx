@@ -103,6 +103,28 @@ export default function ProfileScreen({ navigation }: any) {
         )}
       </View>
 
+      {/* Rappel de confirmation d'email.
+          Volontairement doré et non rouge : le compte fonctionne parfaitement
+          sans, ce n'est pas une erreur mais une action qui reste à faire.
+          C'est elle qui rendra possible la récupération du mot de passe. */}
+      {user && !user.emailVerifiedAt && (
+        <TouchableOpacity
+          onPress={() => navigation.navigate('VerifyEmail')}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          style={[styles.verifyBanner, { backgroundColor: theme.goldSoft, borderColor: theme.gold }]}
+        >
+          <Ionicons name="mail-unread-outline" size={22} color={theme.gold} />
+          <View style={{ flex: 1 }}>
+            <Text style={[typography.body, { color: theme.text }]}>Confirmez votre adresse email</Text>
+            <Text style={[typography.caption, { color: theme.textSecondary, marginTop: 2 }]}>
+              Nécessaire pour récupérer votre compte en cas d’oubli de mot de passe.
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+        </TouchableOpacity>
+      )}
+
       {!user && (
         <Button
           label="Se connecter / Créer un compte"
@@ -195,6 +217,15 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  verifyBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    padding: spacing.md,
+    marginTop: spacing.md,
   },
   group: {
     borderRadius: radius.md,

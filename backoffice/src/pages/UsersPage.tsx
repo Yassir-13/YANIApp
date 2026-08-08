@@ -246,7 +246,23 @@ export default function UsersPage() {
                         {isMe && <span className="small muted"> (vous)</span>}
                       </div>
                     </td>
-                    <td className="small">{u.email}</td>
+                    <td className="small">
+                      {u.email}
+                      {/* Signalé uniquement quand l'adresse n'est PAS confirmée :
+                          c'est le cas qui demande une action (rappeler la
+                          cliente au téléphone plutôt que de compter sur un
+                          email qui ne lui parviendra peut-être jamais).
+                          Marquer aussi le cas normal noierait l'information. */}
+                      {!u.emailVerifiedAt && (
+                        <span
+                          className="badge badge-warning"
+                          style={{ marginLeft: 8 }}
+                          title="Cette adresse n'a jamais été confirmée : les emails envoyés ici ne parviennent peut-être à personne."
+                        >
+                          non vérifié
+                        </span>
+                      )}
+                    </td>
                     <td className="small">
                       {u.phone ? (
                         <a href={`tel:${u.phone}`} style={styles.phone}>{u.phone}</a>

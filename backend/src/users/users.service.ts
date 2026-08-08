@@ -22,6 +22,7 @@ const SAFE_USER_SELECT = {
   phone: true,
   role: true,
   createdAt: true,
+  emailVerifiedAt: true,
 } satisfies Prisma.UserSelect;
 
 // Forme exacte d'un utilisateur exposé, dérivée du select ci-dessus :

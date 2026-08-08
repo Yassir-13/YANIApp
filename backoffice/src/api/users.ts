@@ -10,6 +10,8 @@ export interface AppUser {
   phone: string | null;
   role: Role;
   createdAt: string;
+  // null tant que la cliente n'a pas saisi le code reçu par email.
+  emailVerifiedAt: string | null;
 }
 
 // Enveloppe renvoyée par les endpoints paginés du backend.

@@ -14,6 +14,9 @@ import CartScreen from '../screens/CartScreen';
 import CheckoutScreen from '../screens/CheckoutScreen';
 import OrderConfirmationScreen from '../screens/OrderConfirmationScreen';
 import MyOrdersScreen from '../screens/MyOrdersScreen';
+import VerifyEmailScreen from '../screens/VerifyEmailScreen';
+import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
+import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -87,6 +90,24 @@ export default function RootNavigator() {
        component={MyOrdersScreen}
         options={{ presentation: 'modal' }}
        />
+
+      <Stack.Screen
+        name="VerifyEmail"
+        component={VerifyEmailScreen}
+        options={{ presentation: 'modal' }}
+      />
+
+      <Stack.Screen
+        name="ForgotPassword"
+        component={ForgotPasswordScreen}
+        options={{ presentation: 'modal' }}
+      />
+
+      <Stack.Screen
+        name="ResetPassword"
+        component={ResetPasswordScreen}
+        options={{ presentation: 'modal' }}
+      />
 
     </Stack.Navigator>
   );

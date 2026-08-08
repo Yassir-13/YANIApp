@@ -8,6 +8,9 @@ node_modules/
 !.env.example
 **/.env
 **/.env.*
+# Doit rester en dernier : `**/.env.*` ci-dessus réattrape backend/.env.example,
+# et en git le dernier motif qui correspond l'emporte.
+!**/.env.example
 
 # Build outputs
 dist/

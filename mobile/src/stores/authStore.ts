@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { apiClient } from '../api/client';
+import { authApi } from '../api/auth';
 import { API_BASE_URL } from '../api/config';
 import axios from 'axios';
 import { secureStorage } from '../utils/secureStorage';
@@ -13,6 +14,8 @@ interface User {
   lastName: string | null;
   phone: string | null;
   role: 'CLIENT' | 'STAFF' | 'ADMIN';
+  // null tant que l'adresse n'a pas été confirmée par un code.
+  emailVerifiedAt: string | null;
 }
 
 interface AuthState {
@@ -25,6 +28,8 @@ interface AuthState {
   loadSession: () => Promise<void>;
   setUser: (user: User) => void;
   deleteAccount: () => Promise<void>;
+  verifyEmail: (code: string) => Promise<void>;
+  resendCode: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -87,6 +92,19 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   setUser: (user) => {
     set({ user });
+  },
+
+  verifyEmail: async (code) => {
+    const { emailVerifiedAt } = await authApi.verifyEmail(code);
+    // Mise à jour locale plutôt qu'un rechargement du profil : le bandeau de
+    // rappel disparaît immédiatement, sans aller-retour réseau supplémentaire.
+    set((state) =>
+      state.user ? { user: { ...state.user, emailVerifiedAt } } : state,
+    );
+  },
+
+  resendCode: async () => {
+    await authApi.resendCode();
   },
 
   deleteAccount: async () => {

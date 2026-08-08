@@ -44,6 +44,11 @@ enum AppointmentStatus {
   CANCELLED
 }
 
+enum VerificationPurpose {
+  EMAIL_VERIFY   // confirmer l'adresse à l'inscription
+  PASSWORD_RESET // réinitialiser un mot de passe oublié
+}
+
 enum OrderStatus {
   PENDING     // commande passée, en attente de confirmation staff
   CONFIRMED   // staff a validé (appel client) — stock décrémenté
@@ -72,9 +77,15 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
+  // Date à laquelle la cliente a prouvé qu'elle recevait bien ses mails à cette
+  // adresse. null = jamais confirmée. On garde la date plutôt qu'un booléen :
+  // elle sert à dater la preuve, et un email modifié plus tard la remettra à null.
+  emailVerifiedAt DateTime? @map("email_verified_at")
+
   loyaltyAccount     LoyaltyAccount?
   appointments       Appointment[]
   refreshTokens RefreshToken[]
+  verificationCodes  VerificationCode[]
   loyaltyTx          LoyaltyTransaction[] @relation("AccountOwner")
   createdTransactions LoyaltyTransaction[] @relation("TransactionCreator")
   orders             Order[]
@@ -324,6 +335,38 @@ model RefreshToken {
   @@index([userId])
   @@index([familyId])
   @@map("refresh_tokens")
+}
+
+// ─────────────────────────────────────────────
+//  CODES À USAGE UNIQUE (vérification email · mot de passe oublié)
+// ─────────────────────────────────────────────
+
+model VerificationCode {
+  id         String              @id @default(uuid())
+  userId     String              @map("user_id")
+  purpose    VerificationPurpose
+  // Seul le hash est stocké : une fuite de la base ne donne pas les codes en
+  // clair, exactement comme pour les refresh tokens.
+  //
+  // Contrairement à RefreshToken.tokenHash, ce hash n'est PAS unique : un code
+  // à 6 chiffres est court, deux clientes peuvent légitimement recevoir le même
+  // au même moment. La recherche se fait donc par (userId, purpose), jamais par
+  // le code seul — sinon un code deviné vaudrait pour n'importe quel compte.
+  codeHash   String              @map("code_hash")
+  expiresAt  DateTime            @map("expires_at")
+  consumedAt DateTime?           @map("consumed_at")
+  // 6 chiffres = 1 000 000 de possibilités : sans plafond de tentatives, le code
+  // se devine en quelques minutes. Ce compteur ferme cette porte.
+  attempts   Int                 @default(0)
+  createdAt  DateTime            @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Émettre un nouveau code efface les précédents du même usage : au plus une
+  // ligne active par cliente et par usage, donc pas de table qui gonfle ni de
+  // tâche de purge à maintenir.
+  @@index([userId, purpose])
+  @@map("verification_codes")
 }
 
 // ─────────────────────────────────────────────

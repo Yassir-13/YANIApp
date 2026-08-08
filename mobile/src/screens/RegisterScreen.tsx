@@ -80,7 +80,13 @@ export default function RegisterScreen({ navigation }: any) {
   const submitRegistration = async () => {
     try {
       await register(email.trim(), password, firstName.trim(), lastName.trim(), phone.trim());
-      if (navigation.canGoBack()) navigation.goBack();
+      // Le compte est créé ET connecté : on enchaîne sur la saisie du code
+      // reçu par email. `replace` et non `navigate` — l'inscription est
+      // terminée, revenir en arrière dessus n'aurait aucun sens.
+      //
+      // L'étape reste facultative (« Plus tard »), et la quitter ramène au même
+      // endroit que le retour direct d'avant.
+      navigation.replace('VerifyEmail', { skippable: true });
     } catch (error: any) {
       const msg = error.response?.data?.message;
       alert('Erreur', Array.isArray(msg) ? msg.join('\n') : msg || 'Inscription impossible. Réessayez.');

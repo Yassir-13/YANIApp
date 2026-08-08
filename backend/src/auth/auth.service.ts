@@ -1,18 +1,26 @@
 import {
   Injectable,
+  BadRequestException,
   ConflictException,
   UnauthorizedException,
   ForbiddenException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { VerificationPurpose } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { randomBytes, createHash } from 'crypto';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
+import { MailService } from '../mail/mail.service';
+import {
+  CODE_TTL_MINUTES,
+  VerificationCodeService,
+} from './verification-code.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 @Injectable()
 export class AuthService {
@@ -21,6 +29,8 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
+    private readonly mail: MailService,
+    private readonly verificationCodes: VerificationCodeService,
   ) {}
 
   // ─────────────────────────────────────────
@@ -98,6 +108,12 @@ export class AuthService {
       phone: dto.phone,
     });
 
+    // Le compte est utilisable immédiatement : la confirmation est demandée,
+    // jamais imposée. Une cliente dont l'email tombe en spam doit pouvoir
+    // réserver quand même — elle appellerait l'institut sinon, ce qui nous
+    // ferait perdre le bénéfice de l'application.
+    await this.issueVerificationCode(user);
+
     return {
       id: user.id,
       email: user.email,
@@ -105,6 +121,164 @@ export class AuthService {
       lastName: user.lastName,
       phone: user.phone,
       role: user.role,
+      emailVerifiedAt: user.emailVerifiedAt,
+    };
+  }
+
+  // ─────────────────────────────────────────
+  //  Vérification de l'adresse email
+  // ─────────────────────────────────────────
+
+  // Émet un code et l'envoie. Ne fait rien si un code a déjà été envoyé il y a
+  // moins d'une minute (délai anti-flood géré par VerificationCodeService).
+  private async issueVerificationCode(user: {
+    id: string;
+    email: string;
+    firstName: string | null;
+  }) {
+    const code = await this.verificationCodes.issue(
+      user.id,
+      VerificationPurpose.EMAIL_VERIFY,
+    );
+    if (!code) return;
+
+    await this.mail.sendVerificationCode({
+      to: user.email,
+      code,
+      expiresInMinutes: CODE_TTL_MINUTES,
+      firstName: user.firstName,
+    });
+  }
+
+  async verifyEmail(userId: string, code: string) {
+    const user = await this.usersService.findById(userId);
+    if (!user) {
+      throw new UnauthorizedException('Utilisateur introuvable.');
+    }
+
+    // Déjà confirmée : on répond succès sans consommer de code. Sinon, une
+    // cliente qui appuie deux fois sur « Valider » verrait une erreur alors
+    // que son adresse vient bien d'être confirmée.
+    if (user.emailVerifiedAt) {
+      return {
+        message: 'Votre adresse email est déjà confirmée.',
+        emailVerifiedAt: user.emailVerifiedAt,
+      };
+    }
+
+    await this.verificationCodes.consume(
+      userId,
+      VerificationPurpose.EMAIL_VERIFY,
+      code,
+    );
+
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: { emailVerifiedAt: new Date() },
+    });
+
+    return {
+      message: 'Adresse email confirmée.',
+      emailVerifiedAt: updated.emailVerifiedAt,
+    };
+  }
+
+  async resendVerificationCode(userId: string) {
+    const user = await this.usersService.findById(userId);
+    if (!user) {
+      throw new UnauthorizedException('Utilisateur introuvable.');
+    }
+
+    if (user.emailVerifiedAt) {
+      return { message: 'Votre adresse email est déjà confirmée.' };
+    }
+
+    await this.issueVerificationCode(user);
+
+    // Message volontairement neutre : le délai anti-flood peut avoir empêché
+    // l'envoi, mais le code précédent est alors toujours valable. Annoncer un
+    // échec inquiéterait sans raison.
+    return { message: 'Un code de confirmation vous a été envoyé par email.' };
+  }
+
+  // ─────────────────────────────────────────
+  //  Mot de passe oublié
+  // ─────────────────────────────────────────
+
+  async forgotPassword(email: string) {
+    const user = await this.usersService.findByEmail(email);
+
+    if (user) {
+      const code = await this.verificationCodes.issue(
+        user.id,
+        VerificationPurpose.PASSWORD_RESET,
+      );
+
+      if (code) {
+        // Envoi délibérément non attendu.
+        //
+        // Le message de réponse est déjà identique dans les deux cas, mais
+        // attendre le serveur SMTP rendrait la réponse nettement plus lente
+        // quand le compte existe (~500 ms contre ~5 ms). Ce seul écart suffit
+        // à faire de cette route un test d'existence : on saurait qui est
+        // cliente de l'institut. `send` n'échoue jamais, il journalise — il
+        // n'y a donc pas de promesse rejetée à surveiller ici.
+        void this.mail.sendPasswordResetCode({
+          to: user.email,
+          code,
+          expiresInMinutes: CODE_TTL_MINUTES,
+          firstName: user.firstName,
+        });
+      }
+    }
+
+    return {
+      message:
+        'Si un compte existe avec cette adresse, un code de réinitialisation vient d’être envoyé.',
+    };
+  }
+
+  async resetPassword(dto: ResetPasswordDto) {
+    const user = await this.usersService.findByEmail(dto.email);
+
+    // Compte inconnu : exactement la même erreur qu'un code erroné. Distinguer
+    // les deux transformerait cette route en annuaire de nos clientes.
+    if (!user) {
+      throw new BadRequestException('Code invalide ou expiré.');
+    }
+
+    await this.verificationCodes.consume(
+      user.id,
+      VerificationPurpose.PASSWORD_RESET,
+      dto.code,
+    );
+
+    const passwordHash = await argon2.hash(dto.newPassword);
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          passwordHash,
+          // Recevoir ce code prouve l'accès à la boîte mail : autant en tirer
+          // la confirmation d'adresse. Sans cela, une cliente jamais confirmée
+          // resterait signalée comme telle après avoir pourtant fait la
+          // démonstration qu'elle relève bien cette adresse.
+          emailVerifiedAt: user.emailVerifiedAt ?? new Date(),
+        },
+      }),
+      // Même raisonnement que pour le changement de mot de passe : si le compte
+      // a été compromis, la reprise en main doit couper les sessions ouvertes
+      // par l'intrus, sinon il reste connecté malgré le nouveau mot de passe.
+      this.prisma.refreshToken.updateMany({
+        where: { userId: user.id, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+    ]);
+
+    return {
+      message:
+        'Mot de passe réinitialisé. Vous pouvez maintenant vous connecter, et toutes vos sessions ouvertes ont été déconnectées.',
     };
   }
 
@@ -157,6 +331,7 @@ export class AuthService {
         lastName: user.lastName,
         phone: user.phone,
         role: user.role,
+        emailVerifiedAt: user.emailVerifiedAt,
       },
     };
   }

@@ -75,6 +75,16 @@ export default function LoginScreen({ navigation }: any) {
           style={{ marginTop: spacing.sm }}
         />
 
+        <TouchableOpacity
+          onPress={() => navigation.navigate('ForgotPassword')}
+          accessibilityRole="button"
+          style={{ marginTop: spacing.lg }}
+        >
+          <Text style={[typography.caption, { color: theme.gold, textAlign: 'center' }]}>
+            Mot de passe oublié ?
+          </Text>
+        </TouchableOpacity>
+
         <TouchableOpacity onPress={() => navigation.navigate('Register')} style={{ marginTop: spacing.lg }}>
           <Text style={[typography.caption, { color: theme.textSecondary, textAlign: 'center' }]}>
             Pas encore de compte ? Créer un compte
