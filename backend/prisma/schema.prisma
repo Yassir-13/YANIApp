@@ -126,8 +126,16 @@ model LoyaltyTransaction {
   orderId     String?       @unique @map("order_id")
 
   account     LoyaltyAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  owner       User           @relation("AccountOwner", fields: [ownerId], references: [id])
-  createdBy   User?          @relation("TransactionCreator", fields: [createdById], references: [id])
+  // `owner` = la cliente à qui appartiennent les points. En cascade, comme
+  // toutes les autres données personnelles (RDV, commandes, sessions) : sans
+  // ça, Prisma appliquait son défaut RESTRICT sur une relation obligatoire et
+  // la suppression de compte échouait dès le premier point gagné — le droit à
+  // l'effacement (CNDP) était annoncé en commentaire mais inapplicable.
+  owner       User           @relation("AccountOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  // `createdBy` = l'employée qui a saisi l'écriture. Volontairement SetNull et
+  // NON Cascade : le départ d'une employée ne doit pas effacer les points des
+  // clientes qu'elle a servies. L'écriture reste, elle ne désigne plus personne.
+  createdBy   User?          @relation("TransactionCreator", fields: [createdById], references: [id], onDelete: SetNull)
   appointment Appointment?   @relation(fields: [appointmentId], references: [id])
   reward      Reward?       @relation(fields: [rewardId], references: [id])
   order       Order?         @relation(fields: [orderId], references: [id])
