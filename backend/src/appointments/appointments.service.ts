@@ -6,13 +6,19 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
-import { AppointmentStatus, Role } from '@prisma/client';
+import { AppointmentStatus, Prisma, Role } from '@prisma/client';
 import { LoyaltyService } from '../loyalty/loyalty.service';
 import { ConfigService } from '@nestjs/config';
 import { toZonedTime, fromZonedTime, format } from 'date-fns-tz';
 
 // Capacité applicative : 2 cabines réservées à l'app
 const CENTER_CAPACITY = 2;
+
+// Clé du verrou consultatif Postgres qui sérialise les réservations.
+// Valeur arbitraire, mais elle doit être IDENTIQUE partout : c'est ce qui
+// fait que deux réservations simultanées se mettent en file au lieu de se
+// croiser. Voir withBookingLock.
+const BOOKING_LOCK_KEY = 4_242_001;
 
 // Transitions de statut autorisées (machine à états, miroir de celle des
 // commandes). COMPLETED et CANCELLED sont des états finaux : on n'en sort plus.
@@ -56,15 +62,44 @@ export class AppointmentsService {
   }
 
   // ─────────────────────────────────────────
+  //  Sérialisation des réservations
+  // ─────────────────────────────────────────
+
+  // Compter les RDV qui chevauchent puis insérer ne peut pas être rendu
+  // atomique par une simple écriture conditionnelle : la capacité porte sur
+  // un ENSEMBLE de lignes, pas sur une ligne à modifier. On prend donc un
+  // verrou consultatif Postgres, tenu jusqu'à la fin de la transaction :
+  // la 2ᵉ réservation attend que la 1ʳᵉ soit écrite avant de compter, au lieu
+  // de voir le même créneau libre. Sans lui, 3 clientes pouvaient réserver
+  // 2 cabines. pg_advisory_xact_lock se libère seul au commit comme au
+  // rollback : aucun verrou ne peut rester coincé.
+  private async withBookingLock<T>(
+    run: (tx: Prisma.TransactionClient) => Promise<T>,
+  ): Promise<T> {
+    return this.prisma.$transaction(async (tx) => {
+      // $executeRaw et non $queryRaw : la fonction renvoie `void`, un type que
+      // $queryRaw ne sait pas désérialiser (il lève « Failed to deserialize
+      // column of type 'void' »). On ne veut de toute façon aucune valeur,
+      // juste l'effet de bord.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${BOOKING_LOCK_KEY}::bigint)`;
+      return run(tx);
+    });
+  }
+
+  // ─────────────────────────────────────────
   //  Vérification de disponibilité
   // ─────────────────────────────────────────
 
+  // `db` : le client de la transaction qui détient le verrou de réservation.
+  // La vérification et l'insertion doivent partager cette transaction, sinon
+  // le verrou ne protège rien.
   private async assertSlotAvailable(
+    db: Prisma.TransactionClient,
     serviceId: string,
     startAt: Date,
     excludeAppointmentId?: string,
   ) {
-    const service = await this.prisma.service.findUnique({
+    const service = await db.service.findUnique({
       where: { id: serviceId },
     });
     if (!service || !service.active) {
@@ -79,7 +114,7 @@ export class AppointmentsService {
 
     // ── Horaires d'ouverture (heure locale du centre) ──
     const dayOfWeek = this.toLocalDayOfWeek(startAt);
-    const hours = await this.prisma.openingHours.findUnique({
+    const hours = await db.openingHours.findUnique({
       where: { dayOfWeek },
     });
 
@@ -97,7 +132,7 @@ export class AppointmentsService {
     }
 
     // ── Capacité (chevauchement d'intervalles) ──
-    const candidates = await this.prisma.appointment.findMany({
+    const candidates = await db.appointment.findMany({
       where: {
         status: {
           in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED],
@@ -127,17 +162,22 @@ export class AppointmentsService {
 
   async create(userId: string, dto: CreateAppointmentDto) {
     const startAt = new Date(dto.startAt);
-    // assertSlotAvailable renvoie la prestation validée : on fige son prix.
-    const { service } = await this.assertSlotAvailable(dto.serviceId, startAt);
 
-    return this.prisma.appointment.create({
-      data: {
-        userId,
-        serviceId: dto.serviceId,
-        startAt,
-        priceAtBooking: service.price,
-      },
-      include: { service: true },
+    // Vérification ET insertion sous le même verrou : le créneau constaté
+    // libre l'est encore au moment où le RDV est écrit.
+    return this.withBookingLock(async (tx) => {
+      // assertSlotAvailable renvoie la prestation validée : on fige son prix.
+      const { service } = await this.assertSlotAvailable(tx, dto.serviceId, startAt);
+
+      return tx.appointment.create({
+        data: {
+          userId,
+          serviceId: dto.serviceId,
+          startAt,
+          priceAtBooking: service.price,
+        },
+        include: { service: true },
+      });
     });
   }
 
@@ -154,16 +194,19 @@ export class AppointmentsService {
     }
 
     const startAt = new Date(dto.startAt);
-    const { service } = await this.assertSlotAvailable(dto.serviceId, startAt);
 
-    return this.prisma.appointment.create({
-      data: {
-        userId: targetUserId,
-        serviceId: dto.serviceId,
-        startAt,
-        priceAtBooking: service.price,
-      },
-      include: { service: true },
+    return this.withBookingLock(async (tx) => {
+      const { service } = await this.assertSlotAvailable(tx, dto.serviceId, startAt);
+
+      return tx.appointment.create({
+        data: {
+          userId: targetUserId,
+          serviceId: dto.serviceId,
+          startAt,
+          priceAtBooking: service.price,
+        },
+        include: { service: true },
+      });
     });
   }
 
@@ -272,29 +315,33 @@ export class AppointmentsService {
   // ─────────────────────────────────────────
 
   async reschedule(id: string, newStartAt: string) {
-    const appointment = await this.prisma.appointment.findUnique({
-      where: { id },
-    });
-    if (!appointment) {
-      throw new NotFoundException('Rendez-vous introuvable.');
-    }
-
-    // Reprogrammer un RDV terminé ou annulé n'a pas de sens : ce sont des
-    // états finaux. Sans ce garde-fou, un RDV annulé redevenait actif.
-    if (ALLOWED_TRANSITIONS[appointment.status].length === 0) {
-      throw new BadRequestException(
-        'Un rendez-vous terminé ou annulé ne peut pas être reprogrammé.',
-      );
-    }
-
     const startAt = new Date(newStartAt);
-    // On revérifie la disponibilité en excluant le RDV lui-même
-    await this.assertSlotAvailable(appointment.serviceId, startAt, id);
 
-    return this.prisma.appointment.update({
-      where: { id },
-      data: { startAt },
-      include: { service: true },
+    // Sous le même verrou que create : déplacer un RDV occupe un créneau,
+    // exactement comme en réserver un. Hors du verrou, une reprogrammation
+    // et une réservation simultanées viseraient le même créneau libre.
+    return this.withBookingLock(async (tx) => {
+      const appointment = await tx.appointment.findUnique({ where: { id } });
+      if (!appointment) {
+        throw new NotFoundException('Rendez-vous introuvable.');
+      }
+
+      // Reprogrammer un RDV terminé ou annulé n'a pas de sens : ce sont des
+      // états finaux. Sans ce garde-fou, un RDV annulé redevenait actif.
+      if (ALLOWED_TRANSITIONS[appointment.status].length === 0) {
+        throw new BadRequestException(
+          'Un rendez-vous terminé ou annulé ne peut pas être reprogrammé.',
+        );
+      }
+
+      // On revérifie la disponibilité en excluant le RDV lui-même
+      await this.assertSlotAvailable(tx, appointment.serviceId, startAt, id);
+
+      return tx.appointment.update({
+        where: { id },
+        data: { startAt },
+        include: { service: true },
+      });
     });
   }
 

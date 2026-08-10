@@ -30,12 +30,27 @@ describe('OrdersService', () => {
 
   beforeEach(async () => {
     // Client de transaction : c'est lui qui reçoit les écritures de stock.
+    //
+    // `updateMany` simule ce que fait vraiment Postgres avec une écriture
+    // conditionnelle : il réévalue la condition et renvoie le NOMBRE de
+    // lignes touchées — 0 si la condition n'est plus vraie. C'est ce compteur
+    // qui protège le stock, pas une lecture préalable.
     tx = {
       product: {
         findUnique: jest.fn().mockResolvedValue({ ...PRODUIT }),
         update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn(async ({ where }: any) => {
+          const enBase = await tx.product.findUnique({ where: { id: where.id } });
+          const passe =
+            !!enBase && enBase.active && enBase.stockQty >= where.stockQty.gte;
+          return { count: passe ? 1 : 0 };
+        }),
       },
-      order: { update: jest.fn().mockResolvedValue({}) },
+      order: {
+        update: jest.fn().mockResolvedValue({}),
+        // Le statut lu est encore celui en base : la transition est réservée.
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
     };
 
     prisma = {
@@ -184,9 +199,37 @@ describe('OrdersService', () => {
 
       await service.updateStatus('cmd-1', OrderStatus.CONFIRMED);
 
-      expect(tx.order.update).toHaveBeenCalledWith(
+      expect(tx.order.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({ data: { status: OrderStatus.CONFIRMED } }),
       );
+    });
+
+    // ── Le double clic sur « Confirmer » ──
+    // Les deux requêtes lisent le même statut PENDING et passent toutes deux
+    // le contrôle de transition. C'est l'écriture conditionnée au statut lu
+    // qui départage : la seconde ne touche aucune ligne et échoue.
+    it('réserve la transition sur le statut lu, pas à l’aveugle', async () => {
+      prisma.order.findUnique.mockResolvedValue(commande({ status: OrderStatus.PENDING }));
+
+      await service.updateStatus('cmd-1', OrderStatus.CONFIRMED);
+
+      expect(tx.order.updateMany).toHaveBeenCalledWith({
+        where: { id: 'cmd-1', status: OrderStatus.PENDING },
+        data: { status: OrderStatus.CONFIRMED },
+      });
+    });
+
+    it('refuse la 2ᵉ confirmation : le statut a déjà changé', async () => {
+      prisma.order.findUnique.mockResolvedValue(commande({ status: OrderStatus.PENDING }));
+      // La 1ʳᵉ requête a déjà confirmé : plus aucune ligne PENDING à toucher.
+      tx.order.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(
+        service.updateStatus('cmd-1', OrderStatus.CONFIRMED),
+      ).rejects.toThrow(/changé de statut/);
+
+      // Et surtout : le stock n'est pas décrémenté une seconde fois.
+      expect(tx.product.updateMany).not.toHaveBeenCalled();
     });
   });
 
@@ -194,18 +237,20 @@ describe('OrdersService', () => {
   //  STOCK
   // ═══════════════════════════════════════════════════════════
   describe('stock', () => {
-    it('décrémente à la confirmation, de la quantité commandée', async () => {
+    // La condition de stock est portée par l'écriture elle-même : Postgres
+    // ne décrémente que s'il reste au moins la quantité demandée.
+    it('décrémente à la confirmation, sous condition de stock suffisant', async () => {
       prisma.order.findUnique.mockResolvedValue(commande({ status: OrderStatus.PENDING }));
 
       await service.updateStatus('cmd-1', OrderStatus.CONFIRMED);
 
-      expect(tx.product.update).toHaveBeenCalledWith({
-        where: { id: 'prod-1' },
+      expect(tx.product.updateMany).toHaveBeenCalledWith({
+        where: { id: 'prod-1', active: true, stockQty: { gte: 2 } },
         data: { stockQty: { decrement: 2 } },
       });
     });
 
-    it('refuse la confirmation si le stock est insuffisant, sans rien écrire', async () => {
+    it('refuse la confirmation si le stock est insuffisant', async () => {
       prisma.order.findUnique.mockResolvedValue(commande({ status: OrderStatus.PENDING }));
       tx.product.findUnique.mockResolvedValue({ ...PRODUIT, stockQty: 1 }); // 1 < 2
 
@@ -213,8 +258,12 @@ describe('OrdersService', () => {
         service.updateStatus('cmd-1', OrderStatus.CONFIRMED),
       ).rejects.toThrow(/Stock insuffisant/);
 
-      expect(tx.product.update).not.toHaveBeenCalled();
-      expect(tx.order.update).not.toHaveBeenCalled();
+      // L'écriture conditionnelle n'a touché aucune ligne : le stock est intact.
+      await expect(tx.product.updateMany.mock.results[0].value).resolves.toEqual({
+        count: 0,
+      });
+      // Le passage à CONFIRMED est annulé avec la transaction (vérifié pour de
+      // vrai contre Postgres dans orders.service.concurrency.spec.ts).
     });
 
     it('refuse la confirmation si un produit a été désactivé entre-temps', async () => {
@@ -246,7 +295,7 @@ describe('OrdersService', () => {
       await service.updateStatus('cmd-1', OrderStatus.CANCELLED);
 
       expect(tx.product.update).not.toHaveBeenCalled();
-      expect(tx.order.update).toHaveBeenCalled();
+      expect(tx.order.updateMany).toHaveBeenCalled();
     });
   });
 
@@ -304,7 +353,7 @@ describe('OrdersService', () => {
 
       await service.cancelByClient('cmd-1', 'cliente-1');
 
-      expect(tx.order.update).toHaveBeenCalledWith(
+      expect(tx.order.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({ data: { status: OrderStatus.CANCELLED } }),
       );
     });

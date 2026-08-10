@@ -21,15 +21,24 @@ describe('AppointmentsService — machine à états', () => {
   });
 
   beforeEach(async () => {
+    // Un seul mock de lecture, partagé par le client normal et celui de la
+    // transaction : reschedule relit le RDV DANS la transaction (sous verrou),
+    // updateStatus et cancel le lisent avant. Les tests règlent la même
+    // fonction dans les deux cas.
+    const findUnique = jest.fn();
+
     tx = {
       appointment: {
+        findUnique,
         update: jest.fn(async ({ data }: any) => ({ ...rdv(data.status) })),
       },
+      // Verrou consultatif pris en tête de transaction de réservation.
+      $executeRaw: jest.fn().mockResolvedValue(0),
     };
 
     prisma = {
       appointment: {
-        findUnique: jest.fn(),
+        findUnique,
         update: jest.fn(async ({ data }: any) => ({ ...rdv(data.status) })),
       },
       // Transaction interactive : on se contente d'exécuter le callback

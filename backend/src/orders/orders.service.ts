@@ -154,81 +154,95 @@ export class OrdersService {
   //   - CANCELLED  → restaure le stock si déjà décrémenté (venant de CONFIRMED/READY)
   // ─────────────────────────────────────────
   private async transitionTo(id: string, newStatus: OrderStatus) {
-    const order = await this.prisma.order.findUnique({
+    const found = await this.prisma.order.findUnique({
       where: { id },
       include: { items: true },
     });
-    if (!order) throw new NotFoundException('Commande introuvable.');
+    if (!found) throw new NotFoundException('Commande introuvable.');
 
-    const allowed = ALLOWED_TRANSITIONS[order.status];
+    const { items, ...order } = found;
+    const previousStatus = order.status;
+    const allowed = ALLOWED_TRANSITIONS[previousStatus];
     if (!allowed.includes(newStatus)) {
       throw new BadRequestException(
-        `Transition impossible de ${order.status} vers ${newStatus}.`,
+        `Transition impossible de ${previousStatus} vers ${newStatus}.`,
       );
     }
 
     // Le stock est considéré "décrémenté" dès que la commande a été CONFIRMED.
     const stockWasReserved =
-      order.status === OrderStatus.CONFIRMED || order.status === OrderStatus.READY;
+      previousStatus === OrderStatus.CONFIRMED || previousStatus === OrderStatus.READY;
 
-    // ── CONFIRMED : vérifie et décrémente le stock atomiquement ──
-    if (newStatus === OrderStatus.CONFIRMED) {
-      await this.prisma.$transaction(async (tx) => {
-        // Recharge les produits pour vérifier la dispo au moment T
-        for (const item of order.items) {
-          const product = await tx.product.findUnique({ where: { id: item.productId } });
-          if (!product || !product.active) {
-            throw new BadRequestException(
-              `Produit indisponible dans la commande (${item.productId}).`,
-            );
-          }
-          if (product.stockQty < item.quantity) {
+    await this.prisma.$transaction(async (tx) => {
+      // ── Réservation de la transition, AVANT tout effet de bord ──
+      // L'écriture n'aboutit que si le statut est encore celui qu'on a lu.
+      // Sans cette condition, deux clics rapides sur « Confirmer » passaient
+      // tous deux le contrôle ci-dessus et décrémentaient le stock DEUX fois
+      // pour la même commande. Ici, le second ne touche aucune ligne
+      // (count === 0), lève, et toute sa transaction est annulée.
+      const { count } = await tx.order.updateMany({
+        where: { id, status: previousStatus },
+        data: { status: newStatus },
+      });
+      if (count === 0) {
+        throw new BadRequestException(
+          'Cette commande a changé de statut entre-temps. Rechargez la page.',
+        );
+      }
+
+      // ── CONFIRMED : décrémente le stock, sous condition de disponibilité ──
+      if (newStatus === OrderStatus.CONFIRMED) {
+        for (const item of items) {
+          // La disponibilité est vérifiée PAR l'écriture, pas avant elle :
+          // deux confirmations simultanées lisaient toutes deux « stock = 1 »
+          // et décrémentaient chacune. Le stock finissait à −1.
+          const { count: decremented } = await tx.product.updateMany({
+            where: {
+              id: item.productId,
+              active: true,
+              stockQty: { gte: item.quantity },
+            },
+            data: { stockQty: { decrement: item.quantity } },
+          });
+
+          if (decremented === 0) {
+            // Aucune ligne touchée : produit retiré du catalogue, ou stock
+            // devenu insuffisant. On relit uniquement pour le message —
+            // la transaction est annulée juste après, rien n'est écrit.
+            const product = await tx.product.findUnique({
+              where: { id: item.productId },
+            });
+            if (!product || !product.active) {
+              throw new BadRequestException(
+                `Produit indisponible dans la commande (${item.productId}).`,
+              );
+            }
             throw new BadRequestException(
               `Stock insuffisant pour « ${product.name} » (reste ${product.stockQty}, demandé ${item.quantity}).`,
             );
           }
         }
-        // Décrémente
-        for (const item of order.items) {
+      }
+
+      // ── CANCELLED : restaure le stock si déjà réservé ──
+      if (newStatus === OrderStatus.CANCELLED && stockWasReserved) {
+        for (const item of items) {
           await tx.product.update({
             where: { id: item.productId },
-            data: { stockQty: { decrement: item.quantity } },
+            data: { stockQty: { increment: item.quantity } },
           });
         }
-        await tx.order.update({ where: { id }, data: { status: newStatus } });
-      });
-      return this.findByIdFull(id);
-    }
+      }
+    });
 
-    // ── CANCELLED : restaure le stock si déjà réservé ──
-    if (newStatus === OrderStatus.CANCELLED) {
-      await this.prisma.$transaction(async (tx) => {
-        if (stockWasReserved) {
-          for (const item of order.items) {
-            await tx.product.update({
-              where: { id: item.productId },
-              data: { stockQty: { increment: item.quantity } },
-            });
-          }
-        }
-        await tx.order.update({ where: { id }, data: { status: newStatus } });
-      });
-      return this.findByIdFull(id);
-    }
-
-    // ── COMPLETED : marque puis crédite les points (5% du total) ──
+    // ── COMPLETED : crédite les points (5% du total) ──
+    // Après le commit : le passage à COMPLETED n'a été joué qu'une fois
+    // (updateMany conditionné), donc ce crédit ne peut pas l'être deux fois.
+    // Il reste idempotent par la contrainte unique sur orderId.
     if (newStatus === OrderStatus.COMPLETED) {
-      const updated = await this.prisma.order.update({
-        where: { id },
-        data: { status: newStatus },
-      });
-      // Crédit fidélité (idempotent via la contrainte unique orderId)
-      await this.loyaltyService.earnFromOrder(updated);
-      return this.findByIdFull(id);
+      await this.loyaltyService.earnFromOrder({ ...order, status: newStatus });
     }
 
-    // ── READY (ou autres transitions simples) : juste le statut ──
-    await this.prisma.order.update({ where: { id }, data: { status: newStatus } });
     return this.findByIdFull(id);
   }
 

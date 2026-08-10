@@ -356,16 +356,33 @@ export class LoyaltyService {
       throw new NotFoundException('Compte fidélité introuvable.');
     }
 
-    // 3. Garde-fou : solde suffisant
+    // 3. Message précis quand le solde est visiblement insuffisant.
+    //    Ce n'est PAS ce test qui protège le solde : entre cette lecture et
+    //    l'écriture, le solde peut changer. Le vrai garde-fou est en 4.
     if (account.pointsBalance < reward.pointsCost) {
       throw new BadRequestException(
         `Solde insuffisant. Il vous manque ${reward.pointsCost - account.pointsBalance} point(s).`,
       );
     }
 
-    // 4. Transaction atomique : débit + trace
-    const [transaction] = await this.prisma.$transaction([
-      this.prisma.loyaltyTransaction.create({
+    // 4. Débit conditionnel atomique : Postgres réévalue « solde >= coût »
+    //    au moment de l'écriture et ne touche aucune ligne si ce n'est plus
+    //    vrai. Sans cette condition, deux échanges simultanés lisaient tous
+    //    deux « solde = 100 », se croyaient chacun autorisés, et débitaient
+    //    chacun 100 : le solde tombait à −100.
+    //    Même motif que claimGrant.
+    const transaction = await this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.loyaltyAccount.updateMany({
+        where: { id: account.id, pointsBalance: { gte: reward.pointsCost } },
+        data: { pointsBalance: { decrement: reward.pointsCost } },
+      });
+      if (count === 0) {
+        throw new BadRequestException(
+          'Solde insuffisant : vos points ont changé entre-temps. Rechargez la page.',
+        );
+      }
+
+      return tx.loyaltyTransaction.create({
         data: {
           accountId: account.id,
           ownerId: userId,
@@ -373,14 +390,8 @@ export class LoyaltyService {
           type: LoyaltyTxType.REDEEM,
           rewardId: reward.id,
         },
-      }),
-      this.prisma.loyaltyAccount.update({
-        where: { id: account.id },
-        data: {
-          pointsBalance: { decrement: reward.pointsCost },
-        },
-      }),
-    ]);
+      });
+    });
 
     return {
       message: `Récompense « ${reward.name} » échangée avec succès.`,

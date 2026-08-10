@@ -53,6 +53,11 @@ describe('AppointmentsService — disponibilité des créneaux', () => {
         findUnique: jest.fn(),
       },
       user: { findUnique: jest.fn().mockResolvedValue({ id: 'cliente-1' }) },
+      // Réserver se fait sous verrou, dans une transaction : vérification de
+      // capacité et insertion partagent le même client. Ici le mock joue les
+      // deux rôles, les assertions portent donc toujours sur `prisma`.
+      $executeRaw: jest.fn().mockResolvedValue(0),
+      $transaction: jest.fn(async (cb: any) => cb(prisma)),
     };
 
     const module: TestingModule = await Test.createTestingModule({
