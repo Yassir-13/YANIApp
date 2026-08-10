@@ -39,3 +39,10 @@ Thumbs.db
 
 # Prisma
 # (le schema est suivi, mais pas les artefacts générés si tu les externalises)
+
+# Notes de travail — restent en local.
+# Le dépôt est public : ces documents détaillent le fonctionnement interne du
+# projet, y compris ce qui n'est pas encore corrigé. Ils n'ont rien à y faire.
+# (YANIApp_RECAP_2.md a été versionné avant cette règle : déjà suivi, donc
+# non concerné — git n'ignore pas un fichier qu'il suit déjà.)
+YANIApp_RECAP_*.md
