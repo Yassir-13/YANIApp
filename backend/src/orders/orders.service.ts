@@ -40,13 +40,18 @@ export class OrdersService {
   // ─────────────────────────────────────────
   async create(userId: string, dto: CreateOrderDto) {
     if (dto.fulfillment === FulfillmentType.DELIVERY && !dto.address?.trim()) {
-      throw new BadRequestException('Une adresse est requise pour la livraison.');
+      throw new BadRequestException(
+        'Une adresse est requise pour la livraison.',
+      );
     }
 
     // Fusionne les doublons éventuels (même productId) en sommant les quantités
     const merged = new Map<string, number>();
     for (const item of dto.items) {
-      merged.set(item.productId, (merged.get(item.productId) ?? 0) + item.quantity);
+      merged.set(
+        item.productId,
+        (merged.get(item.productId) ?? 0) + item.quantity,
+      );
     }
     const productIds = [...merged.keys()];
 
@@ -79,7 +84,10 @@ export class OrdersService {
         userId,
         status: OrderStatus.PENDING,
         fulfillment: dto.fulfillment,
-        address: dto.fulfillment === FulfillmentType.DELIVERY ? dto.address?.trim() : null,
+        address:
+          dto.fulfillment === FulfillmentType.DELIVERY
+            ? dto.address?.trim()
+            : null,
         note: dto.note?.trim() || null,
         total,
         items: { create: itemsData },
@@ -119,7 +127,15 @@ export class OrdersService {
       orderBy: { createdAt: 'desc' },
       include: {
         items: { include: { product: true } },
-        user: { select: { id: true, firstName: true, lastName: true, phone: true, email: true } },
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            email: true,
+          },
+        },
       },
     });
   }
@@ -171,7 +187,8 @@ export class OrdersService {
 
     // Le stock est considéré "décrémenté" dès que la commande a été CONFIRMED.
     const stockWasReserved =
-      previousStatus === OrderStatus.CONFIRMED || previousStatus === OrderStatus.READY;
+      previousStatus === OrderStatus.CONFIRMED ||
+      previousStatus === OrderStatus.READY;
 
     await this.prisma.$transaction(async (tx) => {
       // ── Réservation de la transition, AVANT tout effet de bord ──
@@ -233,15 +250,30 @@ export class OrdersService {
           });
         }
       }
-    });
 
-    // ── COMPLETED : crédite les points (5% du total) ──
-    // Après le commit : le passage à COMPLETED n'a été joué qu'une fois
-    // (updateMany conditionné), donc ce crédit ne peut pas l'être deux fois.
-    // Il reste idempotent par la contrainte unique sur orderId.
-    if (newStatus === OrderStatus.COMPLETED) {
-      await this.loyaltyService.earnFromOrder({ ...order, status: newStatus });
-    }
+      // ── COMPLETED : crédite les points (5% du total) ──
+      // DANS la transaction, et non après elle.
+      //
+      // Le crédit se jouait auparavant une fois le commit passé. S'il échouait
+      // — base indisponible une seconde, serveur redémarré au mauvais moment —
+      // la commande restait COMPLETED sans points. Et COMPLETED est un état
+      // FINAL (voir ALLOWED_TRANSITIONS) : impossible d'y revenir, donc les
+      // points étaient perdus pour de bon, sans que personne ne le sache.
+      //
+      // Ici, un crédit qui échoue annule aussi le passage en « terminée ». Le
+      // staff voit l'erreur et rejoue l'opération — c'est réparable, alors
+      // qu'une commande terminée sans points ne l'était pas.
+      //
+      // Le double crédit reste impossible : `updateMany` ci-dessus n'a laissé
+      // passer qu'une seule fois la transition, et la contrainte unique sur
+      // orderId garde le verrou en dernier recours.
+      if (newStatus === OrderStatus.COMPLETED) {
+        await this.loyaltyService.earnFromOrder(
+          { ...order, status: newStatus },
+          tx,
+        );
+      }
+    });
 
     return this.findByIdFull(id);
   }

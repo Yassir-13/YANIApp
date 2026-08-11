@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   Appointment,
@@ -12,7 +16,6 @@ import { UpdateRewardDto } from './dto/update-reward.dto';
 import { CreateMilestoneDto } from './dto/create-milestone.dto';
 import { UpdateMilestoneDto } from './dto/update-milestone.dto';
 import { ManualPointsDto } from './dto/manual-points.dto';
-
 
 // Taux de fidélité : 5% du montant dépensé, converti en points
 const LOYALTY_RATE = 0.05;
@@ -106,8 +109,17 @@ export class LoyaltyService {
   // N'incrémente PAS visitCount : une visite est une prestation réalisée à
   // l'institut, pas un achat de produits. Seuls les RDV comptent pour les
   // paliers de fidélité.
-  async earnFromOrder(order: Order) {
-    const account = await this.prisma.loyaltyAccount.findUnique({
+  //
+  // `tx` : transaction ouverte par l'appelant. Fournie, le crédit et le passage
+  // de la commande en « terminée » réussissent ou échouent ensemble. Sans elle,
+  // un crédit qui échouait laissait la commande COMPLETED — un état FINAL, dont
+  // on ne peut plus sortir — donc sans points, définitivement et en silence.
+  // Même signature que earnFromAppointment, pour que les deux chemins se lisent
+  // pareil.
+  async earnFromOrder(order: Order, tx?: Prisma.TransactionClient) {
+    const db: Prisma.TransactionClient = tx ?? this.prisma;
+
+    const account = await db.loyaltyAccount.findUnique({
       where: { userId: order.userId },
     });
     if (!account) return;
@@ -115,8 +127,8 @@ export class LoyaltyService {
     const points = Math.round(Number(order.total) * LOYALTY_RATE);
     if (points <= 0) return;
 
-    return this.prisma.$transaction([
-      this.prisma.loyaltyTransaction.create({
+    const credit = async (client: Prisma.TransactionClient) => {
+      await client.loyaltyTransaction.create({
         data: {
           accountId: account.id,
           ownerId: order.userId,
@@ -124,14 +136,17 @@ export class LoyaltyService {
           type: LoyaltyTxType.EARN,
           orderId: order.id,
         },
-      }),
-      this.prisma.loyaltyAccount.update({
+      });
+      return client.loyaltyAccount.update({
         where: { id: account.id },
         data: {
           pointsBalance: { increment: points },
         },
-      }),
-    ]);
+      });
+    };
+
+    // Déjà dans une transaction : on y participe. Sinon, on en ouvre une.
+    return tx ? credit(tx) : this.prisma.$transaction(credit);
   }
 
   // ----- PALIERS DE VISITES -----
@@ -299,7 +314,7 @@ export class LoyaltyService {
     });
   }
 
-   createReward(dto: CreateRewardDto) {
+  createReward(dto: CreateRewardDto) {
     return this.prisma.reward.create({ data: dto });
   }
 
@@ -443,7 +458,13 @@ export class LoyaltyService {
           select: { id: true, email: true, firstName: true, lastName: true },
         },
         createdBy: {
-          select: { id: true, email: true, firstName: true, lastName: true, role: true },
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            role: true,
+          },
         },
       },
       orderBy: { createdAt: 'desc' },
@@ -457,7 +478,13 @@ export class LoyaltyService {
       where: { userId },
       include: {
         user: {
-          select: { id: true, email: true, firstName: true, lastName: true, phone: true },
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+          },
         },
         // Récompenses offertes en attente : le comptoir doit les voir pour
         // honorer une cliente qui se présente sans avoir réclamé dans l'app.

@@ -24,7 +24,14 @@ describe('OrdersService', () => {
     userId: 'cliente-1',
     status: OrderStatus.PENDING,
     total: new Prisma.Decimal(400),
-    items: [{ id: 'l1', productId: 'prod-1', quantity: 2, unitPrice: new Prisma.Decimal(200) }],
+    items: [
+      {
+        id: 'l1',
+        productId: 'prod-1',
+        quantity: 2,
+        unitPrice: new Prisma.Decimal(200),
+      },
+    ],
     ...over,
   });
 
@@ -40,7 +47,9 @@ describe('OrdersService', () => {
         findUnique: jest.fn().mockResolvedValue({ ...PRODUIT }),
         update: jest.fn().mockResolvedValue({}),
         updateMany: jest.fn(async ({ where }: any) => {
-          const enBase = await tx.product.findUnique({ where: { id: where.id } });
+          const enBase = await tx.product.findUnique({
+            where: { id: where.id },
+          });
           const passe =
             !!enBase && enBase.active && enBase.stockQty >= where.stockQty.gte;
           return { count: passe ? 1 : 0 };
@@ -57,8 +66,13 @@ describe('OrdersService', () => {
       product: { findMany: jest.fn(), findUnique: jest.fn() },
       order: {
         findUnique: jest.fn(),
-        create: jest.fn(async ({ data }: any) => ({ id: 'cmd-neuve', ...data })),
-        update: jest.fn(async ({ data }: any) => commande({ status: data.status })),
+        create: jest.fn(async ({ data }: any) => ({
+          id: 'cmd-neuve',
+          ...data,
+        })),
+        update: jest.fn(async ({ data }: any) =>
+          commande({ status: data.status }),
+        ),
         findMany: jest.fn(),
       },
       // Forme interactive : transitionTo passe une fonction.
@@ -104,7 +118,10 @@ describe('OrdersService', () => {
         commande({ status: OrderStatus.READY, total: new Prisma.Decimal(400) }),
       );
       // Fati a doublé le prix depuis : le produit vaut désormais 400.
-      tx.product.findUnique.mockResolvedValue({ ...PRODUIT, price: new Prisma.Decimal(400) });
+      tx.product.findUnique.mockResolvedValue({
+        ...PRODUIT,
+        price: new Prisma.Decimal(400),
+      });
 
       await service.updateStatus('cmd-1', OrderStatus.COMPLETED);
 
@@ -123,7 +140,9 @@ describe('OrdersService', () => {
         fulfillment: FulfillmentType.PICKUP,
       });
 
-      expect(prisma.order.create.mock.calls[0][0].data.total.toString()).toBe('200');
+      expect(prisma.order.create.mock.calls[0][0].data.total.toString()).toBe(
+        '200',
+      );
     });
 
     it('refuse un produit inconnu ou désactivé', async () => {
@@ -170,7 +189,9 @@ describe('OrdersService', () => {
   // ═══════════════════════════════════════════════════════════
   describe('machine à états', () => {
     it('refuse de sauter directement de en attente à terminée', async () => {
-      prisma.order.findUnique.mockResolvedValue(commande({ status: OrderStatus.PENDING }));
+      prisma.order.findUnique.mockResolvedValue(
+        commande({ status: OrderStatus.PENDING }),
+      );
 
       await expect(
         service.updateStatus('cmd-1', OrderStatus.COMPLETED),
@@ -178,7 +199,9 @@ describe('OrdersService', () => {
     });
 
     it('refuse de ressusciter une commande annulée', async () => {
-      prisma.order.findUnique.mockResolvedValue(commande({ status: OrderStatus.CANCELLED }));
+      prisma.order.findUnique.mockResolvedValue(
+        commande({ status: OrderStatus.CANCELLED }),
+      );
 
       await expect(
         service.updateStatus('cmd-1', OrderStatus.CONFIRMED),
@@ -187,7 +210,9 @@ describe('OrdersService', () => {
     });
 
     it('refuse de sortir de terminée (état final)', async () => {
-      prisma.order.findUnique.mockResolvedValue(commande({ status: OrderStatus.COMPLETED }));
+      prisma.order.findUnique.mockResolvedValue(
+        commande({ status: OrderStatus.COMPLETED }),
+      );
 
       await expect(
         service.updateStatus('cmd-1', OrderStatus.CANCELLED),
@@ -195,7 +220,9 @@ describe('OrdersService', () => {
     });
 
     it('accepte le parcours normal en attente → confirmée', async () => {
-      prisma.order.findUnique.mockResolvedValue(commande({ status: OrderStatus.PENDING }));
+      prisma.order.findUnique.mockResolvedValue(
+        commande({ status: OrderStatus.PENDING }),
+      );
 
       await service.updateStatus('cmd-1', OrderStatus.CONFIRMED);
 
@@ -209,7 +236,9 @@ describe('OrdersService', () => {
     // le contrôle de transition. C'est l'écriture conditionnée au statut lu
     // qui départage : la seconde ne touche aucune ligne et échoue.
     it('réserve la transition sur le statut lu, pas à l’aveugle', async () => {
-      prisma.order.findUnique.mockResolvedValue(commande({ status: OrderStatus.PENDING }));
+      prisma.order.findUnique.mockResolvedValue(
+        commande({ status: OrderStatus.PENDING }),
+      );
 
       await service.updateStatus('cmd-1', OrderStatus.CONFIRMED);
 
@@ -220,7 +249,9 @@ describe('OrdersService', () => {
     });
 
     it('refuse la 2ᵉ confirmation : le statut a déjà changé', async () => {
-      prisma.order.findUnique.mockResolvedValue(commande({ status: OrderStatus.PENDING }));
+      prisma.order.findUnique.mockResolvedValue(
+        commande({ status: OrderStatus.PENDING }),
+      );
       // La 1ʳᵉ requête a déjà confirmé : plus aucune ligne PENDING à toucher.
       tx.order.updateMany.mockResolvedValue({ count: 0 });
 
@@ -240,7 +271,9 @@ describe('OrdersService', () => {
     // La condition de stock est portée par l'écriture elle-même : Postgres
     // ne décrémente que s'il reste au moins la quantité demandée.
     it('décrémente à la confirmation, sous condition de stock suffisant', async () => {
-      prisma.order.findUnique.mockResolvedValue(commande({ status: OrderStatus.PENDING }));
+      prisma.order.findUnique.mockResolvedValue(
+        commande({ status: OrderStatus.PENDING }),
+      );
 
       await service.updateStatus('cmd-1', OrderStatus.CONFIRMED);
 
@@ -251,7 +284,9 @@ describe('OrdersService', () => {
     });
 
     it('refuse la confirmation si le stock est insuffisant', async () => {
-      prisma.order.findUnique.mockResolvedValue(commande({ status: OrderStatus.PENDING }));
+      prisma.order.findUnique.mockResolvedValue(
+        commande({ status: OrderStatus.PENDING }),
+      );
       tx.product.findUnique.mockResolvedValue({ ...PRODUIT, stockQty: 1 }); // 1 < 2
 
       await expect(
@@ -259,7 +294,9 @@ describe('OrdersService', () => {
       ).rejects.toThrow(/Stock insuffisant/);
 
       // L'écriture conditionnelle n'a touché aucune ligne : le stock est intact.
-      await expect(tx.product.updateMany.mock.results[0].value).resolves.toEqual({
+      await expect(
+        tx.product.updateMany.mock.results[0].value,
+      ).resolves.toEqual({
         count: 0,
       });
       // Le passage à CONFIRMED est annulé avec la transaction (vérifié pour de
@@ -267,7 +304,9 @@ describe('OrdersService', () => {
     });
 
     it('refuse la confirmation si un produit a été désactivé entre-temps', async () => {
-      prisma.order.findUnique.mockResolvedValue(commande({ status: OrderStatus.PENDING }));
+      prisma.order.findUnique.mockResolvedValue(
+        commande({ status: OrderStatus.PENDING }),
+      );
       tx.product.findUnique.mockResolvedValue({ ...PRODUIT, active: false });
 
       await expect(
@@ -277,7 +316,9 @@ describe('OrdersService', () => {
     });
 
     it('restaure le stock à l’annulation d’une commande confirmée', async () => {
-      prisma.order.findUnique.mockResolvedValue(commande({ status: OrderStatus.CONFIRMED }));
+      prisma.order.findUnique.mockResolvedValue(
+        commande({ status: OrderStatus.CONFIRMED }),
+      );
 
       await service.updateStatus('cmd-1', OrderStatus.CANCELLED);
 
@@ -290,7 +331,9 @@ describe('OrdersService', () => {
     // Le piège : une commande PENDING n'a jamais décrémenté le stock.
     // La restaurer créerait du stock à partir de rien.
     it('ne restaure RIEN à l’annulation d’une commande jamais confirmée', async () => {
-      prisma.order.findUnique.mockResolvedValue(commande({ status: OrderStatus.PENDING }));
+      prisma.order.findUnique.mockResolvedValue(
+        commande({ status: OrderStatus.PENDING }),
+      );
 
       await service.updateStatus('cmd-1', OrderStatus.CANCELLED);
 
@@ -304,23 +347,59 @@ describe('OrdersService', () => {
   // ═══════════════════════════════════════════════════════════
   describe('crédit fidélité', () => {
     it('crédite les points au passage à terminée', async () => {
-      prisma.order.findUnique.mockResolvedValue(commande({ status: OrderStatus.READY }));
+      prisma.order.findUnique.mockResolvedValue(
+        commande({ status: OrderStatus.READY }),
+      );
 
       await service.updateStatus('cmd-1', OrderStatus.COMPLETED);
 
       expect(loyalty.earnFromOrder).toHaveBeenCalledTimes(1);
     });
 
+    it('crédite DANS la transaction, pas après le commit', async () => {
+      prisma.order.findUnique.mockResolvedValue(
+        commande({ status: OrderStatus.READY }),
+      );
+
+      await service.updateStatus('cmd-1', OrderStatus.COMPLETED);
+
+      // Le 2ᵉ argument est le client de transaction. C'est lui qui fait que le
+      // crédit et le passage en « terminée » réussissent ou échouent ensemble.
+      // Sans lui, le crédit se jouait après le commit : une commande pouvait
+      // rester COMPLETED — état final — sans jamais recevoir ses points.
+      expect(loyalty.earnFromOrder).toHaveBeenCalledWith(expect.anything(), tx);
+    });
+
+    it('laisse remonter un crédit en échec au lieu de l’avaler', async () => {
+      prisma.order.findUnique.mockResolvedValue(
+        commande({ status: OrderStatus.READY }),
+      );
+      loyalty.earnFromOrder.mockRejectedValue(new Error('base indisponible'));
+
+      // L'erreur doit traverser : c'est elle qui déclenche l'annulation de la
+      // transaction côté Postgres. Avalée, la commande resterait terminée sans
+      // points. Le rollback lui-même est vérifié sur vraie base, dans
+      // orders.service.loyalty-credit.spec.ts — un Prisma mocké ne peut pas
+      // le prouver.
+      await expect(
+        service.updateStatus('cmd-1', OrderStatus.COMPLETED),
+      ).rejects.toThrow('base indisponible');
+    });
+
     it('ne crédite rien sur les autres transitions', async () => {
-      prisma.order.findUnique.mockResolvedValue(commande({ status: OrderStatus.CONFIRMED }));
+      prisma.order.findUnique.mockResolvedValue(
+        commande({ status: OrderStatus.CONFIRMED }),
+      );
 
       await service.updateStatus('cmd-1', OrderStatus.READY);
 
       expect(loyalty.earnFromOrder).not.toHaveBeenCalled();
     });
 
-    it("ne crédite rien quand la commande est annulée", async () => {
-      prisma.order.findUnique.mockResolvedValue(commande({ status: OrderStatus.READY }));
+    it('ne crédite rien quand la commande est annulée', async () => {
+      prisma.order.findUnique.mockResolvedValue(
+        commande({ status: OrderStatus.READY }),
+      );
 
       await service.updateStatus('cmd-1', OrderStatus.CANCELLED);
 
@@ -333,23 +412,29 @@ describe('OrdersService', () => {
   // ═══════════════════════════════════════════════════════════
   describe('annulation par la cliente', () => {
     it("refuse d'annuler la commande d'une autre cliente", async () => {
-      prisma.order.findUnique.mockResolvedValue(commande({ userId: 'quelqu-un-dautre' }));
-
-      await expect(service.cancelByClient('cmd-1', 'cliente-1')).rejects.toThrow(
-        /introuvable/,
+      prisma.order.findUnique.mockResolvedValue(
+        commande({ userId: 'quelqu-un-dautre' }),
       );
+
+      await expect(
+        service.cancelByClient('cmd-1', 'cliente-1'),
+      ).rejects.toThrow(/introuvable/);
     });
 
     it('refuse une annulation après remise (COMPLETED)', async () => {
-      prisma.order.findUnique.mockResolvedValue(commande({ status: OrderStatus.COMPLETED }));
-
-      await expect(service.cancelByClient('cmd-1', 'cliente-1')).rejects.toThrow(
-        /ne peut plus être annulée/,
+      prisma.order.findUnique.mockResolvedValue(
+        commande({ status: OrderStatus.COMPLETED }),
       );
+
+      await expect(
+        service.cancelByClient('cmd-1', 'cliente-1'),
+      ).rejects.toThrow(/ne peut plus être annulée/);
     });
 
     it('autorise une annulation jusqu’à prête', async () => {
-      prisma.order.findUnique.mockResolvedValue(commande({ status: OrderStatus.READY }));
+      prisma.order.findUnique.mockResolvedValue(
+        commande({ status: OrderStatus.READY }),
+      );
 
       await service.cancelByClient('cmd-1', 'cliente-1');
 
