@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   Req,
   UseGuards,
   ParseUUIDPipe,
@@ -20,6 +21,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ManualPointsDto } from './dto/manual-points.dto';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { ApiTags } from '@nestjs/swagger';
 
 @ApiTags('loyalty')
@@ -68,6 +70,13 @@ export class LoyaltyController {
   @Post('grants/:id/claim')
   claimGrant(@Req() req: any, @Param('id', ParseUUIDPipe) id: string) {
     return this.loyaltyService.claimGrant(req.user.id, id);
+  }
+
+  // Les bons de la cliente : ce qu'elle a à présenter à l'institut, et ce
+  // qu'elle a déjà utilisé.
+  @Get('me/vouchers')
+  getMyVouchers(@Req() req: any) {
+    return this.loyaltyService.getMyVouchers(req.user.id);
   }
 
   // ----- ADMIN -----
@@ -150,6 +159,32 @@ export class LoyaltyController {
   @Post('manual')
   addManualPoints(@Req() req: any, @Body() dto: ManualPointsDto) {
     return this.loyaltyService.addManualPoints(dto, req.user.id);
+  }
+
+  // ----- STAFF/ADMIN : bons à honorer au comptoir -----
+  //
+  // Réservé au personnel mais PAS à l'admin seule : remettre une récompense
+  // est le travail quotidien du comptoir, pas un acte de gestion.
+
+  @UseGuards(RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  @Get('vouchers/pending')
+  pendingVouchers() {
+    return this.loyaltyService.listPendingVouchers();
+  }
+
+  @UseGuards(RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  @Get('vouchers/honored')
+  honoredVouchers(@Query() query: PaginationQueryDto) {
+    return this.loyaltyService.listHonoredVouchers(query);
+  }
+
+  @UseGuards(RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  @Post('vouchers/:id/honor')
+  honorVoucher(@Req() req: any, @Param('id', ParseUUIDPipe) id: string) {
+    return this.loyaltyService.honorVoucher(id, req.user.id);
   }
 
   // ----- ADMIN uniquement : audit -----

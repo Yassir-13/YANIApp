@@ -1,4 +1,5 @@
 import { apiClient } from './client';
+import type { Paginated } from './users';
 
 export type LoyaltyTxType = 'EARN' | 'REDEEM' | 'MANUAL' | 'ADJUSTMENT' | 'MILESTONE';
 
@@ -10,6 +11,9 @@ export interface LoyaltyAccount {
   visitCount: number;
   // Récompenses offertes non encore réclamées (fiche cliente au comptoir)
   grants?: MilestoneGrant[];
+  // Bons encore dus à cette cliente. Ils sont ici pour qu'on puisse la servir
+  // même si son téléphone est déchargé : on la retrouve par son nom.
+  vouchers?: RewardVoucher[];
 }
 
 export interface Reward {
@@ -39,6 +43,21 @@ export interface MilestoneGrant {
   reward: Reward;
 }
 
+// Ce que l'institut doit à une cliente : une récompense offerte qu'elle a
+// réclamée dans l'app, ou une récompense qu'elle a payée avec ses points.
+// `honoredAt` non nul = déjà remise.
+export interface RewardVoucher {
+  id: string;
+  code: string;
+  source: 'MILESTONE' | 'REDEEM';
+  pointsSpent: number;
+  createdAt: string;
+  honoredAt: string | null;
+  reward: Reward;
+  account?: { user: AuditPerson };
+  honoredBy?: AuditPerson | null;
+}
+
 // Bornes du seuil — miroir de create-milestone.dto.ts côté backend
 export const MIN_VISIT_THRESHOLD = 2;
 export const MAX_VISIT_THRESHOLD = 100;
@@ -49,6 +68,9 @@ export interface AuditPerson {
   firstName: string | null;
   lastName: string | null;
   role?: string;
+  // Renvoyé uniquement sur les bons à honorer : le comptoir appelle la cliente
+  // quand une récompense l'attend depuis longtemps.
+  phone?: string | null;
 }
 
 export interface ManualTransaction {
@@ -118,6 +140,24 @@ export const loyaltyApi = {
   },
   async addManualPoints(payload: { userId: string; points: number; reason?: string }) {
     const { data } = await apiClient.post('/loyalty/manual', payload);
+    return data;
+  },
+
+  // Bons à honorer (STAFF/ADMIN) — le travail quotidien du comptoir
+  async pendingVouchers(): Promise<RewardVoucher[]> {
+    const { data } = await apiClient.get('/loyalty/vouchers/pending');
+    return data;
+  },
+  // La trace des remises. Paginée : contrairement à la liste des bons dus,
+  // celle-ci grossit sans fin.
+  async honoredVouchers(
+    params: { page?: number; limit?: number } = {},
+  ): Promise<Paginated<RewardVoucher>> {
+    const { data } = await apiClient.get('/loyalty/vouchers/honored', { params });
+    return data;
+  },
+  async honorVoucher(id: string): Promise<{ message: string; voucher: RewardVoucher }> {
+    const { data } = await apiClient.post(`/loyalty/vouchers/${id}/honor`);
     return data;
   },
 

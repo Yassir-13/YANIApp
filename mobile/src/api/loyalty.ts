@@ -15,6 +15,10 @@ export interface LoyaltyTransaction {
   createdAt: string;
   appointmentId: string | null;
   rewardId: string | null;
+  // Nom de la récompense concernée, joint par le serveur. Il ne vient PAS du
+  // catalogue chargé par l'app : celui-ci ne contient que les récompenses
+  // actives, donc une récompense retirée depuis laisserait un blanc.
+  reward: { name: string } | null;
 }
 
 export interface Reward {
@@ -44,6 +48,20 @@ export interface MilestoneGrant {
   createdAt: string;
   reward: Reward;
   milestone: { visitThreshold: number };
+}
+
+// Ce que l'institut doit à la cliente : une récompense offerte qu'elle a
+// réclamée, ou une récompense qu'elle a payée avec ses points. `honoredAt`
+// est la seule source de vérité de « reste à honorer » — l'app et le comptoir
+// lisent le même champ, ce qui n'était pas le cas avant.
+export interface RewardVoucher {
+  id: string;
+  code: string;
+  source: 'MILESTONE' | 'REDEEM';
+  pointsSpent: number;
+  createdAt: string;
+  honoredAt: string | null;
+  reward: Reward;
 }
 
 export const loyaltyApi = {
@@ -77,6 +95,12 @@ export const loyaltyApi = {
   // Réclamer une récompense offerte (aucun point dépensé)
   async claimGrant(grantId: string) {
     const { data } = await apiClient.post(`/loyalty/grants/${grantId}/claim`);
+    return data;
+  },
+
+  // Les bons de la cliente : à présenter d'abord, déjà utilisés ensuite.
+  async getMyVouchers(): Promise<RewardVoucher[]> {
+    const { data } = await apiClient.get('/loyalty/me/vouchers');
     return data;
   },
 };

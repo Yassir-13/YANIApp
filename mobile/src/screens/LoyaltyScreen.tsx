@@ -14,6 +14,7 @@ import {
   Reward,
   Milestone,
   MilestoneGrant,
+  RewardVoucher,
 } from '../api/loyalty';
 import { formatShortDate } from '../utils/format';
 import { useAlert } from '../components/AlertProvider';
@@ -33,25 +34,29 @@ export default function LoyaltyScreen() {
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [grants, setGrants] = useState<MilestoneGrant[]>([]);
+  const [vouchers, setVouchers] = useState<RewardVoucher[]>([]);
   const [claimingId, setClaimingId] = useState<string | null>(null);
+  const [redeemingId, setRedeemingId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
       setError(null);
-      const [acc, hist, rwd, mil, grt] = await Promise.all([
+      const [acc, hist, rwd, mil, grt, vch] = await Promise.all([
         loyaltyApi.getMyAccount(),
         loyaltyApi.getMyHistory(),
         loyaltyApi.getRewards(),
         loyaltyApi.getMilestones(),
         loyaltyApi.getMyGrants(),
+        loyaltyApi.getMyVouchers(),
       ]);
       setAccount(acc);
       setHistory(hist);
       setRewards(rwd);
       setMilestones(mil);
       setGrants(grt);
+      setVouchers(vch);
     } catch {
       setError('Impossible de charger votre fidélité.');
     } finally {
@@ -109,6 +114,26 @@ export default function LoyaltyScreen() {
   // Récompenses offertes en attente : mises en avant, elles ne coûtent rien.
   const unclaimed = useMemo(() => grants.filter((g) => !g.claimedAt), [grants]);
 
+  // Ce que l'institut lui doit encore. Réclamer ne fait plus disparaître une
+  // récompense : elle devient un bon, qui reste visible ici et au comptoir.
+  const aPresenter = useMemo(
+    () => vouchers.filter((v) => !v.honoredAt).length,
+    [vouchers]
+  );
+
+  // Après une réclamation ou un échange, la cliente doit pouvoir aller voir
+  // son code tout de suite — c'est ce qu'elle présentera à l'institut.
+  const annonceBon = (titre: string, message: string) => {
+    show({
+      title: titre,
+      message,
+      buttons: [
+        { text: 'Plus tard', style: 'cancel' },
+        { text: 'Voir mon bon', onPress: () => navigation.navigate('MyRewards') },
+      ],
+    });
+  };
+
   const handleClaim = (grant: MilestoneGrant) => {
     show({
       title: 'Récompense offerte',
@@ -120,9 +145,12 @@ export default function LoyaltyScreen() {
           onPress: async () => {
             setClaimingId(grant.id);
             try {
-              await loyaltyApi.claimGrant(grant.id);
-              alert('Récompense réclamée', `« ${grant.reward.name} » vous attend à l'institut.`);
+              const res = await loyaltyApi.claimGrant(grant.id);
               await load();
+              annonceBon(
+                'Récompense réclamée',
+                `Votre code : ${res.voucher.code}. Présentez-le à l'institut.`
+              );
             } catch (e: any) {
               alert('Erreur', e.response?.data?.message || 'Réclamation impossible.');
             } finally {
@@ -143,12 +171,21 @@ export default function LoyaltyScreen() {
         {
           text: 'Confirmer',
           onPress: async () => {
+            // Verrou pendant la requête : sans lui, rien n'empêchait de
+            // confirmer deux fois. Le serveur refuse bien le second débit,
+            // mais autant ne pas le lui envoyer.
+            setRedeemingId(reward.id);
             try {
-              await loyaltyApi.redeem(reward.id);
-              alert('Succès', `« ${reward.name} » échangée !`);
-              load();
+              const res = await loyaltyApi.redeem(reward.id);
+              await load();
+              annonceBon(
+                'Récompense échangée',
+                `Votre code : ${res.voucher.code}. Présentez-le à l'institut.`
+              );
             } catch (e: any) {
               alert('Erreur', e.response?.data?.message || 'Échange impossible.');
+            } finally {
+              setRedeemingId(null);
             }
           },
         },
@@ -263,6 +300,47 @@ export default function LoyaltyScreen() {
         )}
       </View>
 
+      {/* Accès aux bons. Toujours visible : la cliente doit savoir où les
+          retrouver, même quand il n'y en a aucun en attente. */}
+      <TouchableOpacity
+        onPress={() => navigation.navigate('MyRewards')}
+        activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel={
+          aPresenter > 0
+            ? `Mes récompenses, ${aPresenter} à présenter`
+            : 'Mes récompenses'
+        }
+        style={[
+          styles.vouchersRow,
+          { backgroundColor: theme.surface, borderColor: theme.border },
+        ]}
+      >
+        <View style={[styles.rewardIcon, { backgroundColor: theme.goldSoft }]}>
+          <Ionicons name="ticket-outline" size={22} color={theme.gold} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[typography.subtitle, { color: theme.text }]}>
+            Mes récompenses
+          </Text>
+          <Text style={[typography.small, { color: theme.textSecondary, marginTop: 2 }]}>
+            {aPresenter === 0
+              ? 'Vos récompenses obtenues et utilisées'
+              : aPresenter === 1
+                ? '1 récompense à présenter à l’institut'
+                : `${aPresenter} récompenses à présenter à l’institut`}
+          </Text>
+        </View>
+        {aPresenter > 0 && (
+          <View style={[styles.badge, { backgroundColor: theme.gold }]}>
+            <Text style={[typography.small, { color: theme.surface, fontWeight: '700' }]}>
+              {aPresenter}
+            </Text>
+          </View>
+        )}
+        <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
+      </TouchableOpacity>
+
       {/* Récompenses offertes débloquées, en attente de réclamation */}
       {unclaimed.length > 0 && (
         <>
@@ -310,14 +388,33 @@ export default function LoyaltyScreen() {
         <View style={styles.grid}>
           {rewards.map((r) => {
             const affordable = balance >= r.pointsCost;
+            const enCours = redeemingId === r.id;
+            // Une carte qu'on ne peut pas payer ne doit pas être cliquable :
+            // avant, `affordable` ne servait qu'à colorer le prix, la boîte de
+            // dialogue proposait « Confirmer », et c'est le serveur qui
+            // refusait. On annonçait un échange qu'on savait impossible.
+            const disabled = !affordable || redeemingId !== null;
             return (
               <TouchableOpacity
                 key={r.id}
                 onPress={() => handleRedeem(r)}
+                disabled={disabled}
                 activeOpacity={0.85}
                 accessibilityRole="button"
-                accessibilityLabel={`${r.name}, ${r.pointsCost} points`}
-                style={[styles.rewardCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
+                accessibilityState={{ disabled }}
+                accessibilityLabel={
+                  affordable
+                    ? `${r.name}, ${r.pointsCost} points`
+                    : `${r.name}, ${r.pointsCost} points, il vous manque ${r.pointsCost - balance} points`
+                }
+                style={[
+                  styles.rewardCard,
+                  {
+                    backgroundColor: theme.surface,
+                    borderColor: theme.border,
+                    opacity: affordable ? (enCours ? 0.6 : 1) : 0.55,
+                  },
+                ]}
               >
                 <View style={[styles.rewardIcon, { backgroundColor: theme.goldSoft }]}>
                   <Ionicons name="gift-outline" size={22} color={theme.gold} />
@@ -328,6 +425,11 @@ export default function LoyaltyScreen() {
                 <Text style={[typography.caption, { color: affordable ? theme.gold : theme.textMuted, marginTop: 2 }]}>
                   {r.pointsCost} pts
                 </Text>
+                {!affordable && (
+                  <Text style={[typography.small, { color: theme.textMuted, marginTop: 2 }]}>
+                    Il vous manque {r.pointsCost - balance} pts
+                  </Text>
+                )}
               </TouchableOpacity>
             );
           })}
@@ -361,7 +463,12 @@ export default function LoyaltyScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[typography.bodyMedium, { color: theme.text }]}>{labelForType(tx.type)}</Text>
-                <Text style={[typography.small, { color: theme.textMuted }]}>{formatShortDate(tx.createdAt)}</Text>
+                {/* « Récompense échangée » sans dire laquelle ne servait à
+                    rien des mois plus tard. Le nom vient du serveur. */}
+                <Text style={[typography.small, { color: theme.textMuted }]}>
+                  {tx.reward ? `${tx.reward.name} · ` : ''}
+                  {formatShortDate(tx.createdAt)}
+                </Text>
               </View>
               <Text
                 style={[
@@ -454,6 +561,23 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     marginBottom: spacing.md,
+  },
+  vouchersRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    marginTop: spacing.lg,
+  },
+  badge: {
+    minWidth: 24,
+    height: 24,
+    borderRadius: 12,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   claimBtn: {
     paddingHorizontal: spacing.md,

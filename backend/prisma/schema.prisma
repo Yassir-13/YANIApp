@@ -37,6 +37,12 @@ enum LoyaltyTxType {
   MILESTONE   // récompense de palier réclamée (offerte, 0 point dépensé)
 }
 
+// D'où vient un bon : les deux circuits de récompense de l'institut.
+enum VoucherSource {
+  MILESTONE // offerte par un palier de visites, puis réclamée dans l'app
+  REDEEM    // achetée par la cliente avec ses points
+}
+
 enum AppointmentStatus {
   PENDING
   CONFIRMED
@@ -101,6 +107,7 @@ model User {
   loyaltyTx          LoyaltyTransaction[] @relation("AccountOwner")
   createdTransactions LoyaltyTransaction[] @relation("TransactionCreator")
   orders             Order[]
+  honoredVouchers    RewardVoucher[]      @relation("VoucherHonorer")
 
   @@map("users")
 }
@@ -120,6 +127,7 @@ model LoyaltyAccount {
   user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions LoyaltyTransaction[]
   grants       MilestoneGrant[]
+  vouchers     RewardVoucher[]
 
   @@map("loyalty_accounts")
 }
@@ -151,7 +159,9 @@ model LoyaltyTransaction {
   appointment Appointment?   @relation(fields: [appointmentId], references: [id])
   reward      Reward?       @relation(fields: [rewardId], references: [id])
   order       Order?         @relation(fields: [orderId], references: [id])
-  
+  // Bon émis par cette écriture (échange de points). Absent pour les autres types.
+  voucher     RewardVoucher?
+
   @@index([accountId])
   @@map("loyalty_transactions")
 }
@@ -290,6 +300,7 @@ model Reward {
   transactions LoyaltyTransaction[]
   milestones   LoyaltyMilestone[]
   grants       MilestoneGrant[]
+  vouchers     RewardVoucher[]
 
   @@map("rewards")
 }
@@ -335,12 +346,67 @@ model MilestoneGrant {
   account   LoyaltyAccount   @relation(fields: [accountId], references: [id], onDelete: Cascade)
   milestone LoyaltyMilestone @relation(fields: [milestoneId], references: [id])
   reward    Reward           @relation(fields: [rewardId], references: [id])
+  // Bon émis à la réclamation. Absent tant que la cliente n'a pas réclamé.
+  voucher   RewardVoucher?
 
   // Idempotence : un palier ne peut être débloqué qu'une fois par cycle et par
   // compte, même si la logique de crédit est rejouée.
   @@unique([accountId, milestoneId, cycle])
   @@index([accountId])
   @@map("milestone_grants")
+}
+
+// ─────────────────────────────────────────────
+//  BONS DE RÉCOMPENSE
+// ─────────────────────────────────────────────
+
+// Ce qu'une cliente a le droit de recevoir au comptoir, et que l'institut doit
+// honorer. C'est la notion qui manquait : sans elle, réclamer une récompense
+// offerte la faisait disparaître des DEUX côtés (l'app filtrait sur claimedAt,
+// la fiche comptoir aussi), et un échange de points ne laissait qu'une ligne
+// d'historique que personne ne listait.
+//
+// Les deux circuits — offert par un palier, acheté avec des points — se
+// rejoignent ici. Un seul objet à afficher côté cliente, une seule liste à
+// traiter au comptoir.
+model RewardVoucher {
+  id        String        @id @default(uuid())
+  // Code lisible à voix haute au comptoir (8 caractères, sans O/0/I/1).
+  // Ce n'est PAS un secret : les routes staff sont déjà authentifiées. C'est
+  // un identifiant court, pour ne pas dicter un UUID.
+  code      String        @unique
+  accountId String        @map("account_id")
+  rewardId  String        @map("reward_id")
+  source    VoucherSource
+  // Points réellement dépensés (0 pour une récompense offerte). Figé ici :
+  // si le tarif de la récompense change, ce qui a été payé ne bouge pas.
+  pointsSpent Int         @default(0) @map("points_spent")
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  // Remise effective au comptoir. null = encore dû.
+  honoredAt   DateTime? @map("honored_at")
+  honoredById String?   @map("honored_by")
+
+  // Origine exacte, pour la traçabilité. L'unicité est le vrai garde-fou de
+  // l'idempotence : une réclamation ou un échange rejoué ne peut pas émettre
+  // un second bon pour le même événement.
+  grantId       String? @unique @map("grant_id")
+  transactionId String? @unique @map("transaction_id")
+
+  account     LoyaltyAccount      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  reward      Reward              @relation(fields: [rewardId], references: [id])
+  grant       MilestoneGrant?     @relation(fields: [grantId], references: [id], onDelete: Cascade)
+  transaction LoyaltyTransaction? @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  // Qui a remis le bon. SetNull et non Cascade, même raison que createdBy sur
+  // LoyaltyTransaction : le départ d'une employée ne doit pas effacer la trace
+  // de ce qui a été remis aux clientes.
+  honoredBy   User?               @relation("VoucherHonorer", fields: [honoredById], references: [id], onDelete: SetNull)
+
+  @@index([accountId])
+  // La liste du comptoir ne lit que les bons dus : elle reste courte et rapide
+  // même quand l'historique grossit.
+  @@index([honoredAt])
+  @@map("reward_vouchers")
 }
 
 // ─────────────────────────────────────────────

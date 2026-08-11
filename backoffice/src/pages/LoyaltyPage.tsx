@@ -5,6 +5,7 @@ import {
   Milestone,
   LoyaltyAccount,
   ManualTransaction,
+  RewardVoucher,
   MANUAL_POINTS_CAP,
   MIN_VISIT_THRESHOLD,
   MAX_VISIT_THRESHOLD,
@@ -18,24 +19,33 @@ import Pagination from '../components/Pagination';
 // Lignes d'audit affichées par page (le cumul de points reste global).
 const AUDIT_PAGE_SIZE = 20;
 
-type Tab = 'credit' | 'rewards' | 'milestones' | 'audit';
+// Remises affichées par page. Contrairement aux bons dus — bornés par ce qui
+// reste à remettre — cette liste grossit sans fin : elle est paginée côté
+// serveur dès maintenant.
+const HONORED_PAGE_SIZE = 20;
+
+type Tab = 'vouchers' | 'credit' | 'rewards' | 'milestones' | 'audit';
 
 export default function LoyaltyPage() {
   const user = useAuthStore((s) => s.user);
   const isAdmin = user?.role === 'ADMIN';
 
-  const [tab, setTab] = useState<Tab>('credit');
+  // « À honorer » en premier : c'est le geste du comptoir, pas de la gestion.
+  const [tab, setTab] = useState<Tab>('vouchers');
 
   return (
     <div>
       <div style={{ marginBottom: 'var(--sp-4)' }}>
         <h1>Fidélité</h1>
         <div className="muted small">
-          Créditez des points, gérez les récompenses et suivez les opérations manuelles.
+          Remettez les récompenses dues, créditez des points, gérez le programme.
         </div>
       </div>
 
       <div className="row gap-2" style={{ marginBottom: 'var(--sp-4)' }}>
+        <TabBtn active={tab === 'vouchers'} onClick={() => setTab('vouchers')}>
+          À honorer
+        </TabBtn>
         <TabBtn active={tab === 'credit'} onClick={() => setTab('credit')}>
           Créditer une cliente
         </TabBtn>
@@ -54,6 +64,7 @@ export default function LoyaltyPage() {
         )}
       </div>
 
+      {tab === 'vouchers' && <VouchersTab />}
       {tab === 'credit' && <CreditTab />}
       {tab === 'rewards' && isAdmin && <RewardsTab />}
       {tab === 'milestones' && isAdmin && <MilestonesTab />}
@@ -74,7 +85,251 @@ function TabBtn({ active, onClick, children }: any) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-//  Onglet 1 : créditer une cliente
+//  Onglet 1 : les bons à honorer au comptoir
+// ─────────────────────────────────────────────────────────────────────────
+//
+// Ce que l'institut doit aux clientes. Deux origines, une seule liste : une
+// récompense offerte qu'une cliente a réclamée dans l'app, ou une récompense
+// qu'elle a payée avec ses points. Avant, le premier cas disparaissait de
+// partout à la réclamation, et le second n'apparaissait nulle part.
+function VouchersTab() {
+  const [pending, setPending] = useState<RewardVoucher[]>([]);
+  const [honored, setHonored] = useState<RewardVoucher[]>([]);
+  const [honoredTotal, setHonoredTotal] = useState(0);
+  const [honoredPages, setHonoredPages] = useState(1);
+  const [page, setPage] = useState(1);
+
+  const [filter, setFilter] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
+  const [confirming, setConfirming] = useState<RewardVoucher | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const load = async (p = page) => {
+    setIsLoading(true);
+    try {
+      setError(null);
+      const [dus, remis] = await Promise.all([
+        loyaltyApi.pendingVouchers(),
+        loyaltyApi.honoredVouchers({ page: p, limit: HONORED_PAGE_SIZE }),
+      ]);
+      setPending(dus);
+      setHonored(remis.data);
+      setHonoredTotal(remis.total);
+      setHonoredPages(remis.totalPages);
+    } catch {
+      setError('Impossible de charger les bons.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load(page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
+
+  const confirmHonor = async () => {
+    if (!confirming) return;
+    setSaving(true);
+    setMessage(null);
+    try {
+      const res = await loyaltyApi.honorVoucher(confirming.id);
+      setMessage({ text: res.message, ok: true });
+      setConfirming(null);
+      await load(page);
+    } catch (e: any) {
+      setMessage({
+        text: e.response?.data?.message || 'Remise impossible.',
+        ok: false,
+      });
+      setConfirming(null);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Filtre local : la liste des bons dus est courte par construction (elle ne
+  // contient que ce qui reste à remettre), donc pas besoin d'aller-retour
+  // serveur pour retrouver un code dicté par une cliente.
+  const terme = filter.trim().toLowerCase();
+  const visibles = terme
+    ? pending.filter((v) =>
+        [
+          v.code,
+          v.reward.name,
+          fullName(v.account?.user),
+          v.account?.user?.email ?? '',
+        ]
+          .join(' ')
+          .toLowerCase()
+          .includes(terme),
+      )
+    : pending;
+
+  return (
+    <div style={{ display: 'grid', gap: 'var(--sp-4)' }}>
+      <section className="card">
+        <div className="row between card-pad" style={styles.sectionHead}>
+          <div>
+            <h2>Récompenses à remettre</h2>
+            <div className="small muted">
+              {pending.length} bon(s) en attente
+            </div>
+          </div>
+          <button className="btn btn-outline btn-sm" onClick={() => load(page)}>
+            Actualiser
+          </button>
+        </div>
+
+        {message && (
+          <div
+            className="card-pad small"
+            style={{ color: message.ok ? 'var(--success)' : 'var(--danger)' }}
+          >
+            {message.text}
+          </div>
+        )}
+        {error && <div className="card-pad" style={{ color: 'var(--danger)' }}>{error}</div>}
+
+        <div className="card-pad">
+          <input
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            placeholder="Code, nom de la cliente ou récompense…"
+          />
+        </div>
+
+        {isLoading ? (
+          <div style={{ display: 'grid', placeItems: 'center', height: 160 }}>
+            <div className="spinner" />
+          </div>
+        ) : visibles.length === 0 ? (
+          <div className="card-pad muted small">
+            {pending.length === 0
+              ? 'Aucune récompense en attente.'
+              : 'Aucun bon ne correspond à cette recherche.'}
+          </div>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Cliente</th>
+                <th>Récompense</th>
+                <th>Origine</th>
+                <th>Depuis</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {visibles.map((v) => (
+                <tr key={v.id}>
+                  <td>
+                    <span className="serif" style={styles.code}>{v.code}</span>
+                  </td>
+                  <td>
+                    <div style={{ fontWeight: 500 }}>{fullName(v.account?.user)}</div>
+                    <div className="small muted">{v.account?.user?.phone || v.account?.user?.email}</div>
+                  </td>
+                  <td>{v.reward.name}</td>
+                  <td>
+                    <span className="badge badge-muted">
+                      {v.source === 'MILESTONE'
+                        ? 'Offerte'
+                        : `${v.pointsSpent} pts`}
+                    </span>
+                  </td>
+                  <td className="small muted">{formatDateTime(v.createdAt)}</td>
+                  <td style={{ textAlign: 'right' }}>
+                    <button
+                      className="btn btn-gold btn-sm"
+                      onClick={() => setConfirming(v)}
+                    >
+                      Remis
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      {/* La trace : qui a remis quoi, et quand. */}
+      <section className="card">
+        <div className="card-pad" style={styles.sectionHead}>
+          <h2>Déjà remises</h2>
+          <div className="small muted">{honoredTotal} remise(s) enregistrée(s)</div>
+        </div>
+
+        {honored.length === 0 ? (
+          <div className="card-pad muted small">Aucune remise enregistrée.</div>
+        ) : (
+          <>
+            <table>
+              <thead>
+                <tr>
+                  <th>Remise le</th>
+                  <th>Cliente</th>
+                  <th>Récompense</th>
+                  <th>Par</th>
+                  <th>Code</th>
+                </tr>
+              </thead>
+              <tbody>
+                {honored.map((v) => (
+                  <tr key={v.id}>
+                    <td className="small muted">{formatDateTime(v.honoredAt!)}</td>
+                    <td>
+                      <div style={{ fontWeight: 500 }}>{fullName(v.account?.user)}</div>
+                      <div className="small muted">{v.account?.user?.email}</div>
+                    </td>
+                    <td>{v.reward.name}</td>
+                    <td>
+                      <div>{fullName(v.honoredBy)}</div>
+                      {v.honoredBy?.role && (
+                        <span className="badge badge-muted" style={{ marginTop: 2 }}>
+                          {v.honoredBy.role === 'ADMIN' ? 'Admin' : 'Personnel'}
+                        </span>
+                      )}
+                    </td>
+                    <td className="small muted">{v.code}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <Pagination
+              page={page}
+              totalPages={honoredPages}
+              total={honoredTotal}
+              onChange={setPage}
+              label="remise(s)"
+            />
+          </>
+        )}
+      </section>
+
+      <Confirm
+        open={!!confirming}
+        title="Confirmer la remise"
+        message={
+          confirming
+            ? `Remettre « ${confirming.reward.name} » à ${fullName(confirming.account?.user)} ? Le bon sortira de la liste.`
+            : undefined
+        }
+        confirmLabel="Oui, remise"
+        loading={saving}
+        onConfirm={confirmHonor}
+        onCancel={() => setConfirming(null)}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+//  Onglet 2 : créditer une cliente
 // ─────────────────────────────────────────────────────────────────────────
 function CreditTab() {
   const [search, setSearch] = useState('');
@@ -222,12 +477,32 @@ function CreditTab() {
                 </div>
               </div>
 
-              {/* Récompenses offertes non réclamées : à honorer si la cliente
-                  se présente sans être passée par l'application. */}
+              {/* Bons encore dus. Ils sont rappelés ici, sur la fiche, et pas
+                  seulement dans l'onglet « À honorer » : une cliente dont le
+                  téléphone est déchargé se retrouve par son nom. */}
+              {account && account.vouchers && account.vouchers.length > 0 && (
+                <div style={styles.grantsBox}>
+                  <div className="label" style={{ marginBottom: 6 }}>
+                    Récompense(s) à remettre
+                  </div>
+                  {account.vouchers.map((v) => (
+                    <div key={v.id} className="row between" style={{ marginTop: 4 }}>
+                      <span style={{ fontWeight: 500 }}>{v.reward.name}</span>
+                      <span className="serif" style={styles.code}>{v.code}</span>
+                    </div>
+                  ))}
+                  <div className="small muted" style={{ marginTop: 6 }}>
+                    À remettre depuis l'onglet « À honorer ».
+                  </div>
+                </div>
+              )}
+
+              {/* Récompenses offertes qu'elle n'a pas encore réclamées dans
+                  l'app : rien ne l'oblige à passer par son téléphone. */}
               {account && account.grants && account.grants.length > 0 && (
                 <div style={styles.grantsBox}>
                   <div className="label" style={{ marginBottom: 6 }}>
-                    Récompense(s) offerte(s) en attente
+                    Récompense(s) offerte(s), pas encore réclamées
                   </div>
                   {account.grants.map((g) => (
                     <div key={g.id} className="row between" style={{ marginTop: 4 }}>
@@ -932,6 +1207,14 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 'var(--sp-3)',
     borderRadius: 'var(--radius-sm)',
     background: 'var(--surface-alt)',
+  },
+  // Le code se lit à voix haute au comptoir : espacé, lisible, monospace.
+  code: {
+    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+    fontSize: 15,
+    fontWeight: 600,
+    letterSpacing: 2,
+    color: 'var(--gold-deep)',
   },
   grantsBox: {
     marginTop: 'var(--sp-3)',
