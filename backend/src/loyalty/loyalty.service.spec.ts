@@ -40,10 +40,7 @@ describe('LoyaltyService — earnFromAppointment (prix figé)', () => {
     };
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        LoyaltyService,
-        { provide: PrismaService, useValue: prisma },
-      ],
+      providers: [LoyaltyService, { provide: PrismaService, useValue: prisma }],
     }).compile();
 
     service = module.get(LoyaltyService);
@@ -51,13 +48,19 @@ describe('LoyaltyService — earnFromAppointment (prix figé)', () => {
 
   it('crédite 5% du prix FIGÉ, en ignorant le prix courant du service', async () => {
     // Le tarif a grimpé à 999 depuis la réservation ; il ne doit PAS être lu.
-    prisma.service.findUnique.mockResolvedValue({ price: new Prisma.Decimal(999) });
+    prisma.service.findUnique.mockResolvedValue({
+      price: new Prisma.Decimal(999),
+    });
 
-    await service.earnFromAppointment(appointment({ priceAtBooking: new Prisma.Decimal(400) }));
+    await service.earnFromAppointment(
+      appointment({ priceAtBooking: new Prisma.Decimal(400) }),
+    );
 
     // 5% de 400 = 20 (et surtout pas 5% de 999 = 50)
     expect(prisma.loyaltyTransaction.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ pointsDelta: 20 }) }),
+      expect.objectContaining({
+        data: expect.objectContaining({ pointsDelta: 20 }),
+      }),
     );
     expect(prisma.loyaltyAccount.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -69,22 +72,65 @@ describe('LoyaltyService — earnFromAppointment (prix figé)', () => {
   });
 
   it('repli sur le prix courant quand priceAtBooking est null (RDV hérités)', async () => {
-    prisma.service.findUnique.mockResolvedValue({ price: new Prisma.Decimal(300) });
+    prisma.service.findUnique.mockResolvedValue({
+      price: new Prisma.Decimal(300),
+    });
 
     await service.earnFromAppointment(appointment({ priceAtBooking: null }));
 
     // Pas de prix figé -> on lit le service -> 5% de 300 = 15
     expect(prisma.service.findUnique).toHaveBeenCalled();
     expect(prisma.loyaltyTransaction.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ pointsDelta: 15 }) }),
+      expect.objectContaining({
+        data: expect.objectContaining({ pointsDelta: 15 }),
+      }),
     );
   });
 
-  it('ne crédite rien si le prix figé arrondit à 0 point', async () => {
-    // 5% de 5 = 0.25 -> arrondi 0 -> aucun mouvement
-    await service.earnFromAppointment(appointment({ priceAtBooking: new Prisma.Decimal(5) }));
+  // ═══════════════════════════════════════════════════════════
+  //  « Rien gagné, rien compté » — règle commerciale
+  // ═══════════════════════════════════════════════════════════
+  //
+  // Ces tests verrouillent une DÉCISION, pas un détail d'implémentation.
+  // L'ancien test ne vérifiait que l'absence de points ; il laissait donc
+  // passer un ajout de `visitCount`, qui est pourtant le vrai enjeu : le
+  // tampon sur la carte de fidélité.
+  describe('prestation qui ne rapporte rien', () => {
+    it('ne tamponne pas la carte pour un soin OFFERT', async () => {
+      await service.earnFromAppointment(
+        appointment({ priceAtBooking: new Prisma.Decimal(0) }),
+      );
 
-    expect(prisma.loyaltyTransaction.create).not.toHaveBeenCalled();
+      expect(prisma.loyaltyTransaction.create).not.toHaveBeenCalled();
+      // Le point décisif : aucun tampon. Un offert EST déjà une récompense —
+      // le faire avancer vers la suivante ferait boucler le programme sur
+      // lui-même.
+      expect(prisma.loyaltyAccount.update).not.toHaveBeenCalled();
+    });
+
+    it('ne tamponne pas non plus pour un geste commercial sous 10 DH', async () => {
+      // 5 % de 5 = 0,25 → arrondi à 0.
+      await service.earnFromAppointment(
+        appointment({ priceAtBooking: new Prisma.Decimal(5) }),
+      );
+
+      expect(prisma.loyaltyTransaction.create).not.toHaveBeenCalled();
+      expect(prisma.loyaltyAccount.update).not.toHaveBeenCalled();
+    });
+
+    it('tamponne dès que la prestation rapporte au moins 1 point', async () => {
+      // 5 % de 10 = 0,5 → arrondi à 1. C'est la frontière exacte de la règle :
+      // écrite ici pour qu'un déplacement du seuil se voie tout de suite.
+      await service.earnFromAppointment(
+        appointment({ priceAtBooking: new Prisma.Decimal(10) }),
+      );
+
+      expect(prisma.loyaltyAccount.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ visitCount: { increment: 1 } }),
+        }),
+      );
+    });
   });
 });
 
@@ -113,9 +159,15 @@ describe('LoyaltyService — paliers de visites', () => {
   });
 
   // Rejoue un RDV terminé sur un compte qui atteint `visitCount` visites.
-  const completeVisitAt = async (visitCount: number, milestones: any[] = [milestone]) => {
+  const completeVisitAt = async (
+    visitCount: number,
+    milestones: any[] = [milestone],
+  ) => {
     prisma.loyaltyMilestone.findMany.mockResolvedValue(milestones);
-    prisma.loyaltyAccount.update.mockResolvedValue({ id: 'compte-1', visitCount });
+    prisma.loyaltyAccount.update.mockResolvedValue({
+      id: 'compte-1',
+      visitCount,
+    });
     await service.earnFromAppointment(appointment());
   };
 

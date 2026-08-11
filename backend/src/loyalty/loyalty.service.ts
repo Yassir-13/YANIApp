@@ -72,6 +72,22 @@ export class LoyaltyService {
 
     // Calcule les points : 5% du prix, arrondi à l'entier
     const points = Math.round(Number(price) * LOYALTY_RATE);
+
+    // Rien gagné, rien compté : ni points, ni visite, ni progression vers un
+    // palier. Ce `return` est une RÈGLE COMMERCIALE, pas un oubli — il a déjà
+    // été signalé comme bug lors d'un audit, d'où ce commentaire.
+    //
+    // Ce que ça couvre, à 5 % du prix : tout ce qui est sous 10 DH, donc les
+    // prestations offertes (0 DH) et les gestes commerciaux symboliques.
+    //
+    // Pourquoi un offert ne doit surtout pas compter : un soin offert EST une
+    // récompense de palier. S'il faisait avancer vers la récompense suivante,
+    // le programme se financerait lui-même — cadeau, progression, cadeau — et
+    // la fuite grossirait avec les meilleures clientes, celles qui coûtent
+    // déjà le plus en récompenses.
+    //
+    // Seule une dépense réelle fait avancer la carte. Décision prise le
+    // 2026-08-11 ; à ne pas « corriger » sans la remettre en cause d'abord.
     if (points <= 0) return;
 
     // Créer le mouvement + mettre à jour le solde et le compteur de visites
