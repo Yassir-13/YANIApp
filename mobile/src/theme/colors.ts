@@ -48,6 +48,10 @@ export const lightTheme = {
   badgeSoon: '#B07E1E',
   badgeNewBg: 'rgba(216, 168, 72, 0.16)',
   badgeNew: '#B07E1E',
+  // Rupture : volontairement neutre et non doré. Le doré annonce une bonne
+  // nouvelle (« Bientôt », « Nouv ! ») ; une rupture n'en est pas une.
+  badgeOutBg: 'rgba(110, 102, 86, 0.14)',
+  badgeOut: '#6F6656',
 
   // Chips de filtres
   chipActiveBg: gold.primary,
@@ -103,6 +107,8 @@ export const darkTheme = {
   badgeSoon: '#E4C15E',
   badgeNewBg: 'rgba(216, 168, 72, 0.18)',
   badgeNew: '#E4C15E',
+  badgeOutBg: 'rgba(167, 157, 136, 0.18)',
+  badgeOut: '#A79D88',
 
   // Chips de filtres
   chipActiveBg: gold.primary,

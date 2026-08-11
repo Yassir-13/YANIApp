@@ -13,6 +13,8 @@ export interface CartLine {
 export interface CartSyncResult {
   removed: string[];
   repriced: { name: string; before: string; after: string }[];
+  // Quantités rabotées faute de stock. `after: 0` = ligne retirée du panier.
+  reduced: { name: string; before: number; after: number }[];
 }
 
 interface CartState {
@@ -22,6 +24,8 @@ interface CartState {
 
   count: () => number;
   subtotal: () => number;
+  /** Quantité de ce produit déjà au panier (0 s'il n'y est pas). */
+  quantityOf: (productId: string) => number;
   add: (product: Product, quantity?: number) => void;
   setQuantity: (productId: string, quantity: number) => void;
   increment: (productId: string) => void;
@@ -43,17 +47,32 @@ export const useCartStore = create<CartState>()(
       subtotal: () =>
         get().lines.reduce((sum, l) => sum + parseFloat(l.product.price) * l.quantity, 0),
 
+      // Ce qui est déjà au panier pour ce produit. L'écran détail en a besoin :
+      // « ajouter 1 » n'a de sens que si le stock couvre aussi ce qui y est
+      // déjà.
+      quantityOf: (productId) =>
+        get().lines.find((l) => l.product.id === productId)?.quantity ?? 0,
+
+      // Plafond dur, appliqué par les trois écritures ci-dessous : le panier ne
+      // contient jamais plus que le stock connu du produit. Sans lui, la
+      // cliente obtenait « Commande confirmée » pour une quantité que
+      // l'institut ne pouvait pas servir, et le seul rattrapage était un coup
+      // de téléphone le lendemain (B8).
       add: (product, quantity = 1) =>
         set((state) => {
           const existing = state.lines.find((l) => l.product.id === product.id);
+          const voulu = (existing?.quantity ?? 0) + quantity;
+          const retenu = Math.min(voulu, product.stockQty);
+          // Produit épuisé : rien à ajouter, et surtout pas une ligne à zéro.
+          if (retenu <= 0) return state;
           if (existing) {
             return {
               lines: state.lines.map((l) =>
-                l.product.id === product.id ? { ...l, quantity: l.quantity + quantity } : l
+                l.product.id === product.id ? { ...l, quantity: retenu } : l
               ),
             };
           }
-          return { lines: [...state.lines, { product, quantity }] };
+          return { lines: [...state.lines, { product, quantity: retenu }] };
         }),
 
       setQuantity: (productId, quantity) =>
@@ -62,14 +81,18 @@ export const useCartStore = create<CartState>()(
             quantity <= 0
               ? state.lines.filter((l) => l.product.id !== productId)
               : state.lines.map((l) =>
-                  l.product.id === productId ? { ...l, quantity } : l
+                  l.product.id === productId
+                    ? { ...l, quantity: Math.min(quantity, l.product.stockQty) }
+                    : l
                 ),
         })),
 
       increment: (productId) =>
         set((state) => ({
           lines: state.lines.map((l) =>
-            l.product.id === productId ? { ...l, quantity: l.quantity + 1 } : l
+            l.product.id === productId
+              ? { ...l, quantity: Math.min(l.quantity + 1, l.product.stockQty) }
+              : l
           ),
         })),
 
@@ -103,7 +126,7 @@ export const useCartStore = create<CartState>()(
       // ce qui a changé pour pouvoir le dire clairement à la cliente.
       sync: async () => {
         const lines = get().lines;
-        if (lines.length === 0) return { removed: [], repriced: [] };
+        if (lines.length === 0) return { removed: [], repriced: [], reduced: [] };
 
         // /products ne renvoie que les produits actifs : un produit absent de
         // la réponse est supprimé ou désactivé — dans les deux cas il n'est
@@ -113,6 +136,7 @@ export const useCartStore = create<CartState>()(
 
         const removed: string[] = [];
         const repriced: CartSyncResult['repriced'] = [];
+        const reduced: CartSyncResult['reduced'] = [];
         const kept: CartLine[] = [];
 
         for (const line of lines) {
@@ -121,6 +145,23 @@ export const useCartStore = create<CartState>()(
             removed.push(line.product.name);
             continue;
           }
+
+          // Le stock a pu fondre pendant que le panier dormait. On rabote la
+          // ligne maintenant plutôt que de laisser la cliente aller jusqu'à la
+          // validation pour se faire refuser : elle voit ce qui a changé, et
+          // sur quel produit.
+          const quantity = Math.min(line.quantity, frais.stockQty);
+          if (quantity !== line.quantity) {
+            reduced.push({
+              name: frais.name,
+              before: line.quantity,
+              after: quantity,
+            });
+          }
+          // Épuisé : la ligne n'est plus commandable. Signaler en plus son
+          // changement de prix n'apprendrait rien d'utile.
+          if (quantity <= 0) continue;
+
           if (frais.price !== line.product.price) {
             repriced.push({
               name: frais.name,
@@ -129,11 +170,11 @@ export const useCartStore = create<CartState>()(
             });
           }
           // Remplacé par la version fraîche : prix, nom, image, stock.
-          kept.push({ product: frais, quantity: line.quantity });
+          kept.push({ product: frais, quantity });
         }
 
         set({ lines: kept });
-        return { removed, repriced };
+        return { removed, repriced, reduced };
       },
     }),
     {

@@ -185,6 +185,95 @@ describe('OrdersService', () => {
   });
 
   // ═══════════════════════════════════════════════════════════
+  //  CONTRÔLE DU STOCK À LA COMMANDE (B8)
+  // ═══════════════════════════════════════════════════════════
+  //
+  // Ce contrôle VÉRIFIE le stock sans le réserver — la réservation reste le
+  // geste du personnel, à la confirmation. Ce qu'il empêche : qu'une cliente
+  // lise « Commande confirmée » pour une quantité que l'institut ne peut pas
+  // servir, et l'apprenne le lendemain par téléphone.
+  describe('contrôle du stock à la commande', () => {
+    it('refuse une quantité supérieure au stock disponible', async () => {
+      prisma.product.findMany.mockResolvedValue([{ ...PRODUIT, stockQty: 1 }]);
+
+      await expect(
+        service.create('cliente-1', {
+          items: [{ productId: 'prod-1', quantity: 10 }],
+          fulfillment: FulfillmentType.PICKUP,
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+
+      // Aucune commande écrite : rien à annuler ni à rattraper ensuite.
+      expect(prisma.order.create).not.toHaveBeenCalled();
+    });
+
+    it('nomme le produit et ce qu’il en reste', async () => {
+      prisma.product.findMany.mockResolvedValue([{ ...PRODUIT, stockQty: 1 }]);
+
+      // « Stock insuffisant » sans dire lequel obligerait la cliente à retirer
+      // ses articles un par un pour deviner.
+      await expect(
+        service.create('cliente-1', {
+          items: [{ productId: 'prod-1', quantity: 10 }],
+          fulfillment: FulfillmentType.PICKUP,
+        }),
+      ).rejects.toThrow(/Huile d’argan.*reste 1.*demandé 10/);
+    });
+
+    it('dit « épuisé » plutôt que « reste 0 »', async () => {
+      prisma.product.findMany.mockResolvedValue([{ ...PRODUIT, stockQty: 0 }]);
+
+      await expect(
+        service.create('cliente-1', {
+          items: [{ productId: 'prod-1', quantity: 1 }],
+          fulfillment: FulfillmentType.PICKUP,
+        }),
+      ).rejects.toThrow(/épuisé/);
+    });
+
+    it('accepte une commande égale au stock, à l’unité près', async () => {
+      prisma.product.findMany.mockResolvedValue([{ ...PRODUIT, stockQty: 3 }]);
+
+      await service.create('cliente-1', {
+        items: [{ productId: 'prod-1', quantity: 3 }],
+        fulfillment: FulfillmentType.PICKUP,
+      });
+
+      expect(prisma.order.create).toHaveBeenCalled();
+    });
+
+    it('additionne les doublons AVANT de comparer au stock', async () => {
+      prisma.product.findMany.mockResolvedValue([{ ...PRODUIT, stockQty: 4 }]);
+
+      // 3 + 2 = 5 pour 4 en stock : chaque ligne prise isolément passerait.
+      await expect(
+        service.create('cliente-1', {
+          items: [
+            { productId: 'prod-1', quantity: 3 },
+            { productId: 'prod-1', quantity: 2 },
+          ],
+          fulfillment: FulfillmentType.PICKUP,
+        }),
+      ).rejects.toThrow(/demandé 5/);
+    });
+
+    it('vérifie sans réserver : la création ne touche pas au stock', async () => {
+      prisma.product.findMany.mockResolvedValue([{ ...PRODUIT, stockQty: 10 }]);
+
+      await service.create('cliente-1', {
+        items: [{ productId: 'prod-1', quantity: 2 }],
+        fulfillment: FulfillmentType.PICKUP,
+      });
+
+      // Réserver ici obligerait à libérer tout ce qui n'est jamais confirmé —
+      // paniers abandonnés, commandes oubliées — donc à écrire une mécanique
+      // d'expiration entière.
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+      expect(tx.product.updateMany).not.toHaveBeenCalled();
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════
   //  MACHINE À ÉTATS
   // ═══════════════════════════════════════════════════════════
   describe('machine à états', () => {

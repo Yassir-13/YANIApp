@@ -36,6 +36,7 @@ export class OrdersService {
   //  Création d'une commande (client)
   //  - fige le prix unitaire de chaque ligne
   //  - calcule le total
+  //  - VÉRIFIE le stock, sans le réserver
   //  - NE décrémente PAS le stock (fait à la confirmation staff)
   // ─────────────────────────────────────────
   async create(userId: string, dto: CreateOrderDto) {
@@ -64,6 +65,31 @@ export class OrdersService {
       throw new BadRequestException(
         'Un ou plusieurs produits sont introuvables ou indisponibles.',
       );
+    }
+
+    // ── Stock : on VÉRIFIE ici, on ne RÉSERVE pas ──
+    //
+    // La réservation reste à la confirmation par le personnel (transitionTo),
+    // où elle est atomique. Réserver dès la commande obligerait à libérer tout
+    // ce qui n'est jamais confirmé — paniers abandonnés, commandes oubliées —
+    // donc à construire une mécanique d'expiration entière, pour un institut
+    // où deux clientes ne se disputent presque jamais la dernière unité.
+    //
+    // Ce contrôle ne supprime donc pas la course : il supprime le cas
+    // prévisible et fréquent — commander 10 unités quand il en reste 1, voir
+    // « Commande confirmée », et l'apprendre le lendemain par téléphone.
+    // Le message nomme le produit : « stock insuffisant » sans dire lequel
+    // oblige la cliente à retirer ses articles un par un pour deviner.
+    const insuffisants = products.filter((p) => p.stockQty < merged.get(p.id)!);
+    if (insuffisants.length > 0) {
+      const details = insuffisants
+        .map((p) =>
+          p.stockQty === 0
+            ? `« ${p.name} » (épuisé)`
+            : `« ${p.name} » (reste ${p.stockQty}, demandé ${merged.get(p.id)})`,
+        )
+        .join(', ');
+      throw new BadRequestException(`Stock insuffisant pour ${details}.`);
     }
 
     // Construit les lignes avec prix figé + calcule le total

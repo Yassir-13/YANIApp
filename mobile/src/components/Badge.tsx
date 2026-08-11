@@ -2,7 +2,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, radius } from '../theme/typography';
 
-type BadgeKind = 'inStock' | 'soon' | 'new';
+type BadgeKind = 'inStock' | 'soon' | 'new' | 'outOfStock';
 
 interface BadgeProps {
   kind: BadgeKind;
@@ -18,6 +18,10 @@ export default function Badge({ kind, label }: BadgeProps) {
     inStock: { bg: theme.badgeInStockBg, fg: theme.badgeInStock, text: label ?? 'En stock' },
     soon: { bg: theme.badgeSoonBg, fg: theme.badgeSoon, text: label ?? 'Bientôt' },
     new: { bg: theme.badgeNewBg, fg: theme.badgeNew, text: label ?? 'Nouv !' },
+    // « Bientôt » servait aussi pour la rupture : on annonçait une nouveauté à
+    // venir là où il n'y avait plus rien à vendre. Les deux états sont
+    // désormais distincts (« soon » reste disponible pour un vrai à-venir).
+    outOfStock: { bg: theme.badgeOutBg, fg: theme.badgeOut, text: label ?? 'Épuisé' },
   }[kind];
 
   return (

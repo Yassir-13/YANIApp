@@ -38,13 +38,27 @@ export default function CartScreen({ navigation }: any) {
 
     (async () => {
       try {
-        const { removed, repriced } = await sync();
+        const { removed, repriced, reduced } = await sync();
         if (annule) return;
 
         if (removed.length > 0) {
           alert(
             removed.length > 1 ? 'Produits indisponibles' : 'Produit indisponible',
             `${removed.join(', ')} ${removed.length > 1 ? 'ne sont plus disponibles' : "n'est plus disponible"} et ${removed.length > 1 ? 'ont' : 'a'} été retiré${removed.length > 1 ? 's' : ''} de votre panier.`
+          );
+        } else if (reduced.length > 0) {
+          // Le stock a baissé pendant que le panier dormait. On nomme le
+          // produit et ce qu'il en reste : le serveur refuserait la commande
+          // au dernier moment, sans dire lequel poser.
+          alert(
+            'Stock mis à jour',
+            reduced
+              .map((r) =>
+                r.after === 0
+                  ? `${r.name} : épuisé, retiré de votre panier`
+                  : `${r.name} : il n'en reste que ${r.after} (vous en aviez ${r.before})`
+              )
+              .join('\n')
           );
         } else if (repriced.length > 0) {
           alert(
@@ -99,49 +113,63 @@ export default function CartScreen({ navigation }: any) {
             contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.xl }}
             showsVerticalScrollIndicator={false}
           >
-            {lines.map((line) => (
-              <View key={line.product.id} style={[styles.line, { borderBottomColor: theme.border }]}>
-                <View style={[styles.thumb, { backgroundColor: theme.surface }]}>
-                  {line.product.imageUrl ? (
-                    <Image source={{ uri: line.product.imageUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" />
-                  ) : (
-                    <Ionicons name="image-outline" size={22} color={theme.textMuted} />
-                  )}
-                </View>
-
-                <View style={{ flex: 1 }}>
-                  <Text numberOfLines={1} style={[typography.subtitle, { color: theme.text }]}>
-                    {line.product.name}
-                  </Text>
-
-                  <View style={[styles.stepper, { borderColor: theme.border }]}>
-                    <TouchableOpacity
-                      onPress={() => decrement(line.product.id)}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      accessibilityRole="button"
-                      accessibilityLabel="Diminuer"
-                    >
-                      <Ionicons name="remove" size={18} color={theme.gold} />
-                    </TouchableOpacity>
-                    <Text style={[typography.bodyMedium, { color: theme.text, minWidth: 24, textAlign: 'center' }]}>
-                      {line.quantity}
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => increment(line.product.id)}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      accessibilityRole="button"
-                      accessibilityLabel="Augmenter"
-                    >
-                      <Ionicons name="add" size={18} color={theme.gold} />
-                    </TouchableOpacity>
+            {lines.map((line) => {
+              // Le « + » ne doit pas proposer ce que l'institut ne peut pas
+              // servir. Le store plafonne de toute façon, mais un bouton qui
+              // s'enfonce sans rien changer se lit comme un bug (B8).
+              const auMax = line.quantity >= line.product.stockQty;
+              return (
+                <View key={line.product.id} style={[styles.line, { borderBottomColor: theme.border }]}>
+                  <View style={[styles.thumb, { backgroundColor: theme.surface }]}>
+                    {line.product.imageUrl ? (
+                      <Image source={{ uri: line.product.imageUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                    ) : (
+                      <Ionicons name="image-outline" size={22} color={theme.textMuted} />
+                    )}
                   </View>
-                </View>
 
-                <Text style={[typography.price, { color: theme.gold }]}>
-                  {formatPrice(parseFloat(line.product.price) * line.quantity)}
-                </Text>
-              </View>
-            ))}
+                  <View style={{ flex: 1 }}>
+                    <Text numberOfLines={1} style={[typography.subtitle, { color: theme.text }]}>
+                      {line.product.name}
+                    </Text>
+
+                    <View style={[styles.stepper, { borderColor: theme.border }]}>
+                      <TouchableOpacity
+                        onPress={() => decrement(line.product.id)}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        accessibilityRole="button"
+                        accessibilityLabel="Diminuer"
+                      >
+                        <Ionicons name="remove" size={18} color={theme.gold} />
+                      </TouchableOpacity>
+                      <Text style={[typography.bodyMedium, { color: theme.text, minWidth: 24, textAlign: 'center' }]}>
+                        {line.quantity}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => increment(line.product.id)}
+                        disabled={auMax}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        accessibilityRole="button"
+                        accessibilityLabel="Augmenter"
+                        accessibilityState={{ disabled: auMax }}
+                      >
+                        <Ionicons name="add" size={18} color={auMax ? theme.textMuted : theme.gold} />
+                      </TouchableOpacity>
+                    </View>
+
+                    {auMax && (
+                      <Text style={[typography.small, { color: theme.textMuted, marginTop: 4 }]}>
+                        Stock maximum : {line.product.stockQty}
+                      </Text>
+                    )}
+                  </View>
+
+                  <Text style={[typography.price, { color: theme.gold }]}>
+                    {formatPrice(parseFloat(line.product.price) * line.quantity)}
+                  </Text>
+                </View>
+              );
+            })}
 
             {!user && (
               <View style={[styles.loyaltyHint, { backgroundColor: theme.loyaltyBg }]}>

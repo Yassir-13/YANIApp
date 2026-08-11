@@ -20,6 +20,9 @@ export default function ProductDetailScreen({ route, navigation }: any) {
 
   const addToCart = useCartStore((s) => s.add);
   const cartCount = useCartStore((s) => s.count());
+  // Ce que la cliente a déjà mis de CE produit : le plafond porte sur le total
+  // au panier, pas sur ce seul clic.
+  const dansLePanier = useCartStore((s) => s.quantityOf(productId));
   const { alert } = useAlert();
 
   const [product, setProduct] = useState<Product | null>(null);
@@ -47,6 +50,10 @@ export default function ProductDetailScreen({ route, navigation }: any) {
   }
 
   const inStock = product.stockQty > 0;
+  // Ce qu'on peut encore ajouter. Avant, le bouton restait actif tant que le
+  // stock n'était pas à zéro : avec 1 en stock et 1 déjà au panier, il
+  // proposait encore d'ajouter (B8).
+  const restant = product.stockQty - dansLePanier;
 
   const handleAddToCart = () => {
     addToCart(product, 1);
@@ -96,7 +103,7 @@ export default function ProductDetailScreen({ route, navigation }: any) {
                 {product.category.name}
               </Text>
             )}
-            <Badge kind={inStock ? 'inStock' : 'soon'} />
+            <Badge kind={inStock ? 'inStock' : 'outOfStock'} />
           </View>
 
           <Text style={[typography.heading, { color: theme.text, marginTop: spacing.sm }]}>
@@ -108,15 +115,26 @@ export default function ProductDetailScreen({ route, navigation }: any) {
               {product.description}
             </Text>
           ) : null}
+
+          {/* Dit pourquoi le bouton est éteint. Un bouton grisé sans
+              explication se lit comme une panne de l'app. */}
+          {inStock && restant <= 0 && (
+            <Text style={[typography.small, { color: theme.textMuted, marginTop: spacing.md }]}>
+              Tout le stock disponible est déjà dans votre panier
+              {product.stockQty > 1 ? ` (${product.stockQty})` : ''}.
+            </Text>
+          )}
         </View>
       </ScrollView>
 
       <DetailBottomBar
         priceLabel="Prix"
         price={product.price}
-        ctaLabel={inStock ? 'Ajouter au panier' : 'Indisponible'}
+        ctaLabel={
+          !inStock ? 'Épuisé' : restant > 0 ? 'Ajouter au panier' : 'Maximum atteint'
+        }
         onPress={handleAddToCart}
-        disabled={!inStock}
+        disabled={restant <= 0}
       />
     </View>
   );

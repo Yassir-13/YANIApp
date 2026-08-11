@@ -37,7 +37,7 @@ export default function ProductCard({ product, onPress, width }: ProductCardProp
       </Text>
       <View style={styles.footer}>
         <Text style={[typography.price, { color: theme.gold }]}>{formatPrice(product.price)}</Text>
-        <Badge kind={inStock ? 'inStock' : 'soon'} />
+        <Badge kind={inStock ? 'inStock' : 'outOfStock'} />
       </View>
     </TouchableOpacity>
   );
