@@ -1,4 +1,31 @@
 {
   "extends": "./tsconfig.json",
-  "exclude": ["node_modules", "test", "dist", "**/*spec.ts"]
+  "compilerOptions": {
+    // Racine explicite, et pas déduite.
+    //
+    // Sans cette ligne, TypeScript déduit la racine du plus petit dossier
+    // commun aux fichiers compilés. `prisma/seed.ts` étant du lot, cette racine
+    // remontait à la racine du projet et toute la sortie se décalait dans
+    // `dist/src/` — pendant que `start:prod` cherchait `dist/main`. La commande
+    // que lancera le serveur de production échouait donc en MODULE_NOT_FOUND,
+    // sans que rien ne le signale en développement.
+    //
+    // Figée ici, la disposition ne peut plus glisser en silence : un fichier
+    // compilé hors de `src/` devient une erreur de compilation, pas un
+    // déplacement discret de `dist/`.
+    "rootDir": "./src",
+
+    // Le cache de compilation incrémentale, rangé DANS `dist`.
+    //
+    // Fixer `rootDir` déplaçait ce fichier à la racine du projet. `rm -rf dist`
+    // ne l'effaçait donc plus : TypeScript relisait un cache prétendant que
+    // tout était déjà émis, et un build « propre » ne produisait plus aucun
+    // `.js` — juste des `.d.ts`, sans la moindre erreur affichée.
+    // Rangé ici, supprimer `dist` nettoie vraiment tout.
+    "tsBuildInfoFile": "./dist/tsconfig.build.tsbuildinfo"
+  },
+  // `prisma` rejoint la liste : le seed ne tourne jamais depuis `dist`, il est
+  // lancé par `ts-node prisma/seed.ts` (voir package.json). Le compiler ne
+  // servait à rien et embarquait un script de développement dans le livrable.
+  "exclude": ["node_modules", "test", "dist", "prisma", "**/*spec.ts"]
 }
