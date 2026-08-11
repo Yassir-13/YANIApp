@@ -22,7 +22,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   // Appelé automatiquement après vérification de la signature du token
   async validate(payload: { sub: string; email: string; role: string }) {
     const user = await this.usersService.findById(payload.sub);
-    if (!user) {
+    // Un compte anonymisé est traité comme inexistant. Sans ce test, l'access
+    // token émis juste avant la suppression continuerait d'ouvrir le compte
+    // jusqu'à son expiration — les refresh tokens sont bien détruits, mais le
+    // jeton court déjà en circulation, lui, ne l'est pas.
+    if (!user || user.deletedAt) {
       throw new UnauthorizedException();
     }
     // Ce qui est retourné ici sera injecté dans request.user

@@ -63,7 +63,11 @@ async function creerCliente() {
   return user;
 }
 
-async function creerCommande(userId: string, productId: string, quantity: number) {
+async function creerCommande(
+  userId: string,
+  productId: string,
+  quantity: number,
+) {
   return prisma.order.create({
     data: {
       userId,
@@ -71,7 +75,9 @@ async function creerCommande(userId: string, productId: string, quantity: number
       fulfillment: 'PICKUP',
       total: new Prisma.Decimal('100.00').mul(quantity),
       items: {
-        create: [{ productId, quantity, unitPrice: new Prisma.Decimal('100.00') }],
+        create: [
+          { productId, quantity, unitPrice: new Prisma.Decimal('100.00') },
+        ],
       },
     },
   });
@@ -94,10 +100,18 @@ describe('OrdersService — accès concurrents (vraie base)', () => {
   }, 30_000);
 
   afterAll(async () => {
-    // L'ordre compte : effacer les clientes emporte leurs commandes et lignes
-    // de commande (ON DELETE CASCADE), ce qui libère les produits.
+    // L'ordre compte, et il a changé : les commandes ne partent PLUS avec la
+    // cliente (`orders.user_id` est en ON DELETE RESTRICT depuis que la
+    // suppression de compte est une anonymisation — un total encaissé ne doit
+    // pas disparaître avec la personne). On les retire donc explicitement ;
+    // leurs lignes suivent en cascade, ce qui libère ensuite les produits.
+    await prisma.order.deleteMany({
+      where: { userId: { in: aNettoyer.users } },
+    });
     await prisma.user.deleteMany({ where: { id: { in: aNettoyer.users } } });
-    await prisma.product.deleteMany({ where: { id: { in: aNettoyer.products } } });
+    await prisma.product.deleteMany({
+      where: { id: { in: aNettoyer.products } },
+    });
     await prisma.productCategory.deleteMany({
       where: { id: { in: aNettoyer.categories } },
     });
@@ -133,7 +147,9 @@ describe('OrdersService — accès concurrents (vraie base)', () => {
     expect(messages(résultats)[0]).toMatch(/Stock insuffisant/);
 
     // L'invariant : le stock est à 0. Avant le correctif : −1.
-    const après = await prisma.product.findUnique({ where: { id: produit.id } });
+    const après = await prisma.product.findUnique({
+      where: { id: produit.id },
+    });
     expect(après!.stockQty).toBe(0);
 
     // La commande perdante est restée en attente, pas confirmée à vide.
@@ -169,10 +185,14 @@ describe('OrdersService — accès concurrents (vraie base)', () => {
     // Selon l'entrelacement : soit la 2ᵉ a lu PENDING et son écriture
     // conditionnelle n'a touché aucune ligne, soit elle a lu CONFIRMED et
     // la machine à états l'a refusée. Les deux refus sont corrects.
-    expect(messages(résultats)[0]).toMatch(/changé de statut|Transition impossible/);
+    expect(messages(résultats)[0]).toMatch(
+      /changé de statut|Transition impossible/,
+    );
 
     // L'invariant : 10 − 3 = 7, décrémenté UNE fois. Avant le correctif : 4.
-    const après = await prisma.product.findUnique({ where: { id: produit.id } });
+    const après = await prisma.product.findUnique({
+      where: { id: produit.id },
+    });
     expect(après!.stockQty).toBe(7);
   });
 
@@ -194,8 +214,16 @@ describe('OrdersService — accès concurrents (vraie base)', () => {
         total: new Prisma.Decimal('200.00'),
         items: {
           create: [
-            { productId: servable.id, quantity: 1, unitPrice: new Prisma.Decimal('100.00') },
-            { productId: manquant.id, quantity: 1, unitPrice: new Prisma.Decimal('100.00') },
+            {
+              productId: servable.id,
+              quantity: 1,
+              unitPrice: new Prisma.Decimal('100.00'),
+            },
+            {
+              productId: manquant.id,
+              quantity: 1,
+              unitPrice: new Prisma.Decimal('100.00'),
+            },
           ],
         },
       },
@@ -206,7 +234,8 @@ describe('OrdersService — accès concurrents (vraie base)', () => {
     ).rejects.toThrow(/Stock insuffisant/);
 
     expect(
-      (await prisma.product.findUnique({ where: { id: servable.id } }))!.stockQty,
+      (await prisma.product.findUnique({ where: { id: servable.id } }))!
+        .stockQty,
     ).toBe(5);
     expect(
       (await prisma.order.findUnique({ where: { id: commande.id } }))!.status,

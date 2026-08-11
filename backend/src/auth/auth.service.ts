@@ -50,7 +50,9 @@ export class AuthService {
   // Crée et persiste un refresh token
   private async issueRefreshToken(userId: string, familyId: string) {
     const token = this.generateRefreshToken();
-    const days = Number(this.config.get<string>('JWT_REFRESH_EXPIRES_IN_DAYS') ?? 14);
+    const days = Number(
+      this.config.get<string>('JWT_REFRESH_EXPIRES_IN_DAYS') ?? 14,
+    );
     const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
 
     await this.prisma.refreshToken.create({
@@ -83,7 +85,11 @@ export class AuthService {
   }
 
   // Génère l'access token (JWT court)
-  private async issueAccessToken(user: { id: string; email: string; role: string }) {
+  private async issueAccessToken(user: {
+    id: string;
+    email: string;
+    role: string;
+  }) {
     const payload = { sub: user.id, email: user.email, role: user.role };
     return this.jwtService.signAsync(payload);
   }
@@ -208,7 +214,9 @@ export class AuthService {
   async forgotPassword(email: string) {
     const user = await this.usersService.findByEmail(email);
 
-    if (user) {
+    // Un compte anonymisé ne reçoit plus rien : la réponse reste identique,
+    // mais aucun code n'est émis pour une coquille sans propriétaire.
+    if (user && !user.deletedAt) {
       const code = await this.verificationCodes.issue(
         user.id,
         VerificationPurpose.PASSWORD_RESET,
@@ -241,9 +249,10 @@ export class AuthService {
   async resetPassword(dto: ResetPasswordDto) {
     const user = await this.usersService.findByEmail(dto.email);
 
-    // Compte inconnu : exactement la même erreur qu'un code erroné. Distinguer
-    // les deux transformerait cette route en annuaire de nos clientes.
-    if (!user) {
+    // Compte inconnu OU anonymisé : exactement la même erreur qu'un code
+    // erroné. Distinguer les trois transformerait cette route en annuaire de
+    // nos clientes, anciennes comprises.
+    if (!user || user.deletedAt) {
       throw new BadRequestException('Code invalide ou expiré.');
     }
 
@@ -291,14 +300,19 @@ export class AuthService {
     // et non le simple payload JWT qui ne contient que id/email/role.
     return this.usersService.getProfile(userId);
   }
-  
+
   // ─────────────────────────────────────────
   //  Connexion : émet les deux tokens
   // ─────────────────────────────────────────
 
   async login(dto: LoginDto) {
     const user = await this.usersService.findByEmail(dto.email);
-    if (!user) {
+    // Compte inexistant OU anonymisé : strictement le même chemin. Un compte
+    // supprimé a de toute façon vu son adresse remplacée, donc il ne sera pas
+    // retrouvé ici — ce test est la seconde serrure, et il garantit surtout
+    // qu'on ne distinguera jamais « jamais existé » de « a supprimé son
+    // compte ». Le second révélerait qu'une adresse a fréquenté l'institut.
+    if (!user || user.deletedAt) {
       // Hachage factice avant de refuser.
       //
       // Le message d'erreur est déjà identique dans les deux cas, mais le

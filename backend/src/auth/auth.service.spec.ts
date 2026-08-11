@@ -65,6 +65,7 @@ describe('AuthService — défenses de sécurité', () => {
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     updatedAt: new Date('2026-01-01T00:00:00.000Z'),
     emailVerifiedAt: null,
+    deletedAt: null,
     ...over,
   });
 
@@ -223,6 +224,75 @@ describe('AuthService — défenses de sécurité', () => {
       expect((compteInconnu as Error).message).toBe(
         (codeFaux as Error).message,
       );
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  //  1 bis. UN COMPTE ANONYMISÉ EST UN COMPTE QUI N'EXISTE PLUS
+  // ═══════════════════════════════════════════════════════════
+  //
+  // Depuis que la suppression de compte est une anonymisation, une coquille
+  // vide subsiste en base pour porter l'historique de vente. Elle ne doit
+  // ouvrir aucune porte — et surtout, elle ne doit pas se distinguer d'un
+  // compte qui n'a jamais existé : savoir qu'une adresse a été cliente puis a
+  // supprimé son compte est exactement ce qu'on protège partout ailleurs.
+  describe('compte anonymisé', () => {
+    const supprimee = () => cliente({ deletedAt: new Date('2026-08-11') });
+
+    it('refuse la connexion, comme pour un compte inexistant', async () => {
+      usersService.findByEmail.mockResolvedValue(supprimee());
+      const surCompteSupprime = await service
+        .login({ email: 'cliente@exemple.test', password: BON_MOT_DE_PASSE })
+        .catch((e: Error) => e);
+
+      usersService.findByEmail.mockResolvedValue(null);
+      const surCompteInconnu = await service
+        .login({ email: 'jamais-vue@exemple.test', password: BON_MOT_DE_PASSE })
+        .catch((e: Error) => e);
+
+      // Même message… et le BON mot de passe ne change rien.
+      expect((surCompteSupprime as Error).message).toBe(
+        (surCompteInconnu as Error).message,
+      );
+    });
+
+    it('paie aussi le hachage factice pour un compte anonymisé', async () => {
+      const verify = argon2.verify as jest.Mock;
+      usersService.findByEmail.mockResolvedValue(supprimee());
+
+      await expect(
+        service.login({ email: 'cliente@exemple.test', password: 'x' }),
+      ).rejects.toThrow();
+
+      // Sans ça, le compte supprimé répondrait plus vite que le compte actif :
+      // le chronomètre trahirait les anciennes clientes.
+      expect(verify).toHaveBeenCalled();
+    });
+
+    it('n’envoie aucun code de réinitialisation à une coquille anonyme', async () => {
+      usersService.findByEmail.mockResolvedValue(supprimee());
+
+      const reponse = await service.forgotPassword('cliente@exemple.test');
+
+      // La réponse reste la même — mais rien n'est émis ni envoyé.
+      expect(reponse).toHaveProperty('message');
+      expect(verificationCodes.issue).not.toHaveBeenCalled();
+      expect(mail.sendPasswordResetCode).not.toHaveBeenCalled();
+    });
+
+    it('refuse la réinitialisation du mot de passe', async () => {
+      usersService.findByEmail.mockResolvedValue(supprimee());
+
+      await expect(
+        service.resetPassword({
+          email: 'cliente@exemple.test',
+          code: '123456',
+          newPassword: 'PeuImporte123!',
+        }),
+      ).rejects.toThrow('Code invalide ou expiré.');
+
+      // On ne va même pas consommer de code : rien à rouvrir ici.
+      expect(verificationCodes.consume).not.toHaveBeenCalled();
     });
   });
 

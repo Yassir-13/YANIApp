@@ -6,6 +6,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import * as argon2 from 'argon2';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, User, Role } from '@prisma/client';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -121,6 +122,20 @@ export class UsersService {
   }
 
   // Suppression de compte (droit à l'effacement — CNDP)
+  //
+  // ANONYMISATION, et non suppression de la ligne.
+  //
+  // La version précédente faisait `user.delete()` en s'appuyant sur des
+  // cascades. Elle marchait, mais elle emportait avec la cliente ses commandes
+  // et ses rendez-vous — c'est-à-dire le chiffre d'affaires de l'institut.
+  // Supprimer dix clientes fidèles aurait effacé dix historiques de vente, sans
+  // que rien ne le signale.
+  //
+  // On garde donc une coquille anonyme : la ligne `users` survit pour que
+  // l'historique reste rattaché à quelque chose, mais tout ce qui désigne la
+  // personne est effacé. Les contraintes en base (commandes et rendez-vous en
+  // ON DELETE RESTRICT) garantissent qu'on ne pourra plus revenir en arrière
+  // par accident.
   async deleteAccount(userId: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
@@ -132,8 +147,43 @@ export class UsersService {
         'Un compte administrateur ne peut pas être supprimé ainsi.',
       );
     }
+    // Déjà anonymisé : on répond succès sans rien réécrire. Rejouer écraserait
+    // la date d'origine — la seule trace de QUAND le droit a été exercé.
+    if (user.deletedAt) {
+      return { message: 'Compte supprimé.' };
+    }
 
-    await this.prisma.user.delete({ where: { id: userId } });
+    // Le mot de passe est remplacé par le haché d'un secret aléatoire que
+    // personne ne connaît, nous compris. La connexion est déjà refusée sur
+    // `deletedAt` ; ceci est la seconde serrure.
+    const passwordHash = await argon2.hash(randomBytes(32).toString('hex'));
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          // L'adresse d'origine est LIBÉRÉE : si la cliente revient un jour,
+          // elle pourra se réinscrire avec le même email — sur un compte neuf,
+          // sans ses anciens points. Le domaine `.invalid` est réservé par la
+          // RFC 2606 et n'est routable nulle part : aucun email ne partira
+          // jamais vers cette coquille, même par erreur de code.
+          email: `supprime-${userId}@compte-supprime.invalid`,
+          firstName: null,
+          lastName: null,
+          phone: null,
+          passwordHash,
+          emailVerifiedAt: null,
+          deletedAt: new Date(),
+        },
+      }),
+      // Les sessions ouvertes tombent tout de suite : le téléphone encore
+      // connecté ne doit pas continuer à consulter le compte.
+      this.prisma.refreshToken.deleteMany({ where: { userId } }),
+      // Et un code de réinitialisation en cours ne doit pas servir de porte
+      // dérobée sur une coquille anonyme.
+      this.prisma.verificationCode.deleteMany({ where: { userId } }),
+    ]);
+
     return { message: 'Compte supprimé.' };
   }
 

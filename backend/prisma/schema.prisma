@@ -82,6 +82,18 @@ model User {
   // elle sert à dater la preuve, et un email modifié plus tard la remettra à null.
   emailVerifiedAt DateTime? @map("email_verified_at")
 
+  // Date d'exercice du droit à l'effacement. null = compte actif.
+  //
+  // La ligne n'est PAS supprimée : ses commandes et rendez-vous portent le
+  // chiffre d'affaires de l'institut, qui doit survivre au départ de la
+  // cliente. On vide donc ce qui l'identifie (email, nom, téléphone, mot de
+  // passe) et on garde une coquille anonyme à laquelle l'historique reste
+  // rattaché — c'est l'anonymisation, par opposition à l'effacement en cascade.
+  //
+  // Un compte marqué ici ne peut plus se connecter, ni recevoir d'email, ni
+  // réinitialiser son mot de passe : voir auth.service.ts.
+  deletedAt DateTime? @map("deleted_at")
+
   loyaltyAccount     LoyaltyAccount?
   appointments       Appointment[]
   refreshTokens RefreshToken[]
@@ -163,7 +175,13 @@ model Appointment {
   createdAt DateTime          @default(now()) @map("created_at")
   updatedAt DateTime          @updatedAt @map("updated_at")
 
-  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Restrict, et surtout pas Cascade : un rendez-vous est une prestation
+  // facturée. Supprimer une cliente ne doit PAS emporter le chiffre d'affaires
+  // qu'elle a généré. Le droit à l'effacement passe par l'anonymisation de la
+  // ligne `users` (voir User.deletedAt), pas par sa suppression — et si du code
+  // tentait un jour `user.delete()`, cette contrainte le fera échouer bruyamment
+  // au lieu de détruire l'historique en silence.
+  user      User                @relation(fields: [userId], references: [id], onDelete: Restrict)
   service   Service             @relation(fields: [serviceId], references: [id])
   loyaltyTx LoyaltyTransaction?
 
@@ -394,7 +412,9 @@ model Order {
   createdAt    DateTime        @default(now()) @map("created_at")
   updatedAt    DateTime        @updatedAt @map("updated_at")
 
-  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Restrict : même raison que pour les rendez-vous. Une commande porte un
+  // total encaissé ; il survit au départ de la cliente. Voir User.deletedAt.
+  user         User            @relation(fields: [userId], references: [id], onDelete: Restrict)
   items        OrderItem[]
   loyaltyTx    LoyaltyTransaction?
 

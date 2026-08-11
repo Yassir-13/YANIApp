@@ -17,11 +17,9 @@ const CAPACITE = 2;
 
 // PrismaService porte les réglages de transaction de l'application.
 const prisma = new PrismaService();
-const service = new AppointmentsService(
-  prisma,
-  new LoyaltyService(prisma),
-  { get: () => TZ } as unknown as ConfigService,
-);
+const service = new AppointmentsService(prisma, new LoyaltyService(prisma), {
+  get: () => TZ,
+} as unknown as ConfigService);
 
 const aNettoyer = {
   users: [] as string[],
@@ -33,14 +31,19 @@ const aNettoyer = {
 // configuration réelle et on projette un jour ouvert dans un futur lointain,
 // où aucun rendez-vous existant ne peut se trouver.
 async function trouverCreneau(durationMin: number) {
-  const jours = await prisma.openingHours.findMany({ where: { isClosed: false } });
+  const jours = await prisma.openingHours.findMany({
+    where: { isClosed: false },
+  });
   if (jours.length === 0) return null;
 
   const ouverts = new Map(jours.map((j) => [j.dayOfWeek, j]));
 
   for (let i = 1; i <= 7; i++) {
     const dateStr = `2099-01-0${i}`;
-    const jourLocal = toZonedTime(new Date(`${dateStr}T12:00:00.000Z`), TZ).getDay();
+    const jourLocal = toZonedTime(
+      new Date(`${dateStr}T12:00:00.000Z`),
+      TZ,
+    ).getDay();
     const horaires = ouverts.get(jourLocal);
     if (!horaires) continue;
 
@@ -100,10 +103,17 @@ describe('AppointmentsService — réservations concurrentes (vraie base)', () =
   }, 30_000);
 
   afterAll(async () => {
-    // Effacer les clientes emporte leurs RDV (CASCADE), ce qui libère la
-    // prestation puis sa catégorie.
+    // Les RDV d'abord, explicitement. Ils ne partent PLUS avec la cliente :
+    // `appointments.user_id` est passé en ON DELETE RESTRICT le jour où la
+    // suppression de compte est devenue une anonymisation — un rendez-vous est
+    // une prestation facturée, il ne doit pas disparaître avec la personne.
+    await prisma.appointment.deleteMany({
+      where: { userId: { in: aNettoyer.users } },
+    });
     await prisma.user.deleteMany({ where: { id: { in: aNettoyer.users } } });
-    await prisma.service.deleteMany({ where: { id: { in: aNettoyer.services } } });
+    await prisma.service.deleteMany({
+      where: { id: { in: aNettoyer.services } },
+    });
     await prisma.serviceCategory.deleteMany({
       where: { id: { in: aNettoyer.categories } },
     });
@@ -134,7 +144,9 @@ describe('AppointmentsService — réservations concurrentes (vraie base)', () =
     );
 
     // L'invariant : 2 cabines, 2 réservations. Avant le correctif : jusqu'à 5.
-    expect(résultats.filter((r) => r.status === 'fulfilled')).toHaveLength(CAPACITE);
+    expect(résultats.filter((r) => r.status === 'fulfilled')).toHaveLength(
+      CAPACITE,
+    );
 
     const refus = résultats
       .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
@@ -147,7 +159,9 @@ describe('AppointmentsService — réservations concurrentes (vraie base)', () =
       where: {
         serviceId: prestation.id,
         startAt,
-        status: { in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED] },
+        status: {
+          in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED],
+        },
       },
     });
     expect(enBase).toBe(CAPACITE);
@@ -187,12 +201,16 @@ describe('AppointmentsService — réservations concurrentes (vraie base)', () =
       }),
     ]);
 
-    expect(résultats.filter((r) => r.status === 'fulfilled')).toHaveLength(CAPACITE);
+    expect(résultats.filter((r) => r.status === 'fulfilled')).toHaveLength(
+      CAPACITE,
+    );
 
     const enBase = await prisma.appointment.count({
       where: {
         serviceId: prestation.id,
-        status: { in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED] },
+        status: {
+          in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED],
+        },
       },
     });
     expect(enBase).toBe(CAPACITE);

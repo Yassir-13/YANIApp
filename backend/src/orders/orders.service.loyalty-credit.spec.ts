@@ -88,8 +88,13 @@ describe('OrdersService — crédit fidélité et commande terminée (vraie base
   }, 30_000);
 
   afterAll(async () => {
-    // Effacer les clientes emporte commandes, lignes et mouvements de points
-    // (ON DELETE CASCADE), ce qui libère ensuite les produits.
+    // Les commandes d'abord, explicitement : elles ne partent plus avec la
+    // cliente (`orders.user_id` en ON DELETE RESTRICT depuis que la suppression
+    // de compte est une anonymisation). Leurs lignes et mouvements de points
+    // suivent en cascade, ce qui libère ensuite les produits.
+    await prisma.order.deleteMany({
+      where: { userId: { in: aNettoyer.users } },
+    });
     await prisma.user.deleteMany({ where: { id: { in: aNettoyer.users } } });
     await prisma.product.deleteMany({
       where: { id: { in: aNettoyer.products } },
