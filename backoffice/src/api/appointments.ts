@@ -1,4 +1,12 @@
 import { apiClient } from './client';
+import type { Paginated, PageQuery, TabCounts } from './pagination';
+
+// Les onglets de la page Rendez-vous, miroir de l'énumération du backend.
+export type AppointmentFilter =
+  | AppointmentStatus
+  | 'ALL'
+  | 'TODAY'
+  | 'UPCOMING';
 
 export type AppointmentStatus = 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
 
@@ -37,9 +45,26 @@ export interface Availability {
 }
 
 export const appointmentsApi = {
-  // En tant que STAFF/ADMIN, cette route renvoie TOUS les rendez-vous
-  async getAll(): Promise<Appointment[]> {
-    const { data } = await apiClient.get('/appointments');
+  // Liste paginée PAR LE SERVEUR, filtre compris.
+  //
+  // Le filtre ne peut plus être appliqué ici : sur une liste paginée, il ne
+  // porterait que sur la page affichée — « À confirmer » ne montrerait que les
+  // rendez-vous à confirmer PARMI les vingt derniers. Même raison pour
+  // `counts`, qui porte sur l'ensemble.
+  //
+  // Effet de bord bienvenu : « Aujourd'hui » est désormais le jour du CENTRE,
+  // calculé par le serveur, et non celui du navigateur qui consulte.
+  async getAll(
+    params: PageQuery & { filter?: AppointmentFilter } = {},
+  ): Promise<Paginated<Appointment> & { counts: TabCounts }> {
+    const { filter, page, limit } = params;
+    const { data } = await apiClient.get('/appointments', {
+      params: {
+        ...(filter ? { filter } : {}),
+        ...(page ? { page } : {}),
+        ...(limit ? { limit } : {}),
+      },
+    });
     return data;
   },
   async updateStatus(id: string, status: AppointmentStatus): Promise<Appointment> {

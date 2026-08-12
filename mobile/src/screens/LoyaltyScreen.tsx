@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -40,7 +40,15 @@ export default function LoyaltyScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Cet écran lance six requêtes à chaque focus. Deux allers-retours rapides
+  // en lançaient douze, et l'affichage revenait à la dernière RÉPONSE ARRIVÉE
+  // — le solde affiché pouvait donc être plus ancien que celui qu'on venait
+  // de demander, juste après un échange de points.
+  const derniereDemande = useRef(0);
+
   const load = useCallback(async () => {
+    const demande = ++derniereDemande.current;
+    const depassee = () => demande !== derniereDemande.current;
     try {
       setError(null);
       const [acc, hist, rwd, mil, grt, vch] = await Promise.all([
@@ -51,6 +59,7 @@ export default function LoyaltyScreen() {
         loyaltyApi.getMyGrants(),
         loyaltyApi.getMyVouchers(),
       ]);
+      if (depassee()) return;
       setAccount(acc);
       setHistory(hist);
       setRewards(rwd);
@@ -58,9 +67,10 @@ export default function LoyaltyScreen() {
       setGrants(grt);
       setVouchers(vch);
     } catch {
+      if (depassee()) return;
       setError('Impossible de charger votre fidélité.');
     } finally {
-      setIsLoading(false);
+      if (!depassee()) setIsLoading(false);
     }
   }, []);
 

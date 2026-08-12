@@ -38,7 +38,12 @@ describe('AppointmentsService — disponibilité des créneaux', () => {
 
   beforeEach(async () => {
     prisma = {
-      service: { findUnique: jest.fn().mockResolvedValue({ ...SERVICE }) },
+      service: {
+        findUnique: jest.fn().mockResolvedValue({ ...SERVICE }),
+        // Borne basse de la recherche de chevauchement : la plus longue
+        // prestation du catalogue (I5). Ici tout dure 60 minutes.
+        aggregate: jest.fn().mockResolvedValue({ _max: { durationMin: 60 } }),
+      },
       openingHours: {
         findUnique: jest.fn().mockResolvedValue({
           dayOfWeek: 3,
@@ -128,6 +133,60 @@ describe('AppointmentsService — disponibilité des créneaux', () => {
         AppointmentStatus.PENDING,
         AppointmentStatus.CONFIRMED,
       ]);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  //  BORNE BASSE DE LA RECHERCHE DE CHEVAUCHEMENT (I5)
+  // ═══════════════════════════════════════════════════════════
+  //
+  // Sans borne basse, chaque réservation relisait tous les rendez-vous encore
+  // actifs depuis l'ouverture — et cette lecture se fait à l'intérieur du
+  // verrou de réservation, donc elle faisait patienter les autres clientes.
+  describe('borne basse de la recherche de chevauchement', () => {
+    it('ne remonte pas plus loin que la plus longue prestation', async () => {
+      await reserver();
+
+      const where = prisma.appointment.findMany.mock.calls[0][0].where;
+      // 60 minutes avant le créneau : au-delà, aucun rendez-vous ne peut
+      // encore être en cours.
+      expect(where.startAt.gt).toEqual(
+        new Date(A_14H_LOCAL.getTime() - 60 * 60_000),
+      );
+      // La borne haute n'a pas bougé : la fin du créneau demandé.
+      expect(where.startAt.lt).toEqual(
+        new Date(A_14H_LOCAL.getTime() + 60 * 60_000),
+      );
+    });
+
+    it('suit la plus longue prestation, pas celle qu’on réserve', async () => {
+      // Le jour où Fati crée un soin de 4 heures, la fenêtre doit s'élargir
+      // d'elle-même. Une constante figée dans le code, elle, resterait à 1 h.
+      prisma.service.aggregate.mockResolvedValue({
+        _max: { durationMin: 240 },
+      });
+
+      await reserver();
+
+      const where = prisma.appointment.findMany.mock.calls[0][0].where;
+      expect(where.startAt.gt).toEqual(
+        new Date(A_14H_LOCAL.getTime() - 240 * 60_000),
+      );
+    });
+
+    it('ne masque pas un long rendez-vous commencé bien avant', async () => {
+      // Le vrai risque d'une borne trop courte : rater une occupation réelle,
+      // donc accepter deux clientes sur la même cabine. Ici deux soins de 4 h
+      // commencés à 10h UTC courent encore à 13h.
+      prisma.service.aggregate.mockResolvedValue({
+        _max: { durationMin: 240 },
+      });
+      prisma.appointment.findMany.mockResolvedValue([
+        rdvExistant('2099-01-07T10:00:00.000Z', 240),
+        rdvExistant('2099-01-07T10:00:00.000Z', 240),
+      ]);
+
+      await expect(reserver()).rejects.toThrow(/complet/);
     });
   });
 

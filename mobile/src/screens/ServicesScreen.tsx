@@ -1,6 +1,6 @@
-import { useEffect, useCallback, useMemo, useState } from 'react';
+import { useEffect, useCallback, useMemo, useRef, useState } from 'react';
 import {
-  Text, StyleSheet, ActivityIndicator, RefreshControl, View, ScrollView, TouchableOpacity,
+  Text, StyleSheet, ActivityIndicator, RefreshControl, View, ScrollView, SectionList, TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -27,16 +27,26 @@ export default function ServicesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [activeCat, setActiveCat] = useState<string>(ALL);
 
+  // Voir ProductsScreen : sans ce compteur, deux allers-retours rapides
+  // laissaient gagner la dernière réponse ARRIVÉE, pas la dernière demandée.
+  const derniereDemande = useRef(0);
+
   const load = useCallback(async () => {
+    const demande = ++derniereDemande.current;
+    const depassee = () => demande !== derniereDemande.current;
     try {
       setError(null);
       const data = await servicesApi.getAll();
+      if (depassee()) return;
       setServices(data);
     } catch {
+      if (depassee()) return;
       setError('Impossible de charger les services.');
     } finally {
-      setIsLoading(false);
-      setRefreshing(false);
+      if (!depassee()) {
+        setIsLoading(false);
+        setRefreshing(false);
+      }
     }
   }, []);
 
@@ -66,12 +76,12 @@ export default function ServicesScreen() {
   );
 
   const sections = useMemo(() => {
-    const groups = new Map<string, { id: string; name: string; items: Service[] }>();
+    const groups = new Map<string, { id: string; name: string; data: Service[] }>();
     for (const s of visible) {
       const key = s.category?.id ?? 'autres';
       const name = s.category?.name ?? 'Autres';
-      if (!groups.has(key)) groups.set(key, { id: key, name, items: [] });
-      groups.get(key)!.items.push(s);
+      if (!groups.has(key)) groups.set(key, { id: key, name, data: [] });
+      groups.get(key)!.data.push(s);
     }
     return Array.from(groups.values());
   }, [visible]);
@@ -104,52 +114,32 @@ export default function ServicesScreen() {
     );
   }
 
+  // `SectionList` ne monte que les lignes visibles, au lieu de construire la
+  // liste entière à chaque rendu comme le faisait `.map` dans un `ScrollView`.
   return (
-    <ScrollView
+    <SectionList
       style={{ flex: 1, backgroundColor: theme.background }}
       contentContainerStyle={{ paddingTop: insets.top + spacing.md, paddingBottom: spacing.xxl }}
       showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.gold} />
       }
-    >
-      {/* Titre + recherche */}
-      <View style={[styles.headerRow, { paddingHorizontal: spacing.lg }]}>
-        <Text style={[typography.display, { color: theme.text, flex: 1 }]}>Services</Text>
-        <TouchableOpacity
-          accessibilityRole="button"
-          accessibilityLabel="Rechercher"
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          style={[styles.searchBtn, { backgroundColor: theme.surface, borderColor: theme.border }]}
-        >
-          <Ionicons name="search" size={20} color={theme.text} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Échec du rafraîchissement, sans masquer les prestations affichées */}
-      {error && (
-        <ErrorBanner message="Prestations non actualisées (connexion)." onRetry={load} />
+      sections={sections}
+      keyExtractor={(s) => s.id}
+      // Comme avant : les en-têtes remontent avec la liste au lieu de rester
+      // collés en haut de l'écran (comportement iOS par défaut).
+      stickySectionHeadersEnabled={false}
+      renderSectionHeader={({ section }) => (
+        <Text style={[typography.sectionLabel, styles.sectionLabel, { color: theme.gold }]}>
+          {section.name}
+        </Text>
       )}
-
-      {/* Chips de filtres */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chips}
-      >
-        <Chip label="Tous" active={activeCat === ALL} onPress={() => setActiveCat(ALL)} />
-        {categories.map((c) => (
-          <Chip
-            key={c.id}
-            label={c.name}
-            active={activeCat === c.id}
-            onPress={() => setActiveCat(c.id)}
-          />
-        ))}
-      </ScrollView>
-
-      {/* Sections par catégorie, liste de lignes */}
-      {visible.length === 0 ? (
+      renderItem={({ item: s }) => (
+        <View style={styles.row}>
+          <ServiceRow service={s} onPress={() => goDetail(s.id)} />
+        </View>
+      )}
+      ListEmptyComponent={
         <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl }}>
           <EmptyView
             message={
@@ -160,21 +150,46 @@ export default function ServicesScreen() {
             icon="sparkles-outline"
           />
         </View>
-      ) : (
-        sections.map((section) => (
-          <View key={section.id} style={{ marginTop: spacing.lg }}>
-            <Text style={[typography.sectionLabel, styles.sectionLabel, { color: theme.gold }]}>
-              {section.name}
-            </Text>
-            <View style={{ paddingHorizontal: spacing.lg }}>
-              {section.items.map((s) => (
-                <ServiceRow key={s.id} service={s} onPress={() => goDetail(s.id)} />
-              ))}
-            </View>
+      }
+      ListHeaderComponent={
+        <>
+          {/* Titre + recherche */}
+          <View style={[styles.headerRow, { paddingHorizontal: spacing.lg }]}>
+            <Text style={[typography.display, { color: theme.text, flex: 1 }]}>Services</Text>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Rechercher"
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={[styles.searchBtn, { backgroundColor: theme.surface, borderColor: theme.border }]}
+            >
+              <Ionicons name="search" size={20} color={theme.text} />
+            </TouchableOpacity>
           </View>
-        ))
-      )}
-    </ScrollView>
+
+          {/* Échec du rafraîchissement, sans masquer les prestations affichées */}
+          {error && (
+            <ErrorBanner message="Prestations non actualisées (connexion)." onRetry={load} />
+          )}
+
+          {/* Chips de filtres */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chips}
+          >
+            <Chip label="Tous" active={activeCat === ALL} onPress={() => setActiveCat(ALL)} />
+            {categories.map((c) => (
+              <Chip
+                key={c.id}
+                label={c.name}
+                active={activeCat === c.id}
+                onPress={() => setActiveCat(c.id)}
+              />
+            ))}
+          </ScrollView>
+        </>
+      }
+    />
   );
 }
 
@@ -200,6 +215,12 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     paddingHorizontal: spacing.lg,
+    // Portée par l'en-tête depuis le passage en SectionList : c'est lui qui
+    // ouvre chaque catégorie, là où c'était le conteneur de section avant.
+    marginTop: spacing.lg,
     marginBottom: spacing.md,
+  },
+  row: {
+    paddingHorizontal: spacing.lg,
   },
 });

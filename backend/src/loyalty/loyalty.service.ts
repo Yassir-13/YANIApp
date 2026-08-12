@@ -40,17 +40,39 @@ export class LoyaltyService {
     return account;
   }
 
-  async getHistory(userId: string) {
+  // Historique paginé : il grossit à chaque visite et à chaque commande, sans
+  // fin. Une cliente fidèle depuis trois ans le rechargeait en entier à chaque
+  // ouverture de l'écran Fidélité (I4).
+  async getHistory(
+    userId: string,
+    query: PaginationQueryDto,
+  ): Promise<Paginated<any>> {
     const account = await this.getAccount(userId);
-    return this.prisma.loyaltyTransaction.findMany({
-      where: { accountId: account.id },
-      // Le nom de la récompense vient d'ici et non du catalogue chargé par
-      // l'app : ce catalogue ne contient que les récompenses ACTIVES, donc une
-      // récompense retirée depuis laisserait un blanc précisément sur les
-      // vieilles lignes de l'historique.
-      include: { reward: { select: { name: true } } },
-      orderBy: { createdAt: 'desc' },
-    });
+    const { page, limit } = query;
+    const where = { accountId: account.id };
+
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.loyaltyTransaction.findMany({
+        where,
+        // Le nom de la récompense vient d'ici et non du catalogue chargé par
+        // l'app : ce catalogue ne contient que les récompenses ACTIVES, donc une
+        // récompense retirée depuis laisserait un blanc précisément sur les
+        // vieilles lignes de l'historique.
+        include: { reward: { select: { name: true } } },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.loyaltyTransaction.count({ where }),
+    ]);
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    };
   }
 
   // Crédite les points gagnés sur un RDV complété.
@@ -218,17 +240,39 @@ export class LoyaltyService {
     }
   }
 
-  // Récompenses débloquées d'une cliente (réclamées ou non)
-  async getMyGrants(userId: string) {
+  // Récompenses débloquées d'une cliente (réclamées ou non), paginées.
+  // Un palier récurrent en rejoue une à chaque multiple du seuil : la liste
+  // grandit donc sans fin, lentement mais sûrement. Du plus récent au plus
+  // ancien, pour que la première page porte ce qui vient d'être débloqué.
+  async getMyGrants(
+    userId: string,
+    query: PaginationQueryDto,
+  ): Promise<Paginated<any>> {
     const account = await this.getAccount(userId);
-    return this.prisma.milestoneGrant.findMany({
-      where: { accountId: account.id },
-      include: {
-        reward: true,
-        milestone: { select: { visitThreshold: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const { page, limit } = query;
+    const where = { accountId: account.id };
+
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.milestoneGrant.findMany({
+        where,
+        include: {
+          reward: true,
+          milestone: { select: { visitThreshold: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.milestoneGrant.count({ where }),
+    ]);
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    };
   }
 
   // La cliente réclame une récompense offerte (aucun point dépensé)
@@ -513,25 +557,54 @@ export class LoyaltyService {
 
   // ----- AUDIT : l'admin consulte tous les ajouts manuels -----
 
-  auditManualTransactions() {
-    return this.prisma.loyaltyTransaction.findMany({
-      where: { type: LoyaltyTxType.MANUAL },
-      include: {
-        owner: {
-          select: { id: true, email: true, firstName: true, lastName: true },
-        },
-        createdBy: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-            role: true,
+  // Journal d'audit : par nature il ne fait que grandir, jamais rétrécir.
+  // C'est exactement le genre de liste qu'on ne peut pas laisser sans borne.
+  async auditManualTransactions(
+    query: PaginationQueryDto,
+  ): Promise<Paginated<any> & { pointsTotal: number }> {
+    const { page, limit } = query;
+    const where = { type: LoyaltyTxType.MANUAL };
+
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.loyaltyTransaction.findMany({
+        where,
+        include: {
+          owner: {
+            select: { id: true, email: true, firstName: true, lastName: true },
+          },
+          createdBy: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              role: true,
+            },
           },
         },
-      },
-      orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.loyaltyTransaction.count({ where }),
+    ]);
+
+    // Le cumul porte sur TOUTES les opérations, pas sur la page affichée : un
+    // total d'audit partiel serait pire que pas de total du tout. Il était
+    // additionné dans le navigateur, du temps où la liste arrivait entière.
+    const somme = await this.prisma.loyaltyTransaction.aggregate({
+      where,
+      _sum: { pointsDelta: true },
     });
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+      pointsTotal: somme._sum.pointsDelta ?? 0,
+    };
   }
 
   // ----- STAFF/ADMIN : consulter le compte fidélité d'un client -----
@@ -620,16 +693,39 @@ export class LoyaltyService {
   // Les bons d'une cliente : ce qu'elle doit présenter, puis ce qu'elle a déjà
   // utilisé. Les bons dus remontent en premier — c'est ce qu'elle ouvre l'écran
   // pour voir.
-  async getMyVouchers(userId: string) {
+  //
+  // Paginé : seuls les bons DUS sont bornés par nature, ceux déjà remis
+  // s'accumulent. L'ordre garantit que ce tri ne coûte rien à la cliente — les
+  // bons dus étant en tête, ils ne peuvent pas tomber hors de la première page.
+  async getMyVouchers(
+    userId: string,
+    query: PaginationQueryDto,
+  ): Promise<Paginated<any>> {
     const account = await this.getAccount(userId);
-    return this.prisma.rewardVoucher.findMany({
-      where: { accountId: account.id },
-      include: { reward: true },
-      orderBy: [
-        { honoredAt: { sort: 'asc', nulls: 'first' } },
-        { createdAt: 'desc' },
-      ],
-    });
+    const { page, limit } = query;
+    const where = { accountId: account.id };
+
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.rewardVoucher.findMany({
+        where,
+        include: { reward: true },
+        orderBy: [
+          { honoredAt: { sort: 'asc', nulls: 'first' } },
+          { createdAt: 'desc' },
+        ],
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.rewardVoucher.count({ where }),
+    ]);
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    };
   }
 
   // La liste de travail du comptoir. Bornée par nature : elle ne contient que

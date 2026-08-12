@@ -4,6 +4,7 @@ import { LoyaltyTxType, Role, VoucherSource } from '@prisma/client';
 import { LoyaltyService } from './loyalty.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { VOUCHER_CODE_LENGTH } from './voucher-code';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 
 // Test d'INTÉGRATION, et il ne peut pas être autre chose.
 //
@@ -19,6 +20,10 @@ import { VOUCHER_CODE_LENGTH } from './voucher-code';
 
 const prisma = new PrismaService();
 const service = new LoyaltyService(prisma);
+
+// La liste des bons d'une cliente est paginée : ici elle tient largement dans
+// une page, ce qu'on veut vérifier est ailleurs.
+const PAGE = { page: 1, limit: 25 } as PaginationQueryDto;
 
 const aNettoyer = {
   users: [] as string[],
@@ -168,7 +173,7 @@ describe('LoyaltyService — bons de récompense (vraie base)', () => {
     expect(apres.vouchers[0].reward.name).toBe(recompense.name);
 
     // Et côté cliente, elle la voit toujours, avec son code.
-    const sesBons = await service.getMyVouchers(cliente.id);
+    const sesBons = (await service.getMyVouchers(cliente.id, PAGE)).data;
     expect(sesBons).toHaveLength(1);
     expect(sesBons[0].source).toBe(VoucherSource.MILESTONE);
     expect(sesBons[0].pointsSpent).toBe(0);
@@ -186,7 +191,7 @@ describe('LoyaltyService — bons de récompense (vraie base)', () => {
     ]);
 
     expect(résultats.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
-    expect(await service.getMyVouchers(cliente.id)).toHaveLength(1);
+    expect((await service.getMyVouchers(cliente.id, PAGE)).data).toHaveLength(1);
   });
 
   // ── La remise au comptoir ─────────────────────────────────────────────
@@ -242,6 +247,6 @@ describe('LoyaltyService — bons de récompense (vraie base)', () => {
 
     await service.redeem(alice.id, recompense.id);
 
-    expect(await service.getMyVouchers(badia.id)).toHaveLength(0);
+    expect((await service.getMyVouchers(badia.id, PAGE)).data).toHaveLength(0);
   });
 });

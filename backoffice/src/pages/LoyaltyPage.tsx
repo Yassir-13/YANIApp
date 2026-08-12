@@ -728,7 +728,7 @@ function RewardsTab() {
       <section className="card">
         <div className="row between card-pad" style={styles.sectionHead}>
           <h2>Récompenses existantes</h2>
-          <button className="btn btn-outline btn-sm" onClick={load}>Actualiser</button>
+          <button className="btn btn-outline btn-sm" onClick={() => load()}>Actualiser</button>
         </div>
 
         {isLoading ? (
@@ -999,7 +999,7 @@ function MilestonesTab() {
       <section className="card">
         <div className="row between card-pad" style={styles.sectionHead}>
           <h2>Paliers existants</h2>
-          <button className="btn btn-outline btn-sm" onClick={load}>Actualiser</button>
+          <button className="btn btn-outline btn-sm" onClick={() => load()}>Actualiser</button>
         </div>
 
         {isLoading ? (
@@ -1082,15 +1082,26 @@ function MilestonesTab() {
 // ─────────────────────────────────────────────────────────────────────────
 function AuditTab() {
   const [rows, setRows] = useState<ManualTransaction[]>([]);
+  const [count, setCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  // Cumul de points sur l'ENSEMBLE du journal, calculé par le serveur : une
+  // fois la liste paginée, l'additionner ici ne donnerait que le total de la
+  // page — un chiffre d'audit faux, et qui n'aurait pas l'air faux.
+  const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
 
-  const load = async () => {
+  const load = async (p = page) => {
     setIsLoading(true);
     try {
       setError(null);
-      setRows(await loyaltyApi.auditManual());
+      const res = await loyaltyApi.auditManual({ page: p, limit: AUDIT_PAGE_SIZE });
+      setRows(res.data);
+      setCount(res.total);
+      setTotalPages(res.totalPages);
+      setTotal(res.pointsTotal);
+      setPage(p);
     } catch {
       setError("Impossible de charger l'audit.");
     } finally {
@@ -1099,15 +1110,8 @@ function AuditTab() {
   };
 
   useEffect(() => {
-    load();
+    load(1);
   }, []);
-
-  // Le cumul porte sur TOUTES les opérations, pas sur la page affichée :
-  // un total d'audit partiel serait trompeur.
-  const total = rows.reduce((n, r) => n + r.pointsDelta, 0);
-
-  const totalPages = Math.max(1, Math.ceil(rows.length / AUDIT_PAGE_SIZE));
-  const visible = rows.slice((page - 1) * AUDIT_PAGE_SIZE, page * AUDIT_PAGE_SIZE);
 
   return (
     <section className="card">
@@ -1115,10 +1119,10 @@ function AuditTab() {
         <div>
           <h2>Ajouts manuels</h2>
           <div className="small muted">
-            {rows.length} opération(s) · {total} points crédités au total
+            {count} opération(s) · {total} points crédités au total
           </div>
         </div>
-        <button className="btn btn-outline btn-sm" onClick={load}>Actualiser</button>
+        <button className="btn btn-outline btn-sm" onClick={() => load()}>Actualiser</button>
       </div>
 
       {error && <div className="card-pad" style={{ color: 'var(--danger)' }}>{error}</div>}
@@ -1141,7 +1145,7 @@ function AuditTab() {
             </tr>
           </thead>
           <tbody>
-            {visible.map((r) => (
+            {rows.map((r) => (
               <tr key={r.id}>
                 <td className="small muted">{formatDateTime(r.createdAt)}</td>
                 <td>
@@ -1170,8 +1174,8 @@ function AuditTab() {
         <Pagination
           page={page}
           totalPages={totalPages}
-          total={rows.length}
-          onChange={setPage}
+          total={count}
+          onChange={load}
           label="opération(s)"
         />
       )}

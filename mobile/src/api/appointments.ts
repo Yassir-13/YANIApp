@@ -1,4 +1,5 @@
 import { apiClient } from './client';
+import { Paginated, PAGE_MOBILE } from './pagination';
 
 export interface Slot {
   time: string; // « 14:00 » — heure locale du centre, pour l'affichage
@@ -42,9 +43,16 @@ export const appointmentsApi = {
     return data;
   },
 
+  // Paginé côté serveur, et trié du plus récent au plus ancien : la première
+  // page contient donc ce qui intéresse la cliente. L'ordre croissant d'avant
+  // aurait mis ses plus vieux rendez-vous en tête de page 1 (voir I18 pour le
+  // regroupement « à venir d'abord », qui reste à faire).
   async getMine(): Promise<Appointment[]> {
-    const { data } = await apiClient.get('/appointments');
-    return data;
+    const { data } = await apiClient.get<Paginated<Appointment>>(
+      '/appointments',
+      { params: { limit: PAGE_MOBILE } },
+    );
+    return data.data;
   },
 
   async cancel(id: string) {

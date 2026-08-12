@@ -6,6 +6,11 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
+import {
+  AppointmentFilter,
+  FindAppointmentsQueryDto,
+} from './dto/find-appointments-query.dto';
+import { Paginated } from '../common/dto/pagination-query.dto';
 import { AppointmentStatus, Prisma, Role } from '@prisma/client';
 import { LoyaltyService } from '../loyalty/loyalty.service';
 import { ConfigService } from '@nestjs/config';
@@ -132,12 +137,39 @@ export class AppointmentsService {
     }
 
     // ── Capacité (chevauchement d'intervalles) ──
+    //
+    // La borne basse est ce qui empêche cette requête de relire tout le passé.
+    // Un rendez-vous ne peut chevaucher le créneau demandé que s'il se termine
+    // après son début — donc qu'il commence après « début − sa propre durée ».
+    // Sa durée n'est pas connue au moment de la requête : on borne par la plus
+    // longue prestation du catalogue. C'est large, mais exact — et le test de
+    // chevauchement précis reste fait juste en dessous.
+    //
+    // Sans cette borne, chaque réservation chargeait tous les rendez-vous
+    // encore en attente ou confirmés depuis l'ouverture. Et comme cette
+    // lecture se fait DANS le verrou de réservation, elle faisait patienter
+    // toutes les autres clientes en train de réserver.
+    //
+    // La durée maximale est relue à chaque fois plutôt que figée dans une
+    // constante : le jour où Fati crée une prestation de quatre heures, une
+    // constante périmée ferait manquer des chevauchements — donc accepterait
+    // deux clientes sur le même créneau.
+    const { _max } = await db.service.aggregate({
+      _max: { durationMin: true },
+    });
+    // Volontairement sur TOUTES les prestations, désactivées comprises : un
+    // rendez-vous déjà pris sur une prestation retirée du catalogue occupe
+    // toujours le fauteuil.
+    const borneBasse = new Date(
+      startAt.getTime() - (_max.durationMin ?? 0) * 60_000,
+    );
+
     const candidates = await db.appointment.findMany({
       where: {
         status: {
           in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED],
         },
-        startAt: { lt: endAt },
+        startAt: { gt: borneBasse, lt: endAt },
         ...(excludeAppointmentId ? { id: { not: excludeAppointmentId } } : {}),
       },
       include: { service: true },
@@ -214,30 +246,154 @@ export class AppointmentsService {
   //  Lecture : client = les siens ; staff/admin = tous
   // ─────────────────────────────────────────
 
-  findForUser(userId: string, role: Role) {
-    if (role === Role.CLIENT) {
-      return this.prisma.appointment.findMany({
-        where: { userId },
+  // La cliente voit les siens, le comptoir voit tout — mais les deux listes
+  // sont désormais paginées. Auparavant, cette route renvoyait TOUS les
+  // rendez-vous depuis l'ouverture à chaque affichage (I4).
+  findForUser(userId: string, role: Role, query: FindAppointmentsQueryDto) {
+    return role === Role.CLIENT
+      ? this.findMine(userId, query)
+      : this.findAllForStaff(query);
+  }
+
+  private async findMine(
+    userId: string,
+    query: FindAppointmentsQueryDto,
+  ): Promise<Paginated<any>> {
+    const { page, limit } = query;
+    const where: Prisma.AppointmentWhereInput = { userId };
+
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.appointment.findMany({
+        where,
         include: { service: true },
-        orderBy: { startAt: 'asc' },
-      });
-    }
-    return this.prisma.appointment.findMany({
-      include: {
-        service: true,
-        user: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-            phone: true,
-            role: true,
+        // Du plus récent au plus ancien, comme « Mes commandes ». L'ordre
+        // croissant d'avant plaçait les rendez-vous les PLUS VIEUX en tête :
+        // sans pagination ça se voyait à peine, avec pagination la première
+        // page ne contiendrait plus que du passé. Le regroupement « à venir
+        // d'abord » reste à faire (I18).
+        orderBy: { startAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.appointment.count({ where }),
+    ]);
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    };
+  }
+
+  // Le « aujourd'hui » et le « à venir » du comptoir, traduits en conditions
+  // de base. Ils étaient calculés dans le navigateur, sur la liste complète :
+  // sur une liste paginée, ils ne porteraient plus que sur la page affichée.
+  private whereForFilter(
+    filter: AppointmentFilter,
+  ): Prisma.AppointmentWhereInput {
+    const now = new Date();
+
+    switch (filter) {
+      case AppointmentFilter.TODAY: {
+        // Le jour du CENTRE, pas celui du navigateur de la personne qui
+        // consulte : c'est le serveur qui possède la base des fuseaux.
+        const jour = format(toZonedTime(now, this.timezone), 'yyyy-MM-dd', {
+          timeZone: this.timezone,
+        });
+        return {
+          status: { not: AppointmentStatus.CANCELLED },
+          startAt: {
+            gte: fromZonedTime(`${jour}T00:00:00`, this.timezone),
+            lte: fromZonedTime(`${jour}T23:59:59.999`, this.timezone),
           },
-        },
-      },
-      orderBy: { startAt: 'asc' },
+        };
+      }
+      case AppointmentFilter.UPCOMING:
+        return {
+          status: { not: AppointmentStatus.CANCELLED },
+          startAt: { gt: now },
+        };
+      case AppointmentFilter.ALL:
+        return {};
+      default:
+        return { status: filter as unknown as AppointmentStatus };
+    }
+  }
+
+  private async findAllForStaff(
+    query: FindAppointmentsQueryDto,
+  ): Promise<Paginated<any> & { counts: Record<string, number> }> {
+    const { page, limit, filter } = query;
+    const where = this.whereForFilter(filter);
+
+    // Les vues d'historique se lisent du plus récent au plus ancien ; les vues
+    // de travail (aujourd'hui, à venir, à confirmer) dans l'ordre où les
+    // clientes se présentent.
+    const historique =
+      filter === AppointmentFilter.ALL ||
+      filter === AppointmentFilter.COMPLETED ||
+      filter === AppointmentFilter.CANCELLED;
+
+    const [data, total, today, upcoming] =
+      await this.prisma.$transaction([
+        this.prisma.appointment.findMany({
+          where,
+          include: {
+            service: true,
+            user: {
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                phone: true,
+                role: true,
+              },
+            },
+          },
+          orderBy: { startAt: historique ? 'desc' : 'asc' },
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+        this.prisma.appointment.count({ where }),
+        this.prisma.appointment.count({
+          where: this.whereForFilter(AppointmentFilter.TODAY),
+        }),
+        this.prisma.appointment.count({
+          where: this.whereForFilter(AppointmentFilter.UPCOMING),
+        }),
+      ]);
+
+    // Les compteurs des onglets portent sur TOUT, pas sur la page : c'est ce
+    // qui permet d'annoncer « À confirmer (7) » sans télécharger les sept
+    // mille autres. Hors de la transaction ci-dessus à dessein — ce sont des
+    // indicateurs, pas des invariants.
+    const parStatut = await this.prisma.appointment.groupBy({
+      by: ['status'],
+      _count: true,
+      orderBy: { status: 'asc' },
     });
+
+    const counts: Record<string, number> = {
+      ALL: 0,
+      TODAY: today,
+      UPCOMING: upcoming,
+    };
+    for (const ligne of parStatut) {
+      counts[ligne.status] = ligne._count;
+      counts.ALL += ligne._count;
+    }
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+      counts,
+    };
   }
 
   // ─────────────────────────────────────────

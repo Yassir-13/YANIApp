@@ -14,14 +14,10 @@ export interface AppUser {
   emailVerifiedAt: string | null;
 }
 
-// Enveloppe renvoyée par les endpoints paginés du backend.
-export interface Paginated<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
+// Réexport : l'enveloppe est désormais partagée par toutes les listes
+// paginées, mais elle était historiquement importée depuis ce fichier.
+export type { Paginated } from './pagination';
+import type { Paginated } from './pagination';
 
 export const usersApi = {
   // STAFF/ADMIN : liste paginée, avec recherche optionnelle (nom, email, téléphone).

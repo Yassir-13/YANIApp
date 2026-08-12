@@ -7,6 +7,11 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { LoyaltyService } from '../loyalty/loyalty.service';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { FindOrdersQueryDto } from './dto/find-orders-query.dto';
+import {
+  PaginationQueryDto,
+  Paginated,
+} from '../common/dto/pagination-query.dto';
 import { FulfillmentType, OrderStatus, Prisma, Role } from '@prisma/client';
 
 // Transitions de statut autorisées (machine à états)
@@ -127,12 +132,36 @@ export class OrdersService {
   // ─────────────────────────────────────────
   //  Lectures
   // ─────────────────────────────────────────
-  async findMine(userId: string) {
-    return this.prisma.order.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-      include: { items: { include: { product: true } } },
-    });
+  // Les commandes d'une cliente, paginées. La liste est personnelle, donc bien
+  // plus courte que celle du comptoir — mais elle grossit exactement de la même
+  // façon, à chaque commande, et sans fin. C'est la même famille que
+  // `/loyalty/me/history` et « mes rendez-vous », bornés à l'étape 5 : laisser
+  // celle-ci entière n'aurait tenu qu'à l'oubli.
+  async findMine(
+    userId: string,
+    query: PaginationQueryDto,
+  ): Promise<Paginated<any>> {
+    const { page, limit } = query;
+    const where: Prisma.OrderWhereInput = { userId };
+
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.order.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        include: { items: { include: { product: true } } },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.order.count({ where }),
+    ]);
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    };
   }
 
   async findOneForUser(id: string, userId: string) {
@@ -146,24 +175,62 @@ export class OrdersService {
     return order;
   }
 
-  // STAFF/ADMIN : toutes les commandes, filtrables par statut
-  async findAll(status?: OrderStatus) {
-    return this.prisma.order.findMany({
-      where: status ? { status } : undefined,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        items: { include: { product: true } },
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            phone: true,
-            email: true,
+  // STAFF/ADMIN : les commandes, filtrables par statut et paginées.
+  //
+  // Cette route renvoyait TOUTES les commandes depuis l'ouverture, et le
+  // backoffice les découpait ensuite dans le navigateur : la pagination
+  // affichée était donc purement cosmétique (I4).
+  async findAll(
+    query: FindOrdersQueryDto,
+  ): Promise<Paginated<any> & { counts: Record<string, number> }> {
+    const { page, limit, status } = query;
+    const where: Prisma.OrderWhereInput = status ? { status } : {};
+
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.order.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          items: { include: { product: true } },
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+              email: true,
+            },
           },
         },
-      },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.order.count({ where }),
+    ]);
+
+    // Les compteurs des onglets portent sur l'ensemble des commandes, pas sur
+    // la page : « À confirmer (7) » doit rester vrai même quand on lit la
+    // page 4 des commandes terminées.
+    const parStatut = await this.prisma.order.groupBy({
+      by: ['status'],
+      _count: true,
+      orderBy: { status: 'asc' },
     });
+
+    const counts: Record<string, number> = { ALL: 0 };
+    for (const ligne of parStatut) {
+      counts[ligne.status] = ligne._count;
+      counts.ALL += ligne._count;
+    }
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+      counts,
+    };
   }
 
   // ─────────────────────────────────────────

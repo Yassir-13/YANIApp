@@ -1,4 +1,5 @@
 import { apiClient } from './client';
+import { Paginated, PAGE_MOBILE } from './pagination';
 
 export interface LoyaltyAccount {
   id: string;
@@ -69,9 +70,14 @@ export const loyaltyApi = {
     const { data } = await apiClient.get('/loyalty/me');
     return data;
   },
+  // Historique paginé côté serveur : il grossissait sans fin à chaque visite
+  // et chaque commande, et l'écran Fidélité le rechargeait en entier.
   async getMyHistory(): Promise<LoyaltyTransaction[]> {
-    const { data } = await apiClient.get('/loyalty/me/history');
-    return data;
+    const { data } = await apiClient.get<Paginated<LoyaltyTransaction>>(
+      '/loyalty/me/history',
+      { params: { limit: PAGE_MOBILE } },
+    );
+    return data.data;
   },
   async getRewards(): Promise<Reward[]> {
     const { data } = await apiClient.get('/loyalty/rewards');
@@ -87,10 +93,14 @@ export const loyaltyApi = {
     const { data } = await apiClient.get('/loyalty/milestones');
     return data;
   },
-  // Récompenses offertes débloquées par la cliente
+  // Récompenses offertes débloquées par la cliente. Paginé : un palier
+  // récurrent en rejoue une à chaque multiple du seuil.
   async getMyGrants(): Promise<MilestoneGrant[]> {
-    const { data } = await apiClient.get('/loyalty/me/grants');
-    return data;
+    const { data } = await apiClient.get<Paginated<MilestoneGrant>>(
+      '/loyalty/me/grants',
+      { params: { limit: PAGE_MOBILE } },
+    );
+    return data.data;
   },
   // Réclamer une récompense offerte (aucun point dépensé)
   async claimGrant(grantId: string) {
@@ -99,8 +109,13 @@ export const loyaltyApi = {
   },
 
   // Les bons de la cliente : à présenter d'abord, déjà utilisés ensuite.
+  // Paginé, mais les bons dus étant en tête, ils ne peuvent pas tomber hors
+  // de la page — seul l'historique des remises est susceptible d'être coupé.
   async getMyVouchers(): Promise<RewardVoucher[]> {
-    const { data } = await apiClient.get('/loyalty/me/vouchers');
-    return data;
+    const { data } = await apiClient.get<Paginated<RewardVoucher>>(
+      '/loyalty/me/vouchers',
+      { params: { limit: PAGE_MOBILE } },
+    );
+    return data.data;
   },
 };

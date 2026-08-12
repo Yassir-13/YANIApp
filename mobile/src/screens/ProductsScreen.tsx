@@ -1,6 +1,6 @@
-import { useEffect, useCallback, useMemo, useState } from 'react';
+import { useEffect, useCallback, useMemo, useRef, useState } from 'react';
 import {
-  Text, StyleSheet, ActivityIndicator, RefreshControl, View, ScrollView, TouchableOpacity,
+  Text, StyleSheet, ActivityIndicator, RefreshControl, View, ScrollView, SectionList, TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -29,16 +29,31 @@ export default function ProductsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [activeCat, setActiveCat] = useState<string>(ALL);
 
+  // Numéro de la dernière demande. Deux allers-retours rapides lancent deux
+  // requêtes concurrentes, et sans ce compteur c'est la dernière RÉPONSE
+  // ARRIVÉE qui gagnait — pas la dernière demandée. L'écran pouvait donc
+  // afficher un catalogue plus ancien que celui qu'on venait de réclamer.
+  const derniereDemande = useRef(0);
+
   const load = useCallback(async () => {
+    const demande = ++derniereDemande.current;
+    // Une réponse dépassée est ignorée. La requête n'est pas coupée sur le
+    // réseau — elle est simplement sans effet, ce qui suffit à garantir que
+    // c'est la dernière demande qui décide de ce qui s'affiche.
+    const depassee = () => demande !== derniereDemande.current;
     try {
       setError(null);
       const data = await productsApi.getAll();
+      if (depassee()) return;
       setProducts(data);
     } catch {
+      if (depassee()) return;
       setError('Impossible de charger les produits.');
     } finally {
-      setIsLoading(false);
-      setRefreshing(false);
+      if (!depassee()) {
+        setIsLoading(false);
+        setRefreshing(false);
+      }
     }
   }, []);
 
@@ -68,6 +83,9 @@ export default function ProductsScreen() {
     [products, activeCat]
   );
 
+  // Regroupement par catégorie, puis découpage en rangées de deux : une
+  // `SectionList` n'accepte pas `numColumns`, c'est donc la RANGÉE qui devient
+  // l'élément de liste. La grille reste visuellement identique.
   const sections = useMemo(() => {
     const groups = new Map<string, { id: string; name: string; items: Product[] }>();
     for (const p of visible) {
@@ -76,7 +94,15 @@ export default function ProductsScreen() {
       if (!groups.has(key)) groups.set(key, { id: key, name, items: [] });
       groups.get(key)!.items.push(p);
     }
-    return Array.from(groups.values());
+    return Array.from(groups.values(), ({ id, name, items }) => ({
+      id,
+      name,
+      data: items.reduce<Product[][]>((rangees, p, i) => {
+        if (i % 2 === 0) rangees.push([p]);
+        else rangees[rangees.length - 1].push(p);
+        return rangees;
+      }, []),
+    }));
   }, [visible]);
 
   // Un filtre peut pointer vers une catégorie qui n'existe plus après un
@@ -109,58 +135,37 @@ export default function ProductsScreen() {
     );
   }
 
+  // `SectionList` ne monte que ce qui est visible. Avec l'ancien `.map` dans
+  // un `ScrollView`, 150 produits déclenchaient 150 téléchargements d'images
+  // d'un coup, dont l'immense majorité hors de l'écran.
   return (
-    <ScrollView
+    <SectionList
       style={{ flex: 1, backgroundColor: theme.background }}
       contentContainerStyle={{ paddingTop: insets.top + spacing.md, paddingBottom: spacing.xxl }}
       showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.gold} />
       }
-    >
-      {/* Titre + panier */}
-      <View style={[styles.headerRow, { paddingHorizontal: spacing.lg }]}>
-        <Text style={[typography.display, { color: theme.text, flex: 1 }]}>Produits</Text>
-        <TouchableOpacity
-          onPress={() => navigation.navigate('Cart')}
-          accessibilityRole="button"
-          accessibilityLabel="Panier"
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          style={[styles.searchBtn, { backgroundColor: theme.surface, borderColor: theme.border }]}
-        >
-          <Ionicons name="bag-outline" size={20} color={theme.text} />
-          {cartCount > 0 && (
-            <View style={[styles.cartBadge, { backgroundColor: theme.gold }]}>
-              <Text style={styles.cartBadgeText}>{cartCount}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      </View>
-
-      {/* Échec du rafraîchissement, sans masquer le catalogue déjà affiché */}
-      {error && (
-        <ErrorBanner message="Catalogue non actualisé (connexion)." onRetry={load} />
+      sections={sections}
+      keyExtractor={(rangee) => rangee[0].id}
+      // Les en-têtes de section se figeaient en haut de l'écran sur iOS : on
+      // garde le défilement d'origine, où ils remontent avec la liste.
+      stickySectionHeadersEnabled={false}
+      renderSectionHeader={({ section }) => (
+        <Text style={[typography.sectionLabel, styles.sectionLabel, { color: theme.gold }]}>
+          {section.name}
+        </Text>
       )}
-
-      {/* Chips de filtres */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chips}
-      >
-        <Chip label="Tous" active={activeCat === ALL} onPress={() => setActiveCat(ALL)} />
-        {categories.map((c) => (
-          <Chip
-            key={c.id}
-            label={c.name}
-            active={activeCat === c.id}
-            onPress={() => setActiveCat(c.id)}
-          />
-        ))}
-      </ScrollView>
-
-      {/* Sections par catégorie, grille 2 colonnes */}
-      {visible.length === 0 ? (
+      renderItem={({ item: rangee }) => (
+        <View style={styles.grid}>
+          {rangee.map((p) => (
+            <View key={p.id} style={styles.gridItem}>
+              <ProductCard product={p} onPress={() => goDetail(p.id)} />
+            </View>
+          ))}
+        </View>
+      )}
+      ListEmptyComponent={
         <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl }}>
           <EmptyView
             message={
@@ -171,23 +176,52 @@ export default function ProductsScreen() {
             icon="sparkles-outline"
           />
         </View>
-      ) : (
-        sections.map((section) => (
-          <View key={section.id} style={{ marginTop: spacing.lg }}>
-            <Text style={[typography.sectionLabel, styles.sectionLabel, { color: theme.gold }]}>
-              {section.name}
-            </Text>
-            <View style={styles.grid}>
-              {section.items.map((p) => (
-                <View key={p.id} style={styles.gridItem}>
-                  <ProductCard product={p} onPress={() => goDetail(p.id)} />
+      }
+      ListHeaderComponent={
+        <>
+          {/* Titre + panier */}
+          <View style={[styles.headerRow, { paddingHorizontal: spacing.lg }]}>
+            <Text style={[typography.display, { color: theme.text, flex: 1 }]}>Produits</Text>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Cart')}
+              accessibilityRole="button"
+              accessibilityLabel="Panier"
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={[styles.searchBtn, { backgroundColor: theme.surface, borderColor: theme.border }]}
+            >
+              <Ionicons name="bag-outline" size={20} color={theme.text} />
+              {cartCount > 0 && (
+                <View style={[styles.cartBadge, { backgroundColor: theme.gold }]}>
+                  <Text style={styles.cartBadgeText}>{cartCount}</Text>
                 </View>
-              ))}
-            </View>
+              )}
+            </TouchableOpacity>
           </View>
-        ))
-      )}
-    </ScrollView>
+
+          {/* Échec du rafraîchissement, sans masquer le catalogue déjà affiché */}
+          {error && (
+            <ErrorBanner message="Catalogue non actualisé (connexion)." onRetry={load} />
+          )}
+
+          {/* Chips de filtres */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chips}
+          >
+            <Chip label="Tous" active={activeCat === ALL} onPress={() => setActiveCat(ALL)} />
+            {categories.map((c) => (
+              <Chip
+                key={c.id}
+                label={c.name}
+                active={activeCat === c.id}
+                onPress={() => setActiveCat(c.id)}
+              />
+            ))}
+          </ScrollView>
+        </>
+      }
+    />
   );
 }
 
@@ -229,6 +263,9 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     paddingHorizontal: spacing.lg,
+    // Portée par l'en-tête depuis le passage en SectionList : c'est lui qui
+    // ouvre chaque catégorie, là où c'était le conteneur de section avant.
+    marginTop: spacing.lg,
     marginBottom: spacing.md,
   },
   grid: {

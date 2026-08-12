@@ -38,8 +38,8 @@ export class LoyaltyController {
   }
 
   @Get('me/history')
-  getMyHistory(@Req() req: any) {
-    return this.loyaltyService.getHistory(req.user.id);
+  getMyHistory(@Req() req: any, @Query() query: PaginationQueryDto) {
+    return this.loyaltyService.getHistory(req.user.id, query);
   }
 
   // Catalogue des récompenses disponibles
@@ -62,8 +62,8 @@ export class LoyaltyController {
 
   // Récompenses offertes débloquées par la cliente
   @Get('me/grants')
-  getMyGrants(@Req() req: any) {
-    return this.loyaltyService.getMyGrants(req.user.id);
+  getMyGrants(@Req() req: any, @Query() query: PaginationQueryDto) {
+    return this.loyaltyService.getMyGrants(req.user.id, query);
   }
 
   // Réclamer une récompense offerte (aucun point dépensé)
@@ -75,8 +75,8 @@ export class LoyaltyController {
   // Les bons de la cliente : ce qu'elle a à présenter à l'institut, et ce
   // qu'elle a déjà utilisé.
   @Get('me/vouchers')
-  getMyVouchers(@Req() req: any) {
-    return this.loyaltyService.getMyVouchers(req.user.id);
+  getMyVouchers(@Req() req: any, @Query() query: PaginationQueryDto) {
+    return this.loyaltyService.getMyVouchers(req.user.id, query);
   }
 
   // ----- ADMIN -----
@@ -192,7 +192,7 @@ export class LoyaltyController {
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
   @Get('audit/manual')
-  auditManual() {
-    return this.loyaltyService.auditManualTransactions();
+  auditManual(@Query() query: PaginationQueryDto) {
+    return this.loyaltyService.auditManualTransactions(query);
   }
 }

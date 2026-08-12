@@ -1,5 +1,6 @@
-import { useEffect, useState, useMemo, Fragment } from 'react';
+import { useEffect, useState, Fragment } from 'react';
 import { ordersApi, Order, OrderStatus } from '../api/orders';
+import type { TabCounts } from '../api/pagination';
 import { formatPrice, formatDateTime, fullName } from '../utils';
 import Confirm from '../components/Confirm';
 import Pagination from '../components/Pagination';
@@ -52,6 +53,11 @@ const ACTION_WARNING: Partial<Record<OrderStatus, string>> = {
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
+  // Compteurs des onglets, calculés par le serveur sur l'ENSEMBLE des
+  // commandes. Les recalculer ici ne porterait plus que sur la page reçue.
+  const [counts, setCounts] = useState<TabCounts>({});
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [filter, setFilter] = useState<OrderStatus | 'ALL'>('PENDING');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,46 +72,57 @@ export default function OrdersPage() {
   } | null>(null);
   const [acting, setActing] = useState(false);
 
-  const load = async () => {
+  // Filtre et page partent au SERVEUR. Les appliquer ici ne porterait plus
+  // que sur les vingt lignes reçues : « À confirmer » n'afficherait que les
+  // commandes à confirmer parmi les vingt dernières — un résultat faux, et
+  // d'autant plus trompeur qu'il a l'air normal.
+  const load = async (opts?: { page?: number; filter?: OrderStatus | 'ALL' }) => {
+    const p = opts?.page ?? page;
+    const f = opts?.filter ?? filter;
+
     setIsLoading(true);
+    // Le repli relance un chargement : c'est lui qui éteindra le voyant.
+    // L'éteindre ici aussi ferait disparaître le spinner alors que la seconde
+    // requête est encore en vol, en laissant l'ancienne page à l'écran.
+    let repli = false;
     try {
       setError(null);
-      const data = await ordersApi.getAll();
-      setOrders(data);
+      const res = await ordersApi.getAll({
+        status: f === 'ALL' ? undefined : f,
+        page: p,
+        limit: PAGE_SIZE,
+      });
+
+      // Page devenue vide (une commande a changé de statut entre-temps) :
+      // on recule au lieu d'afficher un tableau vide inexplicable.
+      if (p > res.totalPages) {
+        repli = true;
+        load({ page: res.totalPages, filter: f });
+        return;
+      }
+
+      setOrders(res.data);
+      setCounts(res.counts);
+      setTotal(res.total);
+      setTotalPages(res.totalPages);
+      setPage(p);
     } catch {
       setError('Impossible de charger les commandes.');
     } finally {
-      setIsLoading(false);
+      if (!repli) setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    load();
+    load({ page: 1 });
   }, []);
 
-  const counts = useMemo(() => {
-    const c: Record<string, number> = { ALL: orders.length };
-    for (const o of orders) c[o.status] = (c[o.status] ?? 0) + 1;
-    return c;
-  }, [orders]);
-
-  const filtered = useMemo(
-    () => (filter === 'ALL' ? orders : orders.filter((o) => o.status === filter)),
-    [orders, filter]
-  );
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-
-  // Changer de filtre remet à la première page : rester en page 4 alors que
+  // Changer de filtre revient à la première page : rester en page 4 alors que
   // le nouveau filtre n'a qu'une page afficherait un tableau vide.
-  useEffect(() => {
-    setPage(1);
-  }, [filter]);
-
-  const visible = useMemo(
-    () => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
-    [filtered, page]
-  );
+  const changeFilter = (f: OrderStatus | 'ALL') => {
+    setFilter(f);
+    load({ page: 1, filter: f });
+  };
 
   const runAction = async () => {
     if (!pendingAction) return;
@@ -131,7 +148,7 @@ export default function OrdersPage() {
             Appelez la cliente, confirmez, préparez, puis remettez la commande.
           </div>
         </div>
-        <button className="btn btn-outline btn-sm" onClick={load}>Actualiser</button>
+        <button className="btn btn-outline btn-sm" onClick={() => load()}>Actualiser</button>
       </div>
 
       {/* Onglets de filtre */}
@@ -139,7 +156,7 @@ export default function OrdersPage() {
         {FILTERS.map((f) => (
           <button
             key={f.key}
-            onClick={() => setFilter(f.key)}
+            onClick={() => changeFilter(f.key)}
             className={filter === f.key ? 'btn btn-gold btn-sm' : 'btn btn-outline btn-sm'}
           >
             {f.label}
@@ -160,7 +177,7 @@ export default function OrdersPage() {
         <div style={{ display: 'grid', placeItems: 'center', height: 200 }}>
           <div className="spinner" />
         </div>
-      ) : visible.length === 0 ? (
+      ) : orders.length === 0 ? (
         <div className="card card-pad muted">Aucune commande dans cette catégorie.</div>
       ) : (
         <div className="card">
@@ -178,7 +195,7 @@ export default function OrdersPage() {
               </tr>
             </thead>
             <tbody>
-              {visible.map((o) => {
+              {orders.map((o) => {
                 const meta = STATUS_META[o.status];
                 const actions = NEXT_ACTIONS[o.status];
                 const isOpen = expanded === o.id;
@@ -301,8 +318,8 @@ export default function OrdersPage() {
           <Pagination
             page={page}
             totalPages={totalPages}
-            total={filtered.length}
-            onChange={setPage}
+            total={total}
+            onChange={(p) => load({ page: p })}
             label="commande(s)"
           />
         </div>

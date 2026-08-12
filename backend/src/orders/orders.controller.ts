@@ -4,11 +4,12 @@ import {
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
+import { FindOrdersQueryDto } from './dto/find-orders-query.dto';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ApiTags } from '@nestjs/swagger';
-import { OrderStatus } from '@prisma/client';
 
 @ApiTags('orders')
 @Controller('orders')
@@ -24,8 +25,8 @@ export class OrdersController {
   }
 
   @Get('me')
-  findMine(@Req() req: any) {
-    return this.ordersService.findMine(req.user.id);
+  findMine(@Req() req: any, @Query() query: PaginationQueryDto) {
+    return this.ordersService.findMine(req.user.id, query);
   }
 
   @Get('me/:id')
@@ -43,8 +44,8 @@ export class OrdersController {
   @UseGuards(RolesGuard)
   @Roles('STAFF', 'ADMIN')
   @Get()
-  findAll(@Query('status') status?: OrderStatus) {
-    return this.ordersService.findAll(status);
+  findAll(@Query() query: FindOrdersQueryDto) {
+    return this.ordersService.findAll(query);
   }
 
   @UseGuards(RolesGuard)

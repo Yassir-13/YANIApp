@@ -15,6 +15,8 @@ import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { CreateForClientDto } from './dto/create-for-client.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
 import { RescheduleDto } from './dto/reschedule.dto';
+import { AvailabilityQueryDto } from './dto/availability-query.dto';
+import { FindAppointmentsQueryDto } from './dto/find-appointments-query.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -30,11 +32,8 @@ export class AppointmentsController {
   // Route (publique)
   @Public()
   @Get('availability')
-  getAvailability(
-    @Query('serviceId') serviceId: string,
-    @Query('date') date: string,
-  ) {
-    return this.appointmentsService.getAvailability(serviceId, date);
+  getAvailability(@Query() query: AvailabilityQueryDto) {
+    return this.appointmentsService.getAvailability(query.serviceId, query.date);
   }
 
   // ----- CLIENT (et tous) -----
@@ -45,8 +44,12 @@ export class AppointmentsController {
   }
 
   @Get()
-  findMine(@Req() req: any) {
-    return this.appointmentsService.findForUser(req.user.id, req.user.role);
+  findMine(@Req() req: any, @Query() query: FindAppointmentsQueryDto) {
+    return this.appointmentsService.findForUser(
+      req.user.id,
+      req.user.role,
+      query,
+    );
   }
 
   @Patch(':id/cancel')

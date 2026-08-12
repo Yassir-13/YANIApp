@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { Paginated } from './users';
+import type { Paginated, PageQuery } from './pagination';
 
 export type LoyaltyTxType = 'EARN' | 'REDEEM' | 'MANUAL' | 'ADJUSTMENT' | 'MILESTONE';
 
@@ -161,9 +161,16 @@ export const loyaltyApi = {
     return data;
   },
 
-  // Audit (ADMIN)
-  async auditManual(): Promise<ManualTransaction[]> {
-    const { data } = await apiClient.get('/loyalty/audit/manual');
+  // Audit (ADMIN) — paginé : un journal ne fait que grandir.
+  async auditManual(
+    params: PageQuery = {},
+  ): Promise<Paginated<ManualTransaction> & { pointsTotal: number }> {
+    const { data } = await apiClient.get('/loyalty/audit/manual', {
+      params: {
+        ...(params.page ? { page: params.page } : {}),
+        ...(params.limit ? { limit: params.limit } : {}),
+      },
+    });
     return data;
   },
 };

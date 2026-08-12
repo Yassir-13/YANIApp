@@ -1,5 +1,6 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { appointmentsApi, Appointment, AppointmentStatus } from '../api/appointments';
+import type { TabCounts } from '../api/pagination';
 import { formatPrice, formatDateTime, formatTime, fullName, isToday } from '../utils';
 import Confirm from '../components/Confirm';
 import AppointmentBookingModal from '../components/AppointmentBookingModal';
@@ -50,6 +51,12 @@ const FILTERS: { key: Filter; label: string }[] = [
 
 export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  // Compteurs des onglets, calculés par le serveur sur l'ENSEMBLE des
+  // rendez-vous — y compris « Aujourd'hui », désormais évalué dans le fuseau
+  // du centre et non dans celui du navigateur.
+  const [counts, setCounts] = useState<TabCounts>({});
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [filter, setFilter] = useState<Filter>('TODAY');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,67 +75,52 @@ export default function AppointmentsPage() {
   const [booking, setBooking] = useState(false);
   const [rescheduling, setRescheduling] = useState<Appointment | null>(null);
 
-  const load = async () => {
+  // Filtre, tri et page sont désormais l'affaire du serveur. Sur une liste
+  // paginée, filtrer ici ne porterait que sur les vingt lignes reçues :
+  // « À confirmer » n'afficherait que les rendez-vous à confirmer parmi les
+  // vingt derniers — faux, et sans que rien ne le laisse voir.
+  const load = async (opts?: { page?: number; filter?: Filter }) => {
+    const p = opts?.page ?? page;
+    const f = opts?.filter ?? filter;
+
     setIsLoading(true);
+    // Le repli relance un chargement : c'est lui qui éteindra le voyant.
+    // L'éteindre ici aussi ferait disparaître le spinner alors que la seconde
+    // requête est encore en vol, en laissant l'ancienne page à l'écran.
+    let repli = false;
     try {
       setError(null);
-      // En tant que STAFF/ADMIN, cette route renvoie tous les rendez-vous
-      const data = await appointmentsApi.getAll();
-      setAppointments(data);
+      const res = await appointmentsApi.getAll({ filter: f, page: p, limit: PAGE_SIZE });
+
+      // Page devenue vide (un rendez-vous a changé de statut entre-temps) :
+      // on recule au lieu d'afficher un tableau vide inexplicable.
+      if (p > res.totalPages) {
+        repli = true;
+        load({ page: res.totalPages, filter: f });
+        return;
+      }
+
+      setAppointments(res.data);
+      setCounts(res.counts);
+      setTotal(res.total);
+      setTotalPages(res.totalPages);
+      setPage(p);
     } catch {
       setError('Impossible de charger les rendez-vous.');
     } finally {
-      setIsLoading(false);
+      if (!repli) setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    load();
+    load({ page: 1 });
   }, []);
 
-  const counts = useMemo(() => {
-    const now = Date.now();
-    const c: Record<string, number> = {
-      ALL: appointments.length,
-      TODAY: appointments.filter((a) => isToday(a.startAt) && a.status !== 'CANCELLED').length,
-      UPCOMING: appointments.filter(
-        (a) => new Date(a.startAt).getTime() > now && a.status !== 'CANCELLED'
-      ).length,
-    };
-    for (const a of appointments) c[a.status] = (c[a.status] ?? 0) + 1;
-    return c;
-  }, [appointments]);
-
-  const filtered = useMemo(() => {
-    const now = Date.now();
-    let list = appointments;
-
-    if (filter === 'TODAY') {
-      list = list.filter((a) => isToday(a.startAt) && a.status !== 'CANCELLED');
-    } else if (filter === 'UPCOMING') {
-      list = list.filter((a) => new Date(a.startAt).getTime() > now && a.status !== 'CANCELLED');
-    } else if (filter !== 'ALL') {
-      list = list.filter((a) => a.status === filter);
-    }
-
-    // Les RDV passés en dernier pour les vues historiques, sinon chronologique
-    const desc = filter === 'COMPLETED' || filter === 'CANCELLED' || filter === 'ALL';
-    return [...list].sort((x, y) =>
-      desc ? y.startAt.localeCompare(x.startAt) : x.startAt.localeCompare(y.startAt)
-    );
-  }, [appointments, filter]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-
-  // Changer de filtre remet à la première page.
-  useEffect(() => {
-    setPage(1);
-  }, [filter]);
-
-  const visible = useMemo(
-    () => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
-    [filtered, page]
-  );
+  // Changer de filtre revient à la première page.
+  const changeFilter = (f: Filter) => {
+    setFilter(f);
+    load({ page: 1, filter: f });
+  };
 
   const runAction = async () => {
     if (!pendingAction) return;
@@ -155,7 +147,7 @@ export default function AppointmentsPage() {
           </div>
         </div>
         <div className="row gap-2">
-          <button className="btn btn-outline btn-sm" onClick={load}>Actualiser</button>
+          <button className="btn btn-outline btn-sm" onClick={() => load()}>Actualiser</button>
           <button className="btn btn-gold btn-sm" onClick={() => setBooking(true)}>
             + Nouveau RDV
           </button>
@@ -167,7 +159,7 @@ export default function AppointmentsPage() {
         {FILTERS.map((f) => (
           <button
             key={f.key}
-            onClick={() => setFilter(f.key)}
+            onClick={() => changeFilter(f.key)}
             className={filter === f.key ? 'btn btn-gold btn-sm' : 'btn btn-outline btn-sm'}
           >
             {f.label}
@@ -186,7 +178,7 @@ export default function AppointmentsPage() {
         <div style={{ display: 'grid', placeItems: 'center', height: 200 }}>
           <div className="spinner" />
         </div>
-      ) : visible.length === 0 ? (
+      ) : appointments.length === 0 ? (
         <div className="card card-pad muted">Aucun rendez-vous dans cette catégorie.</div>
       ) : (
         <div className="card">
@@ -203,7 +195,7 @@ export default function AppointmentsPage() {
               </tr>
             </thead>
             <tbody>
-              {visible.map((a) => {
+              {appointments.map((a) => {
                 const meta = STATUS_META[a.status];
                 const actions = NEXT_ACTIONS[a.status];
                 const today = isToday(a.startAt);
@@ -303,8 +295,8 @@ export default function AppointmentsPage() {
           <Pagination
             page={page}
             totalPages={totalPages}
-            total={filtered.length}
-            onChange={setPage}
+            total={total}
+            onChange={(p) => load({ page: p })}
             label="rendez-vous"
           />
         </div>

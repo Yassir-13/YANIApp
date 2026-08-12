@@ -1,5 +1,6 @@
 import { apiClient } from './client';
 import { Product } from './products';
+import { Paginated, PAGE_MOBILE } from './pagination';
 
 export type OrderStatus = 'PENDING' | 'CONFIRMED' | 'READY' | 'COMPLETED' | 'CANCELLED';
 export type FulfillmentType = 'PICKUP' | 'DELIVERY';
@@ -35,9 +36,13 @@ export const ordersApi = {
     const { data } = await apiClient.post('/orders', payload);
     return data;
   },
+  // Paginé côté serveur, du plus récent au plus ancien : la première page
+  // contient les commandes qu'une cliente vient consulter.
   async getMine(): Promise<Order[]> {
-    const { data } = await apiClient.get('/orders/me');
-    return data;
+    const { data } = await apiClient.get<Paginated<Order>>('/orders/me', {
+      params: { limit: PAGE_MOBILE },
+    });
+    return data.data;
   },
   async getOne(id: string): Promise<Order> {
     const { data } = await apiClient.get(`/orders/me/${id}`);

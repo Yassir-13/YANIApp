@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom';
 import { ordersApi, Order } from '../api/orders';
 import { appointmentsApi, Appointment } from '../api/appointments';
 import { productsApi, Product } from '../api/products';
+import type { TabCounts } from '../api/pagination';
 import { useAuthStore } from '../stores/authStore';
-import { formatPrice, formatTime, fullName, isToday } from '../utils';
+import { formatPrice, formatTime, fullName } from '../utils';
 
 // Seuil d'alerte de stock (en dessous, on prévient le staff)
 const LOW_STOCK_THRESHOLD = 5;
@@ -12,8 +13,16 @@ const LOW_STOCK_THRESHOLD = 5;
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
 
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  // Le tableau de bord n'affiche que six lignes de chaque, et quatre nombres.
+  // Il téléchargeait pourtant TOUTES les commandes et TOUS les rendez-vous
+  // depuis l'ouverture, à chaque visite (I4). On demande maintenant exactement
+  // ce qui est affiché : six lignes, plus les compteurs que le serveur calcule.
+  const APERCU = 6;
+
+  const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
+  const [orderCounts, setOrderCounts] = useState<TabCounts>({});
+  const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
+  const [apptCounts, setApptCounts] = useState<TabCounts>({});
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -23,12 +32,16 @@ export default function DashboardPage() {
       setIsLoading(true);
       setError(null);
       const [o, a, p] = await Promise.all([
-        ordersApi.getAll(),
-        appointmentsApi.getAll(),
+        ordersApi.getAll({ status: 'PENDING', limit: APERCU }),
+        // « Aujourd'hui » est calculé par le serveur, dans le fuseau du
+        // centre : c'est lui qui fait autorité, pas le poste qui consulte.
+        appointmentsApi.getAll({ filter: 'TODAY', limit: APERCU }),
         productsApi.getAll(),
       ]);
-      setOrders(o);
-      setAppointments(a);
+      setPendingOrders(o.data);
+      setOrderCounts(o.counts);
+      setTodayAppointments(a.data);
+      setApptCounts(a.counts);
       setProducts(p);
     } catch {
       setError('Impossible de charger les données.');
@@ -42,25 +55,13 @@ export default function DashboardPage() {
   }, []);
 
   // ── Agrégats ──────────────────────────────────────────────────────────
-  const pendingOrders = useMemo(
-    () => orders.filter((o) => o.status === 'PENDING'),
-    [orders]
-  );
-  const activeOrders = useMemo(
-    () => orders.filter((o) => o.status === 'CONFIRMED' || o.status === 'READY'),
-    [orders]
-  );
-  const todayAppointments = useMemo(
-    () =>
-      appointments
-        .filter((a) => isToday(a.startAt) && a.status !== 'CANCELLED')
-        .sort((x, y) => x.startAt.localeCompare(y.startAt)),
-    [appointments]
-  );
-  const pendingAppointments = useMemo(
-    () => appointments.filter((a) => a.status === 'PENDING'),
-    [appointments]
-  );
+  // Les nombres viennent des compteurs du serveur, pas de la longueur des
+  // listes : celles-ci sont plafonnées à six lignes.
+  const pendingOrdersCount = orderCounts.PENDING ?? 0;
+  const activeOrdersCount = (orderCounts.CONFIRMED ?? 0) + (orderCounts.READY ?? 0);
+  const todayCount = apptCounts.TODAY ?? 0;
+  const pendingApptCount = apptCounts.PENDING ?? 0;
+
   const lowStock = useMemo(
     () => products.filter((p) => p.stockQty <= LOW_STOCK_THRESHOLD),
     [products]
@@ -106,26 +107,26 @@ export default function DashboardPage() {
       <div style={styles.stats}>
         <Stat
           label="Commandes à confirmer"
-          value={pendingOrders.length}
-          tone={pendingOrders.length > 0 ? 'warning' : 'muted'}
+          value={pendingOrdersCount}
+          tone={pendingOrdersCount > 0 ? 'warning' : 'muted'}
           to="/orders"
         />
         <Stat
           label="Commandes en cours"
-          value={activeOrders.length}
+          value={activeOrdersCount}
           tone="info"
           to="/orders"
         />
         <Stat
           label="RDV aujourd'hui"
-          value={todayAppointments.length}
+          value={todayCount}
           tone="info"
           to="/appointments"
         />
         <Stat
           label="RDV à confirmer"
-          value={pendingAppointments.length}
-          tone={pendingAppointments.length > 0 ? 'warning' : 'muted'}
+          value={pendingApptCount}
+          tone={pendingApptCount > 0 ? 'warning' : 'muted'}
           to="/appointments"
         />
       </div>
