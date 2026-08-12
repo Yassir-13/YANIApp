@@ -17,6 +17,14 @@ dist/
 build/
 *.tsbuildinfo
 
+# Sauvegardes de la base.
+# Un dump contient TOUT : identités des clientes, téléphones, historiques
+# d'achat. Le dépôt est public — un seul fichier poussé par mégarde et les
+# données de l'institut sont en ligne pour toujours.
+backups/
+*.dump
+*.sql.gz
+
 # Logs
 *.log
 npm-debug.log*

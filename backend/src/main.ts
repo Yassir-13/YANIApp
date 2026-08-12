@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
@@ -93,6 +93,19 @@ async function bootstrap() {
     SwaggerModule.setup('api-docs', app, document);
   }
 
-  await app.listen(3000);
+  // ── Port d'écoute ──
+  // Il vient de l'environnement, et non du code. La plupart des hébergeurs
+  // imposent le leur : écrit en dur, le serveur écoutait à côté et restait
+  // injoignable, sans la moindre erreur pour le signaler.
+  //
+  // Le repli sur 3000 garde le développement inchangé. À noter pour le poste
+  // Windows : la plage 2933–3032 y est réservée par Hyper-V/WSL, et 3000 donne
+  // alors « listen EACCES » — un PORT=3100 dans le .env suffit à contourner.
+  const port = Number(config.get<string>('PORT') ?? 3000);
+  await app.listen(port);
+
+  // Tracé au démarrage : dans un conteneur, c'est la seule façon de savoir sur
+  // quel port l'API a réellement fini par écouter.
+  new Logger('Bootstrap').log(`API à l'écoute sur le port ${port}`);
 }
 bootstrap();

@@ -1,0 +1,126 @@
+name: CI
+
+# Sur la branche principale et sur les pull requests. Le projet se développe en
+# commits directs sur `main` : c'est donc le push qui compte ici.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ═════════════════════════════════════════════════════════════════════
+  #  Backend — compilation + la totalité des tests
+  # ═════════════════════════════════════════════════════════════════════
+  backend:
+    name: Backend (tsc + tests)
+    runs-on: ubuntu-latest
+
+    # Une VRAIE base PostgreSQL, et ce n'est pas du confort.
+    #
+    # 8 des 21 suites de tests instancient PrismaService et écrivent réellement :
+    # concurrence des réservations (verrou consultatif Postgres), rollback du
+    # crédit fidélité, émission des bons, anonymisation de compte, rotation des
+    # jetons. Un Prisma mocké ne sait ni verrouiller, ni annuler une
+    # transaction : il rendrait ces tests verts et vides, précisément sur les
+    # propriétés les plus difficiles du projet.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: yani_ci
+          POSTGRES_PASSWORD: yani_ci
+          POSTGRES_DB: yani_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U yani_ci -d yani_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://yani_ci:yani_ci@localhost:5432/yani_ci?schema=public
+      # Valeur de test, sans aucune valeur ailleurs : elle ne signe que des
+      # jetons créés et vérifiés dans le même job, sur une base jetable.
+      # Longueur ≥ 32 caractères, exigée par la validation d'environnement.
+      JWT_SECRET: ci-secret-de-test-uniquement-32-caracteres-minimum
+      CENTER_TIMEZONE: Africa/Casablanca
+      # Requis par le seed. Le compte créé vit et meurt avec le job.
+      ADMIN_EMAIL: admin@ci.test
+      ADMIN_PASSWORD: MotDePasseCI123
+      ADMIN_FIRST_NAME: CI
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      # Le client Prisma est généré, jamais versionné : sans lui, rien ne
+      # compile et rien ne tourne.
+      - name: Générer le client Prisma
+        run: npx prisma generate
+
+      # `deploy` et jamais `dev` : le second peut réinitialiser la base.
+      - name: Appliquer les migrations
+        run: npx prisma migrate deploy
+
+      # ⚠️ Indispensable, et pas évident : le seed crée les HORAIRES
+      # D'OUVERTURE. Sans une seule ligne dans `opening_hours`, le centre est
+      # considéré fermé tous les jours et le test de concurrence des rendez-vous
+      # échoue avec « Aucun jour d'ouverture configuré ».
+      - name: Seed (horaires d'ouverture + compte admin)
+        run: npx prisma db seed
+
+      - name: Compilation TypeScript
+        run: npx tsc --noEmit
+
+      # `--runInBand` : les tests de concurrence se disputent la même base et le
+      # même verrou consultatif. En parallèle, ils se gêneraient l'un l'autre et
+      # échoueraient au hasard — un test instable est pire qu'un test absent.
+      - name: Tests
+        run: npx jest --runInBand
+
+  # ═════════════════════════════════════════════════════════════════════
+  #  Backoffice et mobile — compilation seule
+  #  Aucun des deux n'a de tests. La compilation est donc le seul filet,
+  #  et elle attrape déjà l'essentiel : un contrat d'API qui change sans
+  #  que ses appelants suivent.
+  # ═════════════════════════════════════════════════════════════════════
+  frontends:
+    name: Backoffice + mobile (tsc)
+    runs-on: ubuntu-latest
+
+    strategy:
+      # Une erreur dans le backoffice ne doit pas masquer l'état du mobile.
+      fail-fast: false
+      matrix:
+        projet: [backoffice, mobile]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ${{ matrix.projet }}/package-lock.json
+
+      - name: Installer les dépendances
+        run: npm ci
+        working-directory: ${{ matrix.projet }}
+
+      - name: Compilation TypeScript
+        run: npx tsc --noEmit
+        working-directory: ${{ matrix.projet }}

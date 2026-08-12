@@ -27,6 +27,13 @@ class EnvironmentVariables {
   @MinLength(1, { message: 'DATABASE_URL ne doit pas être vide.' })
   DATABASE_URL!: string;
 
+  // Port d'écoute, lu via Number() dans main.ts. La plupart des hébergeurs
+  // l'imposent. Une valeur non numérique donnerait un port NaN : l'API
+  // démarrerait sur un port choisi au hasard par le système, donc injoignable.
+  @IsOptional()
+  @IsNumberString({}, { message: 'PORT doit être un nombre (ex. 3000).' })
+  PORT?: string;
+
   // Signé dans auth.module, vérifié dans jwt.strategy : les deux lisent
   // cette même variable, qui doit donc exister avant tout démarrage.
   @IsString({ message: 'JWT_SECRET est obligatoire (aucune valeur de repli).' })

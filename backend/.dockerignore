@@ -1,0 +1,28 @@
+# Ce qui ne doit JAMAIS entrer dans l'image.
+#
+# Sans ce fichier, `COPY . .` embarquerait le .env (donc les secrets de
+# production dans une image qu'on pousse sur un registre), les node_modules de
+# la machine hôte (compilés pour Windows, inutilisables sous Linux) et un dist/
+# périmé qui masquerait celui que l'image vient de compiler.
+
+# Secrets — la raison n°1 d'avoir ce fichier.
+.env
+.env.*
+!.env.example
+
+# Dépendances et sorties de build : l'image les régénère elle-même.
+node_modules
+dist
+coverage
+*.tsbuildinfo
+
+# Tests : ils tournent en CI, pas dans l'image livrée.
+test
+**/*.spec.ts
+
+# Divers
+.git
+.gitignore
+Dockerfile
+.dockerignore
+*.log

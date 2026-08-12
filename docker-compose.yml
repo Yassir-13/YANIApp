@@ -20,5 +20,71 @@ services:
       timeout: 5s
       retries: 5
 
+  # ── Migrations ───────────────────────────────────
+  # Service à usage unique : il applique les migrations, puis s'arrête. L'API
+  # ne démarre qu'une fois qu'il a réussi.
+  #
+  # Pourquoi séparé de l'API : une migration qui échoue doit se voir comme une
+  # étape ratée, avec son message, et non comme une application qui redémarre
+  # en boucle sans qu'on sache pourquoi.
+  #
+  # C'est la MÊME image que l'API : elle embarque le schéma, les fichiers de
+  # migration et le CLI Prisma. Docker ne la construit donc qu'une fois.
+  migrate:
+    build:
+      context: ./backend
+    container_name: yani_migrate
+    # `migrate deploy` et JAMAIS `migrate dev` : le second peut réinitialiser
+    # la base. Cette commande-ci se contente d'appliquer ce qui manque, et
+    # refuse de toucher à l'existant.
+    command: npx prisma migrate deploy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  # ── API ──────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+    container_name: yani_backend
+    restart: unless-stopped
+    env_file:
+      # Les deux, et dans cet ordre : la racine porte la configuration de la
+      # base (partagée avec le service postgres), `backend/.env` porte celle de
+      # l'application (JWT, emails, fuseau, CORS). Le bloc `environment`
+      # ci-dessous l'emporte sur les deux — c'est ainsi que DATABASE_URL est
+      # réécrite pour viser `postgres` et non `localhost`.
+      - .env
+      - backend/.env
+    environment:
+      NODE_ENV: production
+      # `postgres` et non `localhost` : dans le réseau du compose, chaque
+      # service se joint par son nom. Cette URL écrase donc celle du .env, qui
+      # vise la base depuis la machine hôte.
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      PORT: ${BACKEND_PORT:-3000}
+      # À 1 UNIQUEMENT si un reverse proxy de confiance est devant l'API.
+      # C'est lui qui décide si X-Forwarded-For est cru pour identifier une
+      # cliente — donc pour compter ses requêtes. En accès direct, cet en-tête
+      # est falsifiable et contournerait le rate limiting.
+      TRUST_PROXY: ${TRUST_PROXY:-0}
+    ports:
+      # Sur un serveur, laisser 127.0.0.1 : c'est le reverse proxy (Caddy,
+      # nginx) qui expose l'API au monde, en HTTPS. Publier directement le port
+      # reviendrait à servir l'API en clair.
+      - "127.0.0.1:${BACKEND_PORT:-3000}:${BACKEND_PORT:-3000}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    # Node en PID 1 ne réclame pas les processus zombies. `init` place un vrai
+    # PID 1 devant, qui s'en charge et transmet correctement le SIGTERM à
+    # l'arrêt — sans quoi Docker finirait par tuer l'API au bout du délai.
+    init: true
+
 volumes:
   yani_pgdata:                       # volume nommé, survit aux redémarrages
