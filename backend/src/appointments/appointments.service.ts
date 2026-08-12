@@ -266,11 +266,15 @@ export class AppointmentsService {
       this.prisma.appointment.findMany({
         where,
         include: { service: true },
-        // Du plus récent au plus ancien, comme « Mes commandes ». L'ordre
-        // croissant d'avant plaçait les rendez-vous les PLUS VIEUX en tête :
-        // sans pagination ça se voyait à peine, avec pagination la première
-        // page ne contiendrait plus que du passé. Le regroupement « à venir
-        // d'abord » reste à faire (I18).
+        // Du plus récent au plus ancien, comme « Mes commandes ».
+        //
+        // 📌 VOULU, ne pas « corriger ». « Mes rendez-vous » est un historique,
+        // et un historique se lit dans ce sens. L'ordre croissant d'avant
+        // plaçait les rendez-vous les PLUS VIEUX en tête : sans pagination ça
+        // se voyait à peine, avec pagination la première page ne contiendrait
+        // plus que du passé. Un regroupement « à venir d'abord » a été envisagé
+        // (I18) puis écarté le 2026-08-12 : ce n'est pas un tableau de bord,
+        // c'est un journal.
         orderBy: { startAt: 'desc' },
         skip: (page - 1) * limit,
         take: limit,

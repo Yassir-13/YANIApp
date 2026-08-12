@@ -27,7 +27,6 @@ export default function ProductDetailScreen({ route, navigation }: any) {
 
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [favorite, setFavorite] = useState(false);
 
   useEffect(() => {
     productsApi.getOne(productId).then(setProduct).catch(() => {}).finally(() => setIsLoading(false));
@@ -62,7 +61,12 @@ export default function ProductDetailScreen({ route, navigation }: any) {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      {/* En-tête flottant : retour rond + favori */}
+      {/* En-tête flottant : retour rond.
+          Le cœur « favori » a été retiré : il s'allumait, ne stockait rien
+          (aucun endpoint, aucune table, aucun store) et se vidait dès qu'on
+          quittait l'écran. Un bouton qui fait semblant coûte plus cher en
+          confiance qu'un bouton absent. Il reviendra le jour où les favoris
+          existeront vraiment. */}
       <View style={[styles.floatingHeader, { top: insets.top + spacing.sm }]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
@@ -72,16 +76,6 @@ export default function ProductDetailScreen({ route, navigation }: any) {
           style={[styles.round, { backgroundColor: 'rgba(20,16,12,0.55)' }]}
         >
           <Ionicons name="chevron-back" size={22} color="#F8F8F8" />
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setFavorite((f) => !f)}
-          accessibilityRole="button"
-          accessibilityLabel={favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-          accessibilityState={{ selected: favorite }}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          style={[styles.round, { backgroundColor: 'rgba(20,16,12,0.55)' }]}
-        >
-          <Ionicons name={favorite ? 'heart' : 'heart-outline'} size={22} color={theme.gold} />
         </TouchableOpacity>
       </View>
 

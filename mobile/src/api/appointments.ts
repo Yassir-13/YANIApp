@@ -43,10 +43,14 @@ export const appointmentsApi = {
     return data;
   },
 
-  // Paginé côté serveur, et trié du plus récent au plus ancien : la première
-  // page contient donc ce qui intéresse la cliente. L'ordre croissant d'avant
-  // aurait mis ses plus vieux rendez-vous en tête de page 1 (voir I18 pour le
-  // regroupement « à venir d'abord », qui reste à faire).
+  // Paginé côté serveur, du plus récent au plus ancien.
+  //
+  // 📌 Cet ordre est VOULU, ne pas le « corriger ». « Mes rendez-vous » est un
+  // historique, et un historique se lit du plus récent au plus ancien — comme
+  // « Mes commandes » juste à côté. L'ordre croissant d'avant mettait les plus
+  // VIEUX rendez-vous en tête, ce qui ne se voyait pas sur une liste complète
+  // mais remplissait la première page de passé une fois la liste paginée.
+  // Décision prise le 2026-08-12, après que l'audit l'ait signalé (I18).
   async getMine(): Promise<Appointment[]> {
     const { data } = await apiClient.get<Paginated<Appointment>>(
       '/appointments',

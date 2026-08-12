@@ -2,26 +2,26 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, radius } from '../theme/typography';
 
-type BadgeKind = 'inStock' | 'soon' | 'new' | 'outOfStock';
+// Deux états, les deux seuls qui existent au catalogue. « Bientôt » et
+// « Nouv ! » ont été retirés : ils n'étaient utilisés nulle part, et « Bientôt »
+// servait même à annoncer une rupture — une nouveauté à venir là où il n'y
+// avait plus rien à vendre.
+type BadgeKind = 'inStock' | 'outOfStock';
 
 interface BadgeProps {
   kind: BadgeKind;
-  label?: string; // texte optionnel, sinon libellé par défaut
 }
 
-// Petit statut coloré vu sur les cartes produit (« En stock », « Bientôt », « Nouv! »).
+// Petit statut coloré vu sur les cartes produit (« En stock », « Épuisé »).
 // Un point + un texte : l'info ne repose jamais sur la couleur seule (guide UI color-not-only).
-export default function Badge({ kind, label }: BadgeProps) {
+export default function Badge({ kind }: BadgeProps) {
   const { theme } = useTheme();
 
   const config = {
-    inStock: { bg: theme.badgeInStockBg, fg: theme.badgeInStock, text: label ?? 'En stock' },
-    soon: { bg: theme.badgeSoonBg, fg: theme.badgeSoon, text: label ?? 'Bientôt' },
-    new: { bg: theme.badgeNewBg, fg: theme.badgeNew, text: label ?? 'Nouv !' },
-    // « Bientôt » servait aussi pour la rupture : on annonçait une nouveauté à
-    // venir là où il n'y avait plus rien à vendre. Les deux états sont
-    // désormais distincts (« soon » reste disponible pour un vrai à-venir).
-    outOfStock: { bg: theme.badgeOutBg, fg: theme.badgeOut, text: label ?? 'Épuisé' },
+    inStock: { bg: theme.badgeInStockBg, fg: theme.badgeInStock, text: 'En stock' },
+    // Gris neutre et non doré : le doré annonce une bonne nouvelle, une
+    // rupture n'en est pas une.
+    outOfStock: { bg: theme.badgeOutBg, fg: theme.badgeOut, text: 'Épuisé' },
   }[kind];
 
   return (

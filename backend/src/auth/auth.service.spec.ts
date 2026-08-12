@@ -439,4 +439,79 @@ describe('AuthService — défenses de sécurité', () => {
       expect(donnees.passwordHash).toMatch(/^\$argon2/);
     });
   });
+
+  // ═══════════════════════════════════════════════════════════
+  //  5. UNE INSCRIPTION RÉUSSIE EST UNE SESSION OUVERTE
+  // ═══════════════════════════════════════════════════════════
+  //
+  // L'app enchaînait `/auth/register` puis `/auth/login`. Entre les deux, une
+  // fenêtre : compte créé, session absente. La cliente lisait « Inscription
+  // impossible », recommençait, et se voyait répondre que le compte existait
+  // déjà — bloquée pour de bon (I16).
+  describe('inscription', () => {
+    const demande = {
+      email: 'nouvelle@exemple.test',
+      password: 'MotDePasseValide123!',
+      firstName: 'Nouvelle',
+      lastName: 'Cliente',
+      phone: '0612345678',
+    };
+
+    beforeEach(() => {
+      usersService.findByEmail.mockResolvedValue(null);
+      usersService.create.mockResolvedValue(
+        cliente({ id: 'nouvelle-1', email: demande.email }),
+      );
+    });
+
+    it('ouvre la session dans le même appel', async () => {
+      const res = await service.register(demande);
+
+      // C'est tout l'enjeu : plus de second appel, donc plus de fenêtre où le
+      // compte existe sans session.
+      expect(res.accessToken).toBeTruthy();
+      expect(res.refreshToken).toBeTruthy();
+      expect(prisma.refreshToken.create).toHaveBeenCalled();
+    });
+
+    it('renvoie le profil, à la même place que la connexion', async () => {
+      const res = await service.register(demande);
+
+      expect(res.user.id).toBe('nouvelle-1');
+      expect(res.user.email).toBe(demande.email);
+      // L'app traite les deux réponses par le même chemin : la forme doit
+      // rester alignée sur celle de `login`.
+      expect(res.user.role).toBe(Role.CLIENT);
+    });
+
+    it('ne stocke jamais le mot de passe en clair', async () => {
+      await service.register(demande);
+
+      const cree = usersService.create.mock.calls[0][0];
+      expect(cree.passwordHash).not.toBe(demande.password);
+      expect(cree.passwordHash).toMatch(/^\$argon2/);
+    });
+
+    it('refuse un email déjà pris, sans créer ni session ni compte', async () => {
+      usersService.findByEmail.mockResolvedValue(cliente());
+
+      await expect(service.register(demande)).rejects.toThrow(
+        'Un compte existe déjà',
+      );
+      expect(usersService.create).not.toHaveBeenCalled();
+      expect(prisma.refreshToken.create).not.toHaveBeenCalled();
+    });
+
+    it('envoie le code de confirmation sans l’imposer', async () => {
+      await service.register(demande);
+
+      // Le code part, mais le compte est utilisable tout de suite : une
+      // cliente dont l'email tombe en spam doit pouvoir réserver quand même.
+      expect(verificationCodes.issue).toHaveBeenCalledWith(
+        'nouvelle-1',
+        VerificationPurpose.EMAIL_VERIFY,
+      );
+      expect(mail.sendVerificationCode).toHaveBeenCalled();
+    });
+  });
 });

@@ -98,6 +98,18 @@ export class AuthService {
   //  Inscription
   // ─────────────────────────────────────────
 
+  // Renvoie les mêmes jetons que `login`, et pour une raison précise.
+  //
+  // L'app appelait `/auth/register` PUIS `/auth/login`. Entre les deux, il
+  // existait une fenêtre où le compte était créé mais la session non : un
+  // réseau qui lâche ou la limite de débit atteinte sur `login`, et la cliente
+  // lisait « Inscription impossible » alors que son compte existait. Elle
+  // recommençait, et se voyait répondre « Un compte existe déjà avec cet
+  // email » — bloquée, sans rien comprendre.
+  //
+  // Émettre la session ici ferme la fenêtre : une inscription réussie est une
+  // session ouverte, il n'y a plus de « entre les deux ». C'est aussi un
+  // aller-retour et un jeton de rate limit économisés.
   async register(dto: RegisterDto) {
     const existing = await this.usersService.findByEmail(dto.email);
     if (existing) {
@@ -120,14 +132,27 @@ export class AuthService {
     // ferait perdre le bénéfice de l'application.
     await this.issueVerificationCode(user);
 
+    // Nouvelle session = nouvelle famille de tokens, comme à la connexion.
+    const familyId = randomUUID();
+    const accessToken = await this.issueAccessToken(user);
+    const refreshToken = await this.issueRefreshToken(user.id, familyId);
+
+    // Exactement la forme de `login`, à dessein : l'app traite les deux
+    // réponses par le même chemin. Le profil, qui était auparavant à la racine
+    // de la réponse, descend d'un cran sous `user` — seule l'app mobile
+    // consomme cette route, et elle ignorait ce profil.
     return {
-      id: user.id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      phone: user.phone,
-      role: user.role,
-      emailVerifiedAt: user.emailVerifiedAt,
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone,
+        role: user.role,
+        emailVerifiedAt: user.emailVerifiedAt,
+      },
     };
   }
 

@@ -51,20 +51,21 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
- register: async (email, password, firstName, lastName, phone) => {
+  // UN SEUL appel. Il y en avait deux — `/auth/register` puis `/auth/login` —
+  // et entre les deux une fenêtre où le compte existait sans session : si le
+  // login échouait (réseau, limite de débit), la cliente lisait « Inscription
+  // impossible » alors que son compte venait d'être créé. Elle recommençait, et
+  // se voyait répondre « Un compte existe déjà avec cet email ». Bloquée, sans
+  // rien comprendre. `/auth/register` renvoie désormais les jetons lui-même.
+  register: async (email, password, firstName, lastName, phone) => {
     set({ isLoading: true });
     try {
-      await axios.post(`${API_BASE_URL}/auth/register`, {
+      const { data } = await axios.post(`${API_BASE_URL}/auth/register`, {
         email,
         password,
         firstName,
         lastName,
         phone,
-      });
-      // Après inscription, on connecte directement
-      const { data } = await axios.post(`${API_BASE_URL}/auth/login`, {
-        email,
-        password,
       });
       await secureStorage.saveTokens(data.accessToken, data.refreshToken);
       set({ user: data.user });
@@ -129,17 +130,51 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       // On tente /auth/me. Si l'access token est expiré, l'intercepteur
       // rafraîchira automatiquement (grâce à la correction).
-      const { data } = await apiClient.get('/auth/me');
+      // Plusieurs essais : au lancement, le réseau met parfois une seconde ou
+      // deux à revenir (sortie d'ascenseur, de métro, de mode avion). Ces
+      // essais tiennent dans la durée du splash, ils ne se voient donc pas.
+      const { data } = await getMeAvecReprises();
       set({ user: data });
-    } catch {
-      // Échec réel (refresh token mort ou invalide) → on nettoie
-      await secureStorage.clearTokens();
-      set({ user: null });
+    } catch (e) {
+      // ⚠️ Ne PAS effacer les jetons sur n'importe quelle erreur.
+      //
+      // Ce `catch` attrapait tout, et une simple absence de réseau était donc
+      // traitée comme une session invalide : la cliente se retrouvait
+      // déconnectée et devait ressaisir son mot de passe, alors que sa session
+      // était parfaitement valable.
+      //
+      // On ne jette les jetons que si le SERVEUR les a refusés. « Je n'ai pas
+      // pu poser la question » n'est pas « on m'a répondu non ».
+      const status = axios.isAxiosError(e) ? e.response?.status : undefined;
+      if (status === 401 || status === 403) {
+        await secureStorage.clearTokens();
+        set({ user: null });
+      }
+      // Sinon les jetons restent en place : la session reprendra d'elle-même
+      // au prochain lancement avec du réseau, sans rien redemander à la
+      // cliente. Elle reste en mode invité pour ce lancement-ci.
     } finally {
       set({ isInitialized: true });
     }
   },
 }));
+
+// Trois essais espacés de 1 puis 2 secondes, et uniquement sur une panne de
+// réseau : un refus du serveur (401/403) est définitif, le réessayer ne ferait
+// que retarder l'affichage. Même raisonnement que la reconnexion à la base
+// côté serveur — on laisse sa chance à une coupure passagère, pas à une panne.
+async function getMeAvecReprises() {
+  const attentes = [1000, 2000];
+  for (let essai = 0; ; essai++) {
+    try {
+      return await apiClient.get('/auth/me');
+    } catch (e) {
+      const reseau = axios.isAxiosError(e) && !e.response;
+      if (!reseau || essai >= attentes.length) throw e;
+      await new Promise((r) => setTimeout(r, attentes[essai]));
+    }
+  }
+}
 
 // Quand l'intercepteur constate qu'un refresh token n'est plus valide
 // (expiré, révoqué après un changement de mot de passe, session tuée pour

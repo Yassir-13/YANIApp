@@ -21,8 +21,13 @@ export class UpdateProfileDto {
   @MaxLength(50, { message: 'Le nom ne doit pas dépasser 50 caractères.' })
   lastName?: string;
 
-  @ApiPropertyOptional({ example: '0612345678' })
+  // `null` est accepté et signifie « efface mon numéro ». Le champ est libellé
+  // « (optionnel) » dans l'app : il doit donc pouvoir redevenir vide.
+  // `@IsOptional()` laisse passer `null` sans le valider, et Prisma écrit
+  // alors NULL. À ne pas confondre avec `undefined`, qui disparaît du JSON et
+  // laisse donc l'ancien numéro en place — c'était précisément le défaut.
+  @ApiPropertyOptional({ example: '0612345678', nullable: true })
   @IsOptional()
   @IsMoroccanPhone()
-  phone?: string;
+  phone?: string | null;
 }

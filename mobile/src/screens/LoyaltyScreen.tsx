@@ -74,6 +74,30 @@ export default function LoyaltyScreen() {
     }
   }, []);
 
+  // ── Changement de compte : on repart d'une page blanche ──
+  //
+  // Rien n'était réinitialisé, et `isLoading` ne repassait jamais à `true`.
+  // Après une déconnexion suivie d'une connexion sur le MÊME téléphone — le
+  // cas du comptoir, ou d'un appareil partagé — la nouvelle cliente voyait le
+  // solde, l'historique et les récompenses de la précédente pendant tout le
+  // temps du chargement. Bref, mais ce sont des données personnelles.
+  //
+  // Le compteur de demandes est incrémenté au passage : une réponse encore en
+  // vol pour l'ancien compte ne pourra plus s'afficher chez le nouveau.
+  useEffect(() => {
+    derniereDemande.current++;
+    setAccount(null);
+    setHistory([]);
+    setRewards([]);
+    setMilestones([]);
+    setGrants([]);
+    setVouchers([]);
+    setClaimingId(null);
+    setRedeemingId(null);
+    setError(null);
+    setIsLoading(!!user);
+  }, [user?.id]);
+
   // Recharge solde, historique et récompenses à chaque focus : les points
   // peuvent avoir changé côté institut pendant que l'app était ouverte.
   useFocusEffect(
@@ -116,9 +140,6 @@ export default function LoyaltyScreen() {
   // Progression dans le cycle en cours (7 visites sur 10)
   const visitsInCycle = nextMilestone
     ? nextMilestone.milestone.visitThreshold - nextMilestone.remaining
-    : 0;
-  const visitProgress = nextMilestone
-    ? visitsInCycle / nextMilestone.milestone.visitThreshold
     : 0;
 
   // Récompenses offertes en attente : mises en avant, elles ne coûtent rien.

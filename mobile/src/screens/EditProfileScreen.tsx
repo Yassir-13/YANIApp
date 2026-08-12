@@ -5,6 +5,8 @@ import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { useAuthStore } from '../stores/authStore';
 import { usersApi } from '../api/users';
+import { validatePhone } from '../utils/phoneRules';
+import { apiErrorMessage } from '../utils/apiError';
 import Header from '../components/Header';
 import Button from '../components/Button';
 import { useAlert } from '../components/AlertProvider';
@@ -14,7 +16,7 @@ export default function EditProfileScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
-  const { alert, show } = useAlert();
+  const { alert } = useAlert();
 
   const [firstName, setFirstName] = useState(user?.firstName ?? '');
   const [lastName, setLastName] = useState(user?.lastName ?? '');
@@ -30,18 +32,34 @@ export default function EditProfileScreen({ navigation }: any) {
       alert('Champ requis', 'Le nom est obligatoire.');
       return;
     }
+    // Le champ est optionnel, mais s'il est rempli il doit être valide — le
+    // backend l'exige (IsMoroccanPhone), et cet écran ne le vérifiait pas :
+    // le refus arrivait du serveur, en langage de serveur.
+    const numero = phone.trim();
+    if (numero) {
+      const erreurNumero = validatePhone(numero);
+      if (erreurNumero) {
+        alert('Numéro invalide', erreurNumero);
+        return;
+      }
+    }
     setSaving(true);
     try {
       const updated = await usersApi.updateProfile({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        phone: phone.trim() || undefined,
+        // `null` et non `undefined` quand le champ est vidé. `undefined`
+        // disparaît du JSON : le serveur ne voyait aucun champ `phone` et
+        // laissait donc l'ancien numéro en base, pendant que l'app affichait
+        // « Votre profil a été mis à jour ». Un champ libellé « (optionnel) »
+        // doit pouvoir redevenir vide.
+        phone: numero || null,
       });
       if (user) setUser({ ...user, ...updated });
       alert('Enregistré', 'Votre profil a été mis à jour.');
       navigation.goBack();
-    } catch (e: any) {
-      alert('Erreur', e.response?.data?.message || 'Mise à jour impossible.');
+    } catch (e) {
+      alert('Erreur', apiErrorMessage(e, 'Mise à jour impossible.'));
     } finally {
       setSaving(false);
     }

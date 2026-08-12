@@ -7,13 +7,15 @@ import { typography, spacing, radius } from '../theme/typography';
 interface HeaderProps {
   title?: string;           // titre serif optionnel (« Choisir un créneau »)
   onBack?: () => void;      // affiche la flèche ronde de retour
-  right?: React.ReactNode;  // action à droite (cœur, recherche…)
-  serifTitle?: boolean;     // true = titre en serif display (défaut), false = sans
 }
 
 // En-tête réutilisable : bouton retour rond translucide (comme les fiches
-// détail de la maquette), titre centré/aligné, action optionnelle à droite.
-export default function Header({ title, onBack, right, serifTitle = true }: HeaderProps) {
+// détail de la maquette), titre centré ou aligné à gauche selon la présence du
+// retour.
+//
+// `right` (action à droite) et `serifTitle` ont été retirés : aucun écran ne
+// les passait, et une option jamais exercée est une option jamais vérifiée.
+export default function Header({ title, onBack }: HeaderProps) {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
 
@@ -38,7 +40,7 @@ export default function Header({ title, onBack, right, serifTitle = true }: Head
         <Text
           numberOfLines={1}
           style={[
-            serifTitle ? typography.headingSm : typography.title,
+            typography.headingSm,
             { color: theme.text, flex: 1, textAlign: onBack ? 'left' : 'center' },
           ]}
         >
@@ -48,7 +50,9 @@ export default function Header({ title, onBack, right, serifTitle = true }: Head
         <View style={{ flex: 1 }} />
       )}
 
-      <View style={[styles.side, { alignItems: 'flex-end' }]}>{right}</View>
+      {/* Contrepoids du bouton retour : sans lui, un titre centré ne le serait
+          pas vraiment. */}
+      <View style={styles.side} />
     </View>
   );
 }

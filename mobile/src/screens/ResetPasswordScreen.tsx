@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -12,8 +12,9 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
-import { authApi } from '../api/auth';
+import { authApi, RESEND_COOLDOWN_SECONDS } from '../api/auth';
 import { validatePassword, PASSWORD_MIN_LENGTH } from '../utils/passwordRules';
+import { apiErrorMessage } from '../utils/apiError';
 import Header from '../components/Header';
 import Button from '../components/Button';
 import { useAlert } from '../components/AlertProvider';
@@ -31,6 +32,16 @@ export default function ResetPasswordScreen({ navigation, route }: any) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Un code vient d'être envoyé par l'écran précédent : le compte à rebours
+  // démarre donc plein, comme sur l'écran de confirmation d'email.
+  const [secondsLeft, setSecondsLeft] = useState(RESEND_COOLDOWN_SECONDS);
+
+  useEffect(() => {
+    if (secondsLeft <= 0) return;
+    const timer = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [secondsLeft]);
 
   const handleReset = async () => {
     if (code.length !== CODE_LENGTH) {
@@ -59,23 +70,26 @@ export default function ResetPasswordScreen({ navigation, route }: any) {
       // Retour à l'écran de connexion : la réinitialisation a révoqué toutes
       // les sessions, il n'y a donc rien à reprendre en arrière.
       navigation.navigate('Login');
-    } catch (e: any) {
-      const msg = e.response?.data?.message;
-      alert(
-        'Erreur',
-        Array.isArray(msg) ? msg.join('\n') : msg || 'Réinitialisation impossible.',
-      );
+    } catch (e) {
+      alert('Erreur', apiErrorMessage(e, 'Réinitialisation impossible.'));
     } finally {
       setSaving(false);
     }
   };
 
+  // Le serveur refuse d'émettre un second code avant 60 s. Cet écran annonçait
+  // pourtant « un nouveau code a été envoyé » dans tous les cas : la cliente
+  // attendait un email qui n'était jamais parti. L'écran de confirmation
+  // d'email gérait déjà ce délai — pas celui-ci.
   const handleResend = async () => {
+    if (secondsLeft > 0) return;
     try {
       await authApi.forgotPassword(email);
+      setSecondsLeft(RESEND_COOLDOWN_SECONDS);
+      setCode('');
       alert('Code renvoyé', `Un nouveau code a été envoyé à ${email}.`);
-    } catch {
-      alert('Erreur', 'Envoi impossible. Réessayez dans un instant.');
+    } catch (e) {
+      alert('Erreur', apiErrorMessage(e, 'Envoi impossible. Réessayez dans un instant.'));
     }
   };
 
@@ -190,13 +204,23 @@ export default function ResetPasswordScreen({ navigation, route }: any) {
 
         <TouchableOpacity
           onPress={handleResend}
+          disabled={secondsLeft > 0}
           accessibilityRole="button"
+          accessibilityState={{ disabled: secondsLeft > 0 }}
           style={{ marginTop: spacing.lg }}
         >
           <Text
-            style={[typography.caption, { color: theme.gold, textAlign: 'center' }]}
+            style={[
+              typography.caption,
+              {
+                color: secondsLeft > 0 ? theme.textMuted : theme.gold,
+                textAlign: 'center',
+              },
+            ]}
           >
-            Je n’ai rien reçu — renvoyer le code
+            {secondsLeft > 0
+              ? `Renvoyer le code dans ${secondsLeft} s`
+              : 'Je n’ai rien reçu — renvoyer le code'}
           </Text>
         </TouchableOpacity>
       </ScrollView>

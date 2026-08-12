@@ -69,15 +69,27 @@ apiClient.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
         return apiClient(originalRequest);
       } catch (refreshError) {
-        // Le refresh a échoué : session morte, on nettoie.
         pendingRequests = [];
-        await secureStorage.clearTokens();
-        // Effacer les tokens ne suffisait pas : l'application restait affichée
-        // comme connectée jusqu'au prochain redémarrage. On prévient le store
-        // pour qu'il repasse en invité et que l'interface suive.
-        // Cas fréquent depuis que le changement de mot de passe révoque
-        // toutes les sessions.
-        notifySessionExpired();
+
+        // Le refresh a échoué — mais pas forcément parce que la session est
+        // morte. Sans réponse du serveur, c'est le RÉSEAU qui a manqué, et
+        // jeter les jetons dans ce cas déconnecte une cliente dont la session
+        // était parfaitement valable (elle doit alors ressaisir son mot de
+        // passe pour rien). L'access token expire au bout de 15 minutes : le
+        // cas est donc fréquent, pas exotique.
+        const refuseParLeServeur =
+          axios.isAxiosError(refreshError) && !!refreshError.response;
+
+        if (refuseParLeServeur) {
+          await secureStorage.clearTokens();
+          // Effacer les tokens ne suffisait pas : l'application restait
+          // affichée comme connectée jusqu'au prochain redémarrage. On prévient
+          // le store pour qu'il repasse en invité et que l'interface suive.
+          // Cas fréquent depuis que le changement de mot de passe révoque
+          // toutes les sessions.
+          notifySessionExpired();
+        }
+
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

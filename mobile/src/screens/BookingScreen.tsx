@@ -9,13 +9,29 @@ import Header from '../components/Header';
 import Button from '../components/Button';
 import ServiceMiniCard from '../components/ServiceMiniCard';
 
+// Jour civil « AAAA-MM-JJ » d'après l'heure LOCALE du téléphone.
+//
+// `toISOString()` convertit en UTC. Le Maroc étant à UTC+1, entre 00 h 00 et
+// 01 h 00 heure locale la case affichée disait « 9 » et la date envoyée à
+// l'API disait « ...-08 » : la cliente appuyait sur mardi et voyait les
+// créneaux du lundi. Les composantes locales n'ont pas ce décalage.
+//
+// C'est le même choix que `todayLocal()` du backoffice. L'instant exact du
+// rendez-vous, lui, reste calculé par le serveur : chaque créneau renvoyé
+// porte son propre `startAt`, qu'on transmet tel quel sans jamais le recalculer.
+function jourLocal(d: Date): string {
+  const mois = String(d.getMonth() + 1).padStart(2, '0');
+  const jour = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${mois}-${jour}`;
+}
+
 function getNextDays(count: number) {
   const days = [];
   const today = new Date();
   for (let i = 0; i < count; i++) {
     const d = new Date(today);
     d.setDate(today.getDate() + i);
-    const dateStr = d.toISOString().split('T')[0];
+    const dateStr = jourLocal(d);
     const weekday = d.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', '');
     const dayNum = d.getDate();
     const month = d.toLocaleDateString('fr-FR', { month: 'long' });

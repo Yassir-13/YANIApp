@@ -14,17 +14,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { useAuthStore } from '../stores/authStore';
+import { RESEND_COOLDOWN_SECONDS } from '../api/auth';
+import { apiErrorMessage } from '../utils/apiError';
 import Header from '../components/Header';
 import Button from '../components/Button';
 import { useAlert } from '../components/AlertProvider';
 
 const CODE_LENGTH = 6;
-
-// Doit rester aligné sur RESEND_COOLDOWN_SECONDS côté backend : c'est ce délai
-// que le serveur applique avant d'accepter d'émettre un nouveau code. Sans ce
-// compte à rebours visible, la cliente appuierait sur « Renvoyer », ne
-// recevrait rien, et croirait le service en panne.
-const RESEND_COOLDOWN_SECONDS = 60;
 
 export default function VerifyEmailScreen({ navigation, route }: any) {
   const { theme } = useTheme();
@@ -43,6 +39,19 @@ export default function VerifyEmailScreen({ navigation, route }: any) {
   const [code, setCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(RESEND_COOLDOWN_SECONDS);
+
+  // Où retourner en quittant cet écran.
+  //
+  // Depuis l'inscription, `goBack()` ramenait sur le formulaire de CONNEXION :
+  // `Register` s'était fait remplacer par cet écran, la pile valait donc
+  // [Main, Login, VerifyEmail] et l'écran précédent était Login — alors que la
+  // cliente vient précisément de s'inscrire ET d'être connectée. On remonte
+  // donc à l'accueil, qui est toujours le fond de la pile.
+  //
+  // Depuis le profil, `goBack()` reste juste : elle est venue volontairement
+  // et doit retrouver son profil.
+  const quitter = () =>
+    skippable ? navigation.popToTop() : navigation.goBack();
 
   // Un code vient d'être envoyé à l'arrivée sur l'écran (à l'inscription) : le
   // compte à rebours démarre donc plein.
@@ -74,15 +83,11 @@ export default function VerifyEmailScreen({ navigation, route }: any) {
     try {
       await verifyEmail(value);
       alert('Adresse confirmée', 'Merci, votre adresse email est confirmée.');
-      navigation.goBack();
-    } catch (e: any) {
-      const msg = e.response?.data?.message;
+      quitter();
+    } catch (e) {
       setCode('');
       submittedCode.current = null;
-      alert(
-        'Code refusé',
-        Array.isArray(msg) ? msg.join('\n') : msg || 'Code invalide ou expiré.',
-      );
+      alert('Code refusé', apiErrorMessage(e, 'Code invalide ou expiré.'));
     } finally {
       setSubmitting(false);
     }
@@ -95,8 +100,8 @@ export default function VerifyEmailScreen({ navigation, route }: any) {
       setCode('');
       submittedCode.current = null;
       alert('Code envoyé', `Un nouveau code a été envoyé à ${user?.email}.`);
-    } catch (e: any) {
-      alert('Erreur', e.response?.data?.message || 'Envoi impossible. Réessayez.');
+    } catch (e) {
+      alert('Erreur', apiErrorMessage(e, 'Envoi impossible. Réessayez.'));
     }
   };
 
@@ -204,7 +209,7 @@ export default function VerifyEmailScreen({ navigation, route }: any) {
 
         {skippable && (
           <TouchableOpacity
-            onPress={() => navigation.goBack()}
+            onPress={quitter}
             accessibilityRole="button"
             style={{ marginTop: spacing.xl }}
           >

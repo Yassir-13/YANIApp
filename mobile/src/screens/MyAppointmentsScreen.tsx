@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { appointmentsApi, Appointment } from '../api/appointments';
+import { formatPrice } from '../utils/format';
 import { useAlert } from '../components/AlertProvider';
 import Card from '../components/Card';
 import ErrorView from '../components/ErrorView';
@@ -138,9 +139,20 @@ export default function MyAppointmentsScreen({ navigation }: any) {
                   {info.label}
                 </Text>
               </View>
-              <Text style={[typography.caption, { color: theme.textSecondary, marginTop: spacing.xs }]}>
-                {formatDateTime(item.startAt)}
-              </Text>
+              <View style={styles.cardMeta}>
+                <Text style={[typography.caption, { color: theme.textSecondary }]}>
+                  {formatDateTime(item.startAt)}
+                </Text>
+                {/* Le prix FIGÉ à la réservation, et non le tarif du jour :
+                    c'est celui qui sera facturé même si le catalogue a changé
+                    depuis. Il arrivait déjà dans la réponse de l'API et
+                    n'était affiché nulle part. */}
+                {item.priceAtBooking != null && (
+                  <Text style={[typography.caption, { color: theme.gold }]}>
+                    {formatPrice(item.priceAtBooking)}
+                  </Text>
+                )}
+              </View>
               {canCancel && (
                 <TouchableOpacity
                   style={[styles.cancelBtn, { borderColor: theme.danger }]}
@@ -162,6 +174,12 @@ const styles = StyleSheet.create({
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   backButton: { position: 'absolute', top: spacing.xxl, left: spacing.md, zIndex: 10, padding: spacing.sm },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  cardMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: spacing.xs,
+  },
   cancelBtn: {
     alignSelf: 'flex-start',
     borderWidth: 1,

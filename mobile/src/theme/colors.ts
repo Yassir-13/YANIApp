@@ -44,12 +44,12 @@ export const lightTheme = {
   // Badges (statuts produit)
   badgeInStockBg: 'rgba(91, 140, 90, 0.16)',
   badgeInStock: '#4E7C4D',
+  // Ne sert plus de badge : l'écran Fidélité s'en sert comme fond de pastille
+  // pour un mouvement de points non positif. Le reste de la famille « soon » et
+  // « new » a été retiré avec les variantes de Badge qu'aucun écran n'utilisait.
   badgeSoonBg: 'rgba(216, 168, 72, 0.16)',
-  badgeSoon: '#B07E1E',
-  badgeNewBg: 'rgba(216, 168, 72, 0.16)',
-  badgeNew: '#B07E1E',
   // Rupture : volontairement neutre et non doré. Le doré annonce une bonne
-  // nouvelle (« Bientôt », « Nouv ! ») ; une rupture n'en est pas une.
+  // nouvelle ; une rupture n'en est pas une.
   badgeOutBg: 'rgba(110, 102, 86, 0.14)',
   badgeOut: '#6F6656',
 
@@ -79,7 +79,7 @@ export const darkTheme = {
   mode: 'dark' as const,
 
   // Fonds
-  background: '#080808f0',   // noir profond (fond app)
+  background: '#080808',   // noir profond (fond app)
   surface: '#14100C',      // cartes
   surfaceAlt: '#201810',   // surfaces secondaires (chips inactives, champs)
 
@@ -104,9 +104,6 @@ export const darkTheme = {
   badgeInStockBg: 'rgba(107, 163, 104, 0.18)',
   badgeInStock: '#7FB57C',
   badgeSoonBg: 'rgba(216, 168, 72, 0.18)',
-  badgeSoon: '#E4C15E',
-  badgeNewBg: 'rgba(216, 168, 72, 0.18)',
-  badgeNew: '#E4C15E',
   badgeOutBg: 'rgba(167, 157, 136, 0.18)',
   badgeOut: '#A79D88',
 

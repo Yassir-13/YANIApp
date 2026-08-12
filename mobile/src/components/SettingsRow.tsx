@@ -7,13 +7,13 @@ interface SettingsRowProps {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   onPress: () => void;
-  danger?: boolean;
   last?: boolean; // masque la bordure basse sur la dernière ligne d'un groupe
 }
 
-export default function SettingsRow({ icon, label, onPress, danger, last }: SettingsRowProps) {
+// `danger` a été retiré : aucun appelant ne le passait. La suppression de
+// compte, seule action qui l'aurait justifié, ne passe pas par ce composant.
+export default function SettingsRow({ icon, label, onPress, last }: SettingsRowProps) {
   const { theme } = useTheme();
-  const color = danger ? theme.danger : theme.text;
 
   return (
     <TouchableOpacity
@@ -26,9 +26,11 @@ export default function SettingsRow({ icon, label, onPress, danger, last }: Sett
         { borderBottomColor: theme.border, borderBottomWidth: last ? 0 : StyleSheet.hairlineWidth },
       ]}
     >
-      <Ionicons name={icon} size={20} color={danger ? theme.danger : theme.gold} />
-      <Text style={[typography.body, { color, flex: 1, marginLeft: spacing.md }]}>{label}</Text>
-      {!danger && <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />}
+      <Ionicons name={icon} size={20} color={theme.gold} />
+      <Text style={[typography.body, { color: theme.text, flex: 1, marginLeft: spacing.md }]}>
+        {label}
+      </Text>
+      <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
     </TouchableOpacity>
   );
 }

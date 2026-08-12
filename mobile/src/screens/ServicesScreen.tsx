@@ -1,8 +1,7 @@
 import { useEffect, useCallback, useMemo, useRef, useState } from 'react';
 import {
-  Text, StyleSheet, ActivityIndicator, RefreshControl, View, ScrollView, SectionList, TouchableOpacity,
+  Text, StyleSheet, ActivityIndicator, RefreshControl, View, ScrollView, SectionList,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
@@ -153,17 +152,15 @@ export default function ServicesScreen() {
       }
       ListHeaderComponent={
         <>
-          {/* Titre + recherche */}
+          {/* Titre.
+              La loupe « Rechercher » a été retirée : elle n'avait aucun
+              `onPress`. Elle s'enfonçait visuellement sans rien faire, et un
+              lecteur d'écran l'annonçait comme actionnable — donc pire que
+              rien pour qui ne voit pas l'écran. Les filtres par catégorie
+              ci-dessous restent le moyen de s'y retrouver en attendant une
+              vraie recherche. */}
           <View style={[styles.headerRow, { paddingHorizontal: spacing.lg }]}>
             <Text style={[typography.display, { color: theme.text, flex: 1 }]}>Services</Text>
-            <TouchableOpacity
-              accessibilityRole="button"
-              accessibilityLabel="Rechercher"
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              style={[styles.searchBtn, { backgroundColor: theme.surface, borderColor: theme.border }]}
-            >
-              <Ionicons name="search" size={20} color={theme.text} />
-            </TouchableOpacity>
           </View>
 
           {/* Échec du rafraîchissement, sans masquer les prestations affichées */}
@@ -200,14 +197,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: spacing.md,
-  },
-  searchBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   chips: {
     paddingHorizontal: spacing.lg,

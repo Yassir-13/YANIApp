@@ -2,6 +2,12 @@ import axios from 'axios';
 import { apiClient } from './client';
 import { API_BASE_URL } from './config';
 
+// Délai que le SERVEUR impose entre deux envois de code (VerificationCodeService).
+// Il est redit ici pour que les écrans puissent afficher un compte à rebours :
+// sans lui, on annonce « un nouveau code a été envoyé » alors que le serveur
+// n'a rien envoyé, et la cliente attend un email qui ne viendra pas.
+export const RESEND_COOLDOWN_SECONDS = 60;
+
 export const authApi = {
   // ── Confirmation d'adresse email ──
   // Routes authentifiées : l'inscription connecte immédiatement, le compte

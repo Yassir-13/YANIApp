@@ -6,23 +6,13 @@ import { typography, spacing, radius } from '../theme/typography';
 import { useAuthStore } from '../stores/authStore';
 import Button from '../components/Button';
 import { useAlert } from '../components/AlertProvider';
+import { validatePassword } from '../utils/passwordRules';
+import { validatePhone, formatPhoneForDisplay } from '../utils/phoneRules';
+import { apiErrorMessage } from '../utils/apiError';
 
-
-// Validation basique d'un numéro marocain (0XXXXXXXXX ou +212XXXXXXXXX)
-const PHONE_RE = /^(?:\+212|0)([5-7]\d{8})$/;
-
-// Mêmes règles que le backend (IsAppPassword) : au moins 8 caractères,
-// une majuscule et une minuscule. Dupliqué ici pour donner un message
-// immédiat plutôt que d'attendre le refus du serveur.
-const PASSWORD_MIN = 8;
-const HAS_UPPER = /[A-Z]/;
-const HAS_LOWER = /[a-z]/;
-
-// « 0612345678 » → « 06 12 34 56 78 », plus lisible pour une relecture.
-function formatPhoneForDisplay(raw: string): string {
-  const national = raw.startsWith('+212') ? '0' + raw.slice(4) : raw;
-  return national.replace(/(\d{2})(?=\d)/g, '$1 ').trim();
-}
+// Les règles de numéro et de mot de passe vivaient ici, recopiées à la main.
+// Elles sont désormais dans utils/ : trois écrans les appliquaient, chacun à sa
+// façon — et celui du changement de mot de passe en avait oublié la moitié.
 
 export default function RegisterScreen({ navigation }: any) {
   const { theme } = useTheme();
@@ -44,23 +34,18 @@ export default function RegisterScreen({ navigation }: any) {
       alert('Champ requis', 'Le nom est obligatoire.');
       return;
     }
-    if (!PHONE_RE.test(phone.trim())) {
-      alert('Numéro invalide', 'Saisissez un numéro marocain valide (ex. 0612345678).');
+    const erreurNumero = validatePhone(phone.trim());
+    if (erreurNumero) {
+      alert('Numéro invalide', erreurNumero);
       return;
     }
     if (!email || !password) {
       alert('Champs requis', 'Email et mot de passe sont obligatoires.');
       return;
     }
-    if (password.length < PASSWORD_MIN) {
-      alert('Mot de passe trop court', `Au moins ${PASSWORD_MIN} caractères.`);
-      return;
-    }
-    if (!HAS_UPPER.test(password) || !HAS_LOWER.test(password)) {
-      alert(
-        'Mot de passe trop simple',
-        'Il doit contenir au moins une majuscule et une minuscule.',
-      );
+    const erreurMotDePasse = validatePassword(password);
+    if (erreurMotDePasse) {
+      alert('Mot de passe refusé', erreurMotDePasse);
       return;
     }
 
@@ -87,9 +72,8 @@ export default function RegisterScreen({ navigation }: any) {
       // L'étape reste facultative (« Plus tard »), et la quitter ramène au même
       // endroit que le retour direct d'avant.
       navigation.replace('VerifyEmail', { skippable: true });
-    } catch (error: any) {
-      const msg = error.response?.data?.message;
-      alert('Erreur', Array.isArray(msg) ? msg.join('\n') : msg || 'Inscription impossible. Réessayez.');
+    } catch (error) {
+      alert('Erreur', apiErrorMessage(error, 'Inscription impossible. Réessayez.'));
     }
   };
 
