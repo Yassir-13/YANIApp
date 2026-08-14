@@ -5,6 +5,7 @@ import { AppointmentStatus, Role } from '@prisma/client';
 import { AppointmentsService } from './appointments.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoyaltyService } from '../loyalty/loyalty.service';
+import { SettingsService } from '../settings/settings.service';
 
 describe('AppointmentsService — machine à états', () => {
   let service: AppointmentsService;
@@ -52,6 +53,12 @@ describe('AppointmentsService — machine à états', () => {
         AppointmentsService,
         { provide: PrismaService, useValue: prisma },
         { provide: LoyaltyService, useValue: loyalty },
+        // Ces tests portent sur les transitions de statut, pas sur la capacité :
+        // les réglages du centre sont un décor. Voir availability.service.spec.ts.
+        {
+          provide: SettingsService,
+          useValue: { get: async () => ({ capacity: 2, slotIntervalMin: 30 }) },
+        },
         { provide: ConfigService, useValue: { get: () => 'Africa/Casablanca' } },
       ],
     }).compile();

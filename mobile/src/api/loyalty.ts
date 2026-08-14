@@ -5,14 +5,13 @@ export interface LoyaltyAccount {
   id: string;
   userId: string;
   pointsBalance: number;
-  tier: 'NORMAL' | 'BRONZE' | 'SILVER' | 'GOLD';
   visitCount: number;
 }
 
 export interface LoyaltyTransaction {
   id: string;
   pointsDelta: number;
-  type: 'EARN' | 'REDEEM' | 'MANUAL' | 'ADJUSTMENT' | 'MILESTONE';
+  type: 'EARN' | 'REDEEM' | 'MANUAL' | 'MILESTONE';
   createdAt: string;
   appointmentId: string | null;
   rewardId: string | null;

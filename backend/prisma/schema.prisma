@@ -22,18 +22,10 @@ enum Role {
   ADMIN
 }
 
-enum LoyaltyTier {
-  NORMAL
-  BRONZE
-  SILVER
-  GOLD
-}
-
 enum LoyaltyTxType {
   EARN        // points gagnés (ex : RDV complété)
   REDEEM      // points dépensés (échange récompense)
   MANUAL      // ajout manuel par le staff
-  ADJUSTMENT  // correction par l'admin
   MILESTONE   // récompense de palier réclamée (offerte, 0 point dépensé)
 }
 
@@ -117,12 +109,11 @@ model User {
 // ─────────────────────────────────────────────
 
 model LoyaltyAccount {
-  id            String      @id @default(uuid())
-  userId        String      @unique @map("user_id")
-  pointsBalance Int         @default(0) @map("points_balance")
-  tier          LoyaltyTier @default(NORMAL)
-  visitCount    Int         @default(0) @map("visit_count")
-  updatedAt     DateTime    @updatedAt @map("updated_at")
+  id            String   @id @default(uuid())
+  userId        String   @unique @map("user_id")
+  pointsBalance Int      @default(0) @map("points_balance")
+  visitCount    Int      @default(0) @map("visit_count")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions LoyaltyTransaction[]
@@ -270,18 +261,57 @@ model Product {
 }
 
 // ─────────────────────────────────────────────
-//  HORAIRES D'OUVERTURE
+//  OUVERTURE DU CENTRE
 // ─────────────────────────────────────────────
 
+// Une PLAGE d'ouverture, pas un jour : un même jour en porte autant que
+// nécessaire (9h-12h puis 15h-19h). Un jour sans aucune ligne est fermé —
+// c'est ce qui remplace l'ancien booléen `isClosed`.
+//
+// Les heures sont exprimées en heure LOCALE du centre, comme avant. La
+// conversion vers UTC reste faite par le moteur de créneaux, qui possède la
+// base des fuseaux.
 model OpeningHours {
-  id        String   @id @default(uuid())
-  dayOfWeek Int      @unique @map("day_of_week") // 0 = dimanche ... 6 = samedi
-  openTime  String   @map("open_time")   // "09:00"
-  closeTime String   @map("close_time")  // "19:00"
-  isClosed  Boolean  @default(false) @map("is_closed")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id        String @id @default(uuid())
+  dayOfWeek Int    @map("day_of_week") // 0 = dimanche ... 6 = samedi
+  startTime String @map("start_time")  // "09:00"
+  endTime   String @map("end_time")    // "12:00"
 
+  // Deux plages ne peuvent pas commencer à la même heure le même jour. Le
+  // chevauchement, lui, est refusé par le service : une contrainte SQL ne sait
+  // pas l'exprimer sans extension.
+  @@unique([dayOfWeek, startTime])
   @@map("opening_hours")
+}
+
+// Fermeture exceptionnelle : congés, jour férié, journée d'absence. Elle
+// s'ajoute aux horaires hebdomadaires et prime sur eux.
+//
+// Les bornes sont des dates au format "AAAA-MM-JJ" et non des DateTime : une
+// fermeture est un JOUR du calendrier local du centre, pas un instant. Stocker
+// un instant obligerait à choisir une heure arbitraire et rouvrirait la
+// question du fuseau à chaque lecture.
+model Closure {
+  id        String   @id @default(uuid())
+  startDate String   @map("start_date") // "2026-08-20"
+  endDate   String   @map("end_date")   // "2026-08-27", incluse
+  reason    String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([startDate, endDate])
+  @@map("closures")
+}
+
+// Réglages de réservation, modifiables depuis le backoffice sans redéploiement.
+// Une seule ligne, d'identifiant 1 : ce ne sont pas des enregistrements, ce
+// sont les réglages du centre.
+model CenterSettings {
+  id              Int      @id @default(1)
+  capacity        Int      @default(2) // cabines réservables par l'app
+  slotIntervalMin Int      @default(30) @map("slot_interval_min") // écart entre créneaux proposés
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("center_settings")
 }
 
 // ─────────────────────────────────────────────

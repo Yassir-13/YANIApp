@@ -9,7 +9,7 @@ const NAV = [
   { to: '/appointments', label: 'Rendez-vous', icon: '▦' },
   { to: '/catalog', label: 'Catalogue', icon: '▣' },
   { to: '/loyalty', label: 'Fidélité', icon: '◈' },
-  { to: '/hours', label: 'Horaires', icon: '◷' },
+  { to: '/hours', label: 'Réservations', icon: '◷' },
   { to: '/users', label: 'Utilisateurs', icon: '◉', adminOnly: true },
 ];
 

@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
-  IsString, IsNotEmpty, IsOptional, IsInt, IsNumber, IsUUID, IsBoolean, Min,
+  IsString, IsNotEmpty, IsOptional, IsInt, IsNumber, IsUUID, IsBoolean,
+  IsUrl, MaxLength, Min,
 } from 'class-validator';
 
 // Mise à jour partielle d'une prestation : tous les champs sont optionnels.
@@ -15,11 +16,13 @@ export class UpdateServiceDto {
   @IsOptional()
   @IsString()
   @IsNotEmpty()
+  @MaxLength(120)
   name?: string;
 
   @ApiPropertyOptional({ example: 'Brushing complet avec produits premium' })
   @IsOptional()
   @IsString()
+  @MaxLength(2000)
   description?: string;
 
   @ApiPropertyOptional({ example: 45, description: 'Durée en minutes' })
@@ -36,7 +39,10 @@ export class UpdateServiceDto {
 
   @ApiPropertyOptional({ example: 'https://exemple.ma/images/brushing.jpg' })
   @IsOptional()
-  @IsString()
+  @IsUrl(
+    { protocols: ['http', 'https'], require_protocol: true },
+    { message: "imageUrl doit être une adresse http(s) complète." },
+  )
   imageUrl?: string;
 
   @ApiPropertyOptional({ example: true, description: 'Réactiver ou désactiver la prestation' })

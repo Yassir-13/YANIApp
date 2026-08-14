@@ -1,13 +1,12 @@
 import { apiClient } from './client';
 import type { Paginated, PageQuery } from './pagination';
 
-export type LoyaltyTxType = 'EARN' | 'REDEEM' | 'MANUAL' | 'ADJUSTMENT' | 'MILESTONE';
+export type LoyaltyTxType = 'EARN' | 'REDEEM' | 'MANUAL' | 'MILESTONE';
 
 export interface LoyaltyAccount {
   id: string;
   userId: string;
   pointsBalance: number;
-  tier: string;
   visitCount: number;
   // Récompenses offertes non encore réclamées (fiche cliente au comptoir)
   grants?: MilestoneGrant[];

@@ -522,7 +522,6 @@ function labelForType(type: string): string {
     case 'EARN': return 'Points gagnés';
     case 'REDEEM': return 'Récompense échangée';
     case 'MANUAL': return 'Ajout manuel';
-    case 'ADJUSTMENT': return 'Ajustement';
     case 'MILESTONE': return 'Récompense offerte';
     default: return type;
   }

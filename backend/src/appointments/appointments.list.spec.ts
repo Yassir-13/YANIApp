@@ -5,6 +5,7 @@ import { formatInTimeZone } from 'date-fns-tz';
 import { AppointmentsService } from './appointments.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoyaltyService } from '../loyalty/loyalty.service';
+import { SettingsService } from '../settings/settings.service';
 import {
   AppointmentFilter,
   FindAppointmentsQueryDto,
@@ -52,6 +53,9 @@ describe('AppointmentsService — liste paginée', () => {
         AppointmentsService,
         { provide: PrismaService, useValue: prisma },
         { provide: LoyaltyService, useValue: {} },
+        // Ces tests portent sur la pagination et les filtres : les réglages du
+        // centre ne sont jamais lus par ce chemin.
+        { provide: SettingsService, useValue: {} },
         { provide: ConfigService, useValue: { get: () => TZ } },
       ],
     }).compile();

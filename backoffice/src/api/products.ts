@@ -59,4 +59,13 @@ export const productsApi = {
     const { data } = await apiClient.post('/products/categories', { name });
     return data;
   },
+  // Une faute de frappe dans un nom de catégorie était définitive.
+  async renameCategory(id: string, name: string): Promise<Category> {
+    const { data } = await apiClient.patch(`/products/categories/${id}`, { name });
+    return data;
+  },
+  // Refusé par le serveur si la catégorie contient encore des produits.
+  async deleteCategory(id: string): Promise<void> {
+    await apiClient.delete(`/products/categories/${id}`);
+  },
 };

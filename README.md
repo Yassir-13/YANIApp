@@ -26,7 +26,7 @@ Mono-dépôt, trois applications sur une seule base PostgreSQL.
 | Dossier | Rôle | Pile |
 |---|---|---|
 | `backend/` | API REST, règles métier, base de données | NestJS · Prisma · PostgreSQL |
-| `backoffice/` | Interface de gestion (commandes, RDV, catalogue, fidélité, horaires) | React · Vite |
+| `backoffice/` | Interface de gestion (commandes, RDV, catalogue, fidélité, réservations) | React · Vite |
 | `mobile/` | Application cliente | Expo · React Native |
 
 ---
@@ -83,7 +83,9 @@ uniquement, elle est coupée en production.
 
 > **Le seed n'est pas optionnel.** Sans horaires d'ouverture, le centre est
 > considéré fermé tous les jours et aucune cliente ne peut réserver. Il est
-> idempotent : le rejouer ne réécrit jamais des horaires déjà configurés.
+> idempotent : dès que la table des horaires contient une ligne, il n'y touche
+> plus — le rejouer sur une base en service ne peut pas altérer les horaires
+> réels de l'institut.
 
 ### 3. Back-office
 

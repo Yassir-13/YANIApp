@@ -11,6 +11,7 @@ import { ServicesModule } from './services/services.module';
 import { ProductsModule } from './products/products.module';
 import { AppointmentsModule } from './appointments/appointments.module';
 import { OpeningHoursModule } from './opening-hours/opening-hours.module';
+import { SettingsModule } from './settings/settings.module';
 import { LoyaltyModule } from './loyalty/loyalty.module';
 import { OrdersModule } from './orders/orders.module';
 
@@ -37,6 +38,7 @@ import { OrdersModule } from './orders/orders.module';
     ProductsModule,
     AppointmentsModule,
     OpeningHoursModule,
+    SettingsModule,
     LoyaltyModule,
     OrdersModule,
   ],

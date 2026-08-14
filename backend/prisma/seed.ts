@@ -3,16 +3,26 @@ import * as argon2 from 'argon2';
 
 const prisma = new PrismaClient();
 
-// Horaires de départ, modifiables ensuite depuis le backoffice (page Horaires).
-// 0 = dimanche … 6 = samedi.
+// Plages de départ, modifiables ensuite depuis le backoffice (page Horaires).
+// 0 = dimanche … 6 = samedi. Le dimanche n'a aucune plage : c'est ce qui dit
+// qu'un jour est fermé.
+//
+// Une pause déjeuner est posée d'emblée plutôt qu'une journée continue : c'est
+// le fonctionnement réel d'un institut, et ça rend le mécanisme visible dès la
+// première ouverture de la page.
 const HORAIRES_PAR_DEFAUT = [
-  { dayOfWeek: 0, openTime: '00:00', closeTime: '00:00', isClosed: true },
-  { dayOfWeek: 1, openTime: '09:00', closeTime: '18:00', isClosed: false },
-  { dayOfWeek: 2, openTime: '09:00', closeTime: '18:00', isClosed: false },
-  { dayOfWeek: 3, openTime: '09:00', closeTime: '18:00', isClosed: false },
-  { dayOfWeek: 4, openTime: '09:00', closeTime: '18:00', isClosed: false },
-  { dayOfWeek: 5, openTime: '09:00', closeTime: '19:00', isClosed: false },
-  { dayOfWeek: 6, openTime: '09:00', closeTime: '19:00', isClosed: false },
+  { dayOfWeek: 1, startTime: '09:00', endTime: '13:00' },
+  { dayOfWeek: 1, startTime: '14:00', endTime: '18:00' },
+  { dayOfWeek: 2, startTime: '09:00', endTime: '13:00' },
+  { dayOfWeek: 2, startTime: '14:00', endTime: '18:00' },
+  { dayOfWeek: 3, startTime: '09:00', endTime: '13:00' },
+  { dayOfWeek: 3, startTime: '14:00', endTime: '18:00' },
+  { dayOfWeek: 4, startTime: '09:00', endTime: '13:00' },
+  { dayOfWeek: 4, startTime: '14:00', endTime: '18:00' },
+  { dayOfWeek: 5, startTime: '09:00', endTime: '13:00' },
+  { dayOfWeek: 5, startTime: '14:00', endTime: '19:00' },
+  { dayOfWeek: 6, startTime: '09:00', endTime: '13:00' },
+  { dayOfWeek: 6, startTime: '14:00', endTime: '19:00' },
 ];
 
 // Sans une seule ligne dans `opening_hours`, le centre est considéré fermé tous
@@ -20,19 +30,23 @@ const HORAIRES_PAR_DEFAUT = [
 // cliente ne peut réserver. Une installation neuve était donc muette jusqu'à ce
 // que quelqu'un pense à ouvrir la page Horaires.
 //
-// `createMany` + `skipDuplicates` : les jours déjà configurés ne sont jamais
-// réécrits. Rejouer le seed sur une base en service ne peut pas écraser les
-// horaires réels de l'institut.
+// ⚠️ Le garde-fou est un comptage, et non plus `skipDuplicates`. Depuis que le
+// modèle porte plusieurs plages par jour, « déjà présent » ne veut plus rien
+// dire ligne à ligne : si Fati a réglé le lundi sur 10h-16h, insérer en
+// « ignorant les doublons » lui AJOUTERAIT 9h-13h et 14h-18h, qui chevauchent
+// ses vraies heures. Table non vide = installation en service, on ne touche à
+// rien.
 async function seedHoraires() {
+  const dejaConfigurees = await prisma.openingHours.count();
+  if (dejaConfigurees > 0) {
+    console.log("Horaires d'ouverture déjà configurés. Aucune action.");
+    return;
+  }
+
   const { count } = await prisma.openingHours.createMany({
     data: HORAIRES_PAR_DEFAUT,
-    skipDuplicates: true,
   });
-  console.log(
-    count > 0
-      ? `Horaires d'ouverture créés pour ${count} jour(s).`
-      : "Horaires d'ouverture déjà configurés. Aucune action.",
-  );
+  console.log(`Horaires d'ouverture créés : ${count} plages.`);
 }
 
 async function main() {
@@ -41,6 +55,8 @@ async function main() {
   const email = process.env.ADMIN_EMAIL;
   const password = process.env.ADMIN_PASSWORD;
   const firstName = process.env.ADMIN_FIRST_NAME ?? 'Admin';
+  const lastName = process.env.ADMIN_LAST_NAME ?? 'Institut';
+  const phone = process.env.ADMIN_PHONE ?? null;
 
   if (!email || !password) {
     throw new Error(
@@ -68,11 +84,21 @@ async function main() {
 
   const passwordHash = await argon2.hash(password);
 
+  // `emailVerifiedAt` est daté d'emblée : ce compte n'est pas né d'une
+  // inscription, personne ne lui enverra de code. Sans lui, le backoffice
+  // affichait « non vérifié » à côté du compte de la gérante — un doute inutile
+  // sur le seul compte qui ne peut pas en faire l'objet.
+  //
+  // Nom et téléphone suivent la même logique : ils sont obligatoires à
+  // l'inscription, un compte administrateur incomplet dénotait dans la liste.
   const admin = await prisma.user.create({
     data: {
       email,
       passwordHash,
       firstName,
+      lastName,
+      phone,
+      emailVerifiedAt: new Date(),
       role: Role.ADMIN,
       loyaltyAccount: { create: {} },
     },

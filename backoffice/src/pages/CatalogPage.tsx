@@ -34,12 +34,17 @@ export default function CatalogPage() {
   const [toDeactivate, setToDeactivate] = useState<Product | Service | null>(null);
   const [acting, setActing] = useState(false);
 
-  // Création de catégorie (indispensable : le formulaire produit/prestation
-  // exige une catégorie, et sur une base neuve il n'en existe aucune)
+  // Gestion des catégories. La création est indispensable — le formulaire
+  // produit/prestation exige une catégorie, et sur une base neuve il n'en
+  // existe aucune. Le renommage l'est devenu : une faute de frappe était
+  // définitive, faute de route pour la corriger.
   const [catFormOpen, setCatFormOpen] = useState(false);
   const [catName, setCatName] = useState('');
   const [catSaving, setCatSaving] = useState(false);
   const [catError, setCatError] = useState<string | null>(null);
+  const [catRenamingId, setCatRenamingId] = useState<string | null>(null);
+  const [catRenameValue, setCatRenameValue] = useState('');
+  const [catToDelete, setCatToDelete] = useState<Category | null>(null);
 
   const load = async () => {
     setIsLoading(true);
@@ -189,6 +194,60 @@ export default function CatalogPage() {
     }
   };
 
+  // ── Renommage / suppression de catégorie ────────────────────────────
+  const messageErreur = (e: any, defaut: string) => {
+    const msg = e.response?.data?.message;
+    return Array.isArray(msg) ? msg.join(', ') : msg || defaut;
+  };
+
+  const submitRename = async (category: Category) => {
+    const name = catRenameValue.trim();
+    if (!name || name === category.name) {
+      setCatRenamingId(null);
+      return;
+    }
+    setCatSaving(true);
+    setCatError(null);
+    try {
+      if (kind === 'product') await productsApi.renameCategory(category.id, name);
+      else await servicesApi.renameCategory(category.id, name);
+      // Rechargement complet : le nom de la catégorie est affiché sur chaque
+      // ligne du tableau, pas seulement dans cette liste.
+      await load();
+      setCatRenamingId(null);
+    } catch (e: any) {
+      setCatError(messageErreur(e, 'Renommage impossible.'));
+    } finally {
+      setCatSaving(false);
+    }
+  };
+
+  const submitDeleteCategory = async () => {
+    if (!catToDelete) return;
+    setCatSaving(true);
+    setCatError(null);
+    try {
+      if (kind === 'product') await productsApi.deleteCategory(catToDelete.id);
+      else await servicesApi.deleteCategory(catToDelete.id);
+      // Le filtre pointait peut-être sur la catégorie qui vient de disparaître.
+      if (catFilter === catToDelete.id) setCatFilter('ALL');
+      await load();
+      setCatToDelete(null);
+    } catch (e: any) {
+      setCatError(messageErreur(e, 'Suppression impossible.'));
+      setCatToDelete(null);
+    } finally {
+      setCatSaving(false);
+    }
+  };
+
+  const closeCatForm = () => {
+    setCatFormOpen(false);
+    setCatRenamingId(null);
+    setCatError(null);
+    setCatName('');
+  };
+
   const reactivate = async (item: Product | Service) => {
     try {
       if (kind === 'product') await productsApi.update(item.id, { active: true });
@@ -220,10 +279,11 @@ export default function CatalogPage() {
               onClick={() => {
                 setCatError(null);
                 setCatName('');
+                setCatRenamingId(null);
                 setCatFormOpen(true);
               }}
             >
-              + Catégorie
+              Catégories
             </button>
           )}
           {isAdmin && (
@@ -396,33 +456,101 @@ export default function CatalogPage() {
         }}
       />
 
-      {/* Modal : nouvelle catégorie */}
+      {/* Modal : gestion des catégories */}
       {catFormOpen && (
-        <div style={styles.backdrop} onClick={() => setCatFormOpen(false)}>
-          <form
+        <div style={styles.backdrop} onClick={closeCatForm}>
+          <div
             className="card"
             style={styles.catCard}
             onClick={(e) => e.stopPropagation()}
-            onSubmit={submitCategory}
           >
             <div style={styles.accent} />
             <h2 style={{ marginBottom: 'var(--sp-2)' }}>
-              Nouvelle catégorie {kind === 'product' ? 'de produit' : 'de prestation'}
+              Catégories {kind === 'product' ? 'de produits' : 'de prestations'}
             </h2>
             <div className="muted small" style={{ marginBottom: 'var(--sp-4)' }}>
-              Elle deviendra disponible dans le formulaire {noun}.
+              Renommez une catégorie mal orthographiée, ou retirez-en une qui ne
+              sert plus. Une catégorie qui contient encore des éléments ne peut
+              pas être supprimée.
             </div>
 
-            <label className="label" style={{ display: 'block', marginBottom: 5 }}>
-              Nom de la catégorie
-            </label>
-            <input
-              autoFocus
-              value={catName}
-              onChange={(e) => setCatName(e.target.value)}
-              placeholder={kind === 'product' ? 'Soins capillaires' : 'Soins du visage'}
-              required
-            />
+            {categories.length > 0 && (
+              <div style={{ marginBottom: 'var(--sp-4)' }}>
+                {categories.map((c) => (
+                  <div
+                    key={c.id}
+                    className="row gap-2"
+                    style={{ marginBottom: 6, flexWrap: 'wrap' }}
+                  >
+                    {catRenamingId === c.id ? (
+                      <>
+                        <input
+                          autoFocus
+                          value={catRenameValue}
+                          onChange={(e) => setCatRenameValue(e.target.value)}
+                          style={{ flex: 1, minWidth: 160 }}
+                        />
+                        <button
+                          className="btn btn-gold btn-sm"
+                          disabled={catSaving || !catRenameValue.trim()}
+                          onClick={() => submitRename(c)}
+                        >
+                          {catSaving ? '…' : 'Enregistrer'}
+                        </button>
+                        <button
+                          className="btn btn-outline btn-sm"
+                          disabled={catSaving}
+                          onClick={() => setCatRenamingId(null)}
+                        >
+                          Annuler
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <span style={{ flex: 1, minWidth: 160 }}>{c.name}</span>
+                        <button
+                          className="btn btn-outline btn-sm"
+                          onClick={() => {
+                            setCatError(null);
+                            setCatRenamingId(c.id);
+                            setCatRenameValue(c.name);
+                          }}
+                        >
+                          Renommer
+                        </button>
+                        <button
+                          className="btn btn-danger btn-sm"
+                          onClick={() => setCatToDelete(c)}
+                        >
+                          Supprimer
+                        </button>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <form onSubmit={submitCategory}>
+              <label className="label" style={{ display: 'block', marginBottom: 5 }}>
+                Nouvelle catégorie
+              </label>
+              <div className="row gap-2">
+                <input
+                  value={catName}
+                  onChange={(e) => setCatName(e.target.value)}
+                  placeholder={kind === 'product' ? 'Soins capillaires' : 'Soins du visage'}
+                  style={{ flex: 1 }}
+                />
+                <button
+                  type="submit"
+                  className="btn btn-gold"
+                  disabled={catSaving || !catName.trim()}
+                >
+                  {catSaving ? '…' : 'Créer'}
+                </button>
+              </div>
+            </form>
 
             {catError && (
               <div
@@ -443,18 +571,26 @@ export default function CatalogPage() {
               <button
                 type="button"
                 className="btn btn-outline"
-                onClick={() => setCatFormOpen(false)}
+                onClick={closeCatForm}
                 disabled={catSaving}
               >
-                Annuler
-              </button>
-              <button type="submit" className="btn btn-gold" disabled={catSaving}>
-                {catSaving ? 'Création…' : 'Créer'}
+                Fermer
               </button>
             </div>
-          </form>
+          </div>
         </div>
       )}
+
+      <Confirm
+        open={!!catToDelete}
+        title={`Supprimer « ${catToDelete?.name ?? ''} »`}
+        message="La catégorie disparaîtra définitivement. Le serveur refuse la suppression si elle contient encore des éléments."
+        confirmLabel="Supprimer"
+        danger
+        loading={catSaving}
+        onConfirm={submitDeleteCategory}
+        onCancel={() => setCatToDelete(null)}
+      />
 
       <Confirm
         open={!!toDeactivate}

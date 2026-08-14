@@ -13,11 +13,9 @@ import {
 import { Paginated } from '../common/dto/pagination-query.dto';
 import { AppointmentStatus, Prisma, Role } from '@prisma/client';
 import { LoyaltyService } from '../loyalty/loyalty.service';
+import { SettingsService } from '../settings/settings.service';
 import { ConfigService } from '@nestjs/config';
 import { toZonedTime, fromZonedTime, format } from 'date-fns-tz';
-
-// Capacité applicative : 2 cabines réservées à l'app
-const CENTER_CAPACITY = 2;
 
 // Clé du verrou consultatif Postgres qui sérialise les réservations.
 // Valeur arbitraire, mais elle doit être IDENTIQUE partout : c'est ce qui
@@ -41,6 +39,7 @@ export class AppointmentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly loyaltyService: LoyaltyService,
+    private readonly settings: SettingsService,
     private readonly config: ConfigService,
   ) {}
 
@@ -64,6 +63,29 @@ export class AppointmentsService {
   private toLocalDayOfWeek(date: Date): number {
     const zoned = toZonedTime(date, this.timezone);
     return zoned.getDay();
+  }
+
+  // Jour du calendrier local du centre, "AAAA-MM-JJ" — la forme sous laquelle
+  // les fermetures exceptionnelles sont stockées.
+  private toLocalDate(date: Date): string {
+    return format(toZonedTime(date, this.timezone), 'yyyy-MM-dd', {
+      timeZone: this.timezone,
+    });
+  }
+
+  // Une fermeture exceptionnelle prime sur les horaires hebdomadaires : un
+  // mardi ouvert reste fermé s'il tombe dans des congés. Les bornes sont
+  // incluses, et la comparaison de chaînes "AAAA-MM-JJ" ordonne les dates
+  // correctement — aucun fuseau ne s'invite dans le calcul.
+  private async isExceptionallyClosed(
+    db: Prisma.TransactionClient | PrismaService,
+    dateStr: string,
+  ): Promise<boolean> {
+    const closure = await db.closure.findFirst({
+      where: { startDate: { lte: dateStr }, endDate: { gte: dateStr } },
+      select: { id: true },
+    });
+    return closure !== null;
   }
 
   // ─────────────────────────────────────────
@@ -117,22 +139,48 @@ export class AppointmentsService {
 
     const endAt = new Date(startAt.getTime() + service.durationMin * 60_000);
 
-    // ── Horaires d'ouverture (heure locale du centre) ──
-    const dayOfWeek = this.toLocalDayOfWeek(startAt);
-    const hours = await db.openingHours.findUnique({
-      where: { dayOfWeek },
-    });
-
-    if (!hours || hours.isClosed) {
+    // ── Fermeture exceptionnelle (congés, jour férié) ──
+    if (await this.isExceptionallyClosed(db, this.toLocalDate(startAt))) {
       throw new BadRequestException('Le centre est fermé ce jour-là.');
     }
 
-    const startHHMM = this.toLocalHHMM(startAt);
-    const endHHMM = this.toLocalHHMM(endAt);
+    // ── Horaires d'ouverture (heure locale du centre) ──
+    // Un jour sans aucune plage est fermé : c'est ce qui a remplacé l'ancien
+    // booléen `isClosed`.
+    const dayOfWeek = this.toLocalDayOfWeek(startAt);
+    const ranges = await db.openingHours.findMany({
+      where: { dayOfWeek },
+      orderBy: { startTime: 'asc' },
+    });
 
-    if (startHHMM < hours.openTime || endHHMM > hours.closeTime) {
+    if (ranges.length === 0) {
+      throw new BadRequestException('Le centre est fermé ce jour-là.');
+    }
+
+    // Le rendez-vous doit tenir ENTIÈREMENT dans UNE plage : à cheval sur la
+    // pause déjeuner, il n'y aurait personne pour le finir.
+    //
+    // Le calcul se fait en minutes depuis minuit, et non sur l'heure de fin
+    // convertie en "HH:MM", pour deux raisons. C'est exactement l'expression
+    // qu'utilise getAvailability, donc ce qui est proposé est ce qui est
+    // accepté — les deux ne peuvent plus diverger. Et une prestation qui
+    // déborderait après minuit donne ici plus de 1440 minutes, donc un refus,
+    // là où "02:00" se serait comparé comme le matin même.
+    const startMinutes = this.hhmmToMinutes(this.toLocalHHMM(startAt));
+    const endMinutes = startMinutes + service.durationMin;
+
+    const tientDansUnePlage = ranges.some(
+      (plage) =>
+        startMinutes >= this.hhmmToMinutes(plage.startTime) &&
+        endMinutes <= this.hhmmToMinutes(plage.endTime),
+    );
+
+    if (!tientDansUnePlage) {
+      const plages = ranges
+        .map((p) => `${p.startTime}–${p.endTime}`)
+        .join(', ');
       throw new BadRequestException(
-        `Le créneau doit être compris entre ${hours.openTime} et ${hours.closeTime} (heure locale).`,
+        `Le créneau doit tenir dans une plage d'ouverture : ${plages} (heure locale).`,
       );
     }
 
@@ -181,7 +229,8 @@ export class AppointmentsService {
       return startAt.getTime() < apptEnd && apptStart < endAt.getTime();
     });
 
-    if (overlapping.length >= CENTER_CAPACITY) {
+    const { capacity } = await this.settings.get();
+    if (overlapping.length >= capacity) {
       throw new BadRequestException('Ce créneau est complet.');
     }
 
@@ -505,9 +554,6 @@ export class AppointmentsService {
     });
   }
 
-  // Granularité des créneaux proposés (en minutes)
-  private readonly SLOT_INTERVAL = 30;
-
   // Calcule les créneaux disponibles pour un service à une date donnée
   async getAvailability(serviceId: string, dateStr: string) {
     // 1. Le service (pour connaître sa durée)
@@ -518,18 +564,28 @@ export class AppointmentsService {
       throw new NotFoundException('Service introuvable ou indisponible.');
     }
 
-    // 2. Le jour de la semaine (en heure locale) et ses horaires
-    const dayDate = new Date(`${dateStr}T12:00:00.000Z`); // midi pour éviter les bascules de jour
-    const dayOfWeek = this.toLocalDayOfWeek(dayDate);
-    const hours = await this.prisma.openingHours.findUnique({
-      where: { dayOfWeek },
-    });
-
-    if (!hours || hours.isClosed) {
+    // 2. Une fermeture exceptionnelle ferme la journée quels que soient les
+    // horaires hebdomadaires — c'est le cas des congés et des jours fériés.
+    if (await this.isExceptionallyClosed(this.prisma, dateStr)) {
       return { date: dateStr, closed: true, slots: [] };
     }
 
-    // 3. Récupère les RDV actifs de ce jour (pour vérifier la capacité).
+    // 3. Le jour de la semaine (en heure locale) et ses plages d'ouverture.
+    // Aucune plage = jour fermé.
+    const dayDate = new Date(`${dateStr}T12:00:00.000Z`); // midi pour éviter les bascules de jour
+    const dayOfWeek = this.toLocalDayOfWeek(dayDate);
+    const ranges = await this.prisma.openingHours.findMany({
+      where: { dayOfWeek },
+      orderBy: { startTime: 'asc' },
+    });
+
+    if (ranges.length === 0) {
+      return { date: dateStr, closed: true, slots: [] };
+    }
+
+    const { capacity, slotIntervalMin } = await this.settings.get();
+
+    // 4. Récupère les RDV actifs de ce jour (pour vérifier la capacité).
     // La journée est bornée en heure LOCALE puis convertie : un « 00:00 UTC »
     // ne correspond pas à minuit à Casablanca et décalait la fenêtre d'une heure.
     const dayStart = fromZonedTime(`${dateStr}T00:00:00`, this.timezone);
@@ -544,49 +600,58 @@ export class AppointmentsService {
       include: { service: true },
     });
 
-    // 4. Génère les créneaux de l'ouverture à la fermeture
+    // 5. Génère les créneaux, plage par plage
+    //
+    // Une prestation ne peut pas déborder de sa plage : la condition d'arrêt
+    // porte sur la fin de CHAQUE plage. Un soin d'une heure ne sera donc jamais
+    // proposé à 11h30 si la pause déjeuner commence à midi — c'est ce que
+    // coûtait, en logique d'exclusion, l'approche « une plage trouée ».
     //
     // Chaque créneau porte DEUX valeurs : `time` pour l'affichage (heure locale)
     // et `startAt`, l'instant UTC exact à renvoyer tel quel lors de la réservation.
     // Le client n'a ainsi aucun calcul de fuseau à refaire — c'est le serveur,
     // qui possède la base IANA, qui fait autorité.
+    //
+    // Les plages arrivent triées et ne se chevauchent pas (garanti par
+    // OpeningHoursService) : la liste produite reste dans l'ordre des heures.
     const slots: { time: string; startAt: string; available: boolean }[] = [];
-    const [openH, openM] = hours.openTime.split(':').map(Number);
-    const [closeH, closeM] = hours.closeTime.split(':').map(Number);
-    const openMinutes = openH * 60 + openM;
-    const closeMinutes = closeH * 60 + closeM;
 
-    for (
-      let m = openMinutes;
-      m + service.durationMin <= closeMinutes;
-      m += this.SLOT_INTERVAL
-    ) {
-      // Construit l'instant UTC correspondant à ce créneau local
-      const slotStart = this.localTimeToUtc(dateStr, m);
-      const slotEnd = new Date(slotStart.getTime() + service.durationMin * 60_000);
+    for (const plage of ranges) {
+      const debut = this.hhmmToMinutes(plage.startTime);
+      const fin = this.hhmmToMinutes(plage.endTime);
 
-      // Passé ? indisponible
-      if (slotStart.getTime() < Date.now()) {
+      for (
+        let m = debut;
+        m + service.durationMin <= fin;
+        m += slotIntervalMin
+      ) {
+        // Construit l'instant UTC correspondant à ce créneau local
+        const slotStart = this.localTimeToUtc(dateStr, m);
+        const slotEnd = new Date(slotStart.getTime() + service.durationMin * 60_000);
+
+        // Passé ? indisponible
+        if (slotStart.getTime() < Date.now()) {
+          slots.push({
+            time: this.minutesToHHMM(m),
+            startAt: slotStart.toISOString(),
+            available: false,
+          });
+          continue;
+        }
+
+        // Compte les chevauchements
+        const overlapping = dayAppointments.filter((appt) => {
+          const apptStart = appt.startAt.getTime();
+          const apptEnd = apptStart + appt.service.durationMin * 60_000;
+          return slotStart.getTime() < apptEnd && apptStart < slotEnd.getTime();
+        });
+
         slots.push({
           time: this.minutesToHHMM(m),
           startAt: slotStart.toISOString(),
-          available: false,
+          available: overlapping.length < capacity,
         });
-        continue;
       }
-
-      // Compte les chevauchements
-      const overlapping = dayAppointments.filter((appt) => {
-        const apptStart = appt.startAt.getTime();
-        const apptEnd = apptStart + appt.service.durationMin * 60_000;
-        return slotStart.getTime() < apptEnd && apptStart < slotEnd.getTime();
-      });
-
-      slots.push({
-        time: this.minutesToHHMM(m),
-        startAt: slotStart.toISOString(),
-        available: overlapping.length < CENTER_CAPACITY,
-      });
     }
 
     return { date: dateStr, closed: false, slots };
@@ -609,5 +674,11 @@ export class AppointmentsService {
     const h = Math.floor(minutes / 60);
     const m = minutes % 60;
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  }
+
+  // "09:30" → 570. Le format est garanti par le DTO des horaires.
+  private hhmmToMinutes(hhmm: string): number {
+    const [h, m] = hhmm.split(':').map(Number);
+    return h * 60 + m;
   }
 }

@@ -31,12 +31,24 @@ export class MailService implements OnModuleInit {
     this.driver =
       (this.config.get<string>('MAIL_DRIVER') as MailDriver) ?? 'console';
 
-    const fromName = this.config.get<string>('MAIL_FROM_NAME') ?? 'Institut Yani';
+    // Le nom est injecté entre guillemets dans un en-tête `From`. Un retour à
+    // la ligne y couperait l'en-tête en deux et permettrait d'en ajouter
+    // d'autres ; un guillemet fermerait la chaîne. Valeur de configuration
+    // seulement — mais un fichier `.env` recopié de travers suffit à produire
+    // un en-tête cassé, et l'échec serait silencieux.
+    const fromName = this.echapperNom(
+      this.config.get<string>('MAIL_FROM_NAME') ?? 'Institut Yani',
+    );
     const fromAddress =
       this.config.get<string>('MAIL_FROM') ??
       this.config.get<string>('SMTP_USER') ??
       'no-reply@localhost';
     this.from = `"${fromName}" <${fromAddress}>`;
+  }
+
+  // Retire ce qui casserait l'en-tête : sauts de ligne, guillemets, antislashs.
+  private echapperNom(nom: string): string {
+    return nom.replace(/[\r\n"\\]/g, ' ').trim();
   }
 
   async onModuleInit() {

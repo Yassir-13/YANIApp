@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateServiceCategoryDto } from './dto/create-category.dto';
 import { CreateServiceDto } from './dto/create-service.dto';
@@ -18,6 +22,45 @@ export class ServicesService {
     return this.prisma.serviceCategory.findMany({
       orderBy: { name: 'asc' },
     });
+  }
+
+  // Une faute de frappe dans un nom de catégorie était définitive : seul POST
+  // existait. Le nom reste unique — le renommage vers un nom déjà pris est
+  // refusé par la base (409).
+  async renameCategory(id: string, name: string) {
+    await this.findCategoryOrFail(id);
+    return this.prisma.serviceCategory.update({
+      where: { id },
+      data: { name },
+    });
+  }
+
+  // Suppression réelle, et non désactivation comme pour les prestations : une
+  // catégorie vide ne laisse rien derrière elle. Une catégorie qui contient
+  // encore des prestations n'est PAS supprimée — il faudrait les déplacer, et
+  // c'est une décision qui appartient à la gérante, pas à une suppression en
+  // cascade silencieuse.
+  async deleteCategory(id: string) {
+    const category = await this.findCategoryOrFail(id);
+    const utilisee = await this.prisma.service.count({ where: { categoryId: id } });
+
+    if (utilisee > 0) {
+      throw new BadRequestException(
+        `« ${category.name} » contient encore ${utilisee} prestation(s). Déplacez-les dans une autre catégorie avant de la supprimer.`,
+      );
+    }
+
+    return this.prisma.serviceCategory.delete({ where: { id } });
+  }
+
+  private async findCategoryOrFail(id: string) {
+    const category = await this.prisma.serviceCategory.findUnique({
+      where: { id },
+    });
+    if (!category) {
+      throw new NotFoundException('Catégorie introuvable.');
+    }
+    return category;
   }
 
   // ----- Services -----

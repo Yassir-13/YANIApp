@@ -53,6 +53,29 @@ export class ProductsController {
     return this.productsService.createCategory(dto);
   }
 
+  // Renommer, c'est envoyer le même corps que créer : une catégorie n'a qu'un
+  // nom. Pas d'Update DTO pour redire la même chose.
+  @ApiOperation({ summary: 'Renommer une catégorie' })
+  @ApiBearerAuth('access-token')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Patch('categories/:id')
+  renameCategory(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CreateProductCategoryDto,
+  ) {
+    return this.productsService.renameCategory(id, dto.name);
+  }
+
+  @ApiOperation({ summary: 'Supprimer une catégorie vide' })
+  @ApiBearerAuth('access-token')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Delete('categories/:id')
+  deleteCategory(@Param('id', ParseUUIDPipe) id: string) {
+    return this.productsService.deleteCategory(id);
+  }
+
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')

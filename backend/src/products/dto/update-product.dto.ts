@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
-  IsString, IsNotEmpty, IsOptional, IsInt, IsNumber, IsUUID, IsBoolean, Min,
+  IsString, IsNotEmpty, IsOptional, IsInt, IsNumber, IsUUID, IsBoolean,
+  IsUrl, MaxLength, Min,
 } from 'class-validator';
 
 // Mise à jour partielle d'un produit : tous les champs sont optionnels.
@@ -15,11 +16,13 @@ export class UpdateProductDto {
   @IsOptional()
   @IsString()
   @IsNotEmpty()
+  @MaxLength(120)
   name?: string;
 
   @ApiPropertyOptional({ example: 'Masque nourrissant aux huiles naturelles' })
   @IsOptional()
   @IsString()
+  @MaxLength(2000)
   description?: string;
 
   @ApiPropertyOptional({ example: 89.9, description: 'Prix en dirhams' })
@@ -36,7 +39,10 @@ export class UpdateProductDto {
 
   @ApiPropertyOptional({ example: 'https://exemple.ma/images/masque.jpg' })
   @IsOptional()
-  @IsString()
+  @IsUrl(
+    { protocols: ['http', 'https'], require_protocol: true },
+    { message: "imageUrl doit être une adresse http(s) complète." },
+  )
   imageUrl?: string;
 
   @ApiPropertyOptional({ example: true, description: 'Réactiver ou désactiver le produit' })

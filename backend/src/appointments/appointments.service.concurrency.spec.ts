@@ -4,6 +4,7 @@ import { Prisma, AppointmentStatus } from '@prisma/client';
 import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 import { AppointmentsService } from './appointments.service';
 import { LoyaltyService } from '../loyalty/loyalty.service';
+import { SettingsService } from '../settings/settings.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 
@@ -12,14 +13,20 @@ import { ConfigService } from '@nestjs/config';
 // verrou n'existe pas dans un mock. Voir orders.service.concurrency.spec.ts.
 
 const TZ = process.env.CENTER_TIMEZONE ?? 'Africa/Casablanca';
-// Miroir de CENTER_CAPACITY dans appointments.service.ts : 2 cabines.
-const CAPACITE = 2;
 
 // PrismaService porte les réglages de transaction de l'application.
 const prisma = new PrismaService();
-const service = new AppointmentsService(prisma, new LoyaltyService(prisma), {
-  get: () => TZ,
-} as unknown as ConfigService);
+const service = new AppointmentsService(
+  prisma,
+  new LoyaltyService(prisma),
+  new SettingsService(prisma),
+  { get: () => TZ } as unknown as ConfigService,
+);
+
+// La capacité n'est plus une constante du code : elle est lue en base, comme
+// le fait le service. Une valeur recopiée ici mentirait le jour où la gérante
+// ajoute une cabine depuis le backoffice.
+let CAPACITE = 2;
 
 const aNettoyer = {
   users: [] as string[],
@@ -28,15 +35,14 @@ const aNettoyer = {
 };
 
 // On ne touche PAS aux horaires d'ouverture de l'institut : on lit sa
-// configuration réelle et on projette un jour ouvert dans un futur lointain,
+// configuration réelle et on projette une plage ouverte dans un futur lointain,
 // où aucun rendez-vous existant ne peut se trouver.
+//
+// Une fermeture exceptionnelle ne peut pas gêner : elles portent sur des dates
+// réelles, jamais sur janvier 2099.
 async function trouverCreneau(durationMin: number) {
-  const jours = await prisma.openingHours.findMany({
-    where: { isClosed: false },
-  });
-  if (jours.length === 0) return null;
-
-  const ouverts = new Map(jours.map((j) => [j.dayOfWeek, j]));
+  const plages = await prisma.openingHours.findMany();
+  if (plages.length === 0) return null;
 
   for (let i = 1; i <= 7; i++) {
     const dateStr = `2099-01-0${i}`;
@@ -44,15 +50,16 @@ async function trouverCreneau(durationMin: number) {
       new Date(`${dateStr}T12:00:00.000Z`),
       TZ,
     ).getDay();
-    const horaires = ouverts.get(jourLocal);
-    if (!horaires) continue;
 
-    // Le créneau doit tenir entre l'ouverture et la fermeture.
-    const [oh, om] = horaires.openTime.split(':').map(Number);
-    const [ch, cm] = horaires.closeTime.split(':').map(Number);
-    if (oh * 60 + om + durationMin > ch * 60 + cm) continue;
+    // Le créneau doit tenir ENTIÈREMENT dans UNE plage : depuis la pause
+    // déjeuner, un jour ouvert ne garantit plus une amplitude continue.
+    for (const plage of plages.filter((p) => p.dayOfWeek === jourLocal)) {
+      const [dh, dm] = plage.startTime.split(':').map(Number);
+      const [fh, fm] = plage.endTime.split(':').map(Number);
+      if (dh * 60 + dm + durationMin > fh * 60 + fm) continue;
 
-    return fromZonedTime(`${dateStr}T${horaires.openTime}:00`, TZ);
+      return fromZonedTime(`${dateStr}T${plage.startTime}:00`, TZ);
+    }
   }
   return null;
 }
@@ -100,6 +107,7 @@ describe('AppointmentsService — réservations concurrentes (vraie base)', () =
   beforeAll(async () => {
     await prisma.$connect();
     await prisma.$transaction(async (tx) => tx.appointment.count());
+    CAPACITE = (await new SettingsService(prisma).get()).capacity;
   }, 30_000);
 
   afterAll(async () => {
@@ -130,10 +138,13 @@ describe('AppointmentsService — réservations concurrentes (vraie base)', () =
     }
 
     const prestation = await creerPrestation(DUREE);
-    const clientes = await creerClientes(5);
+    // Trois clientes de plus que de cabines : il en restera toujours à refuser,
+    // quelle que soit la capacité réglée dans le backoffice.
+    const CANDIDATES = CAPACITE + 3;
+    const clientes = await creerClientes(CANDIDATES);
 
-    // Cinq réservations partent ensemble sur le même créneau. Toutes voient
-    // le créneau libre au moment de compter.
+    // Toutes les réservations partent ensemble sur le même créneau, et toutes
+    // voient le créneau libre au moment de compter.
     const résultats = await Promise.allSettled(
       clientes.map((c) =>
         service.create(c.id, {
@@ -143,7 +154,8 @@ describe('AppointmentsService — réservations concurrentes (vraie base)', () =
       ),
     );
 
-    // L'invariant : 2 cabines, 2 réservations. Avant le correctif : jusqu'à 5.
+    // L'invariant : autant de réservations que de cabines, pas une de plus.
+    // Avant le correctif : les cinq passaient.
     expect(résultats.filter((r) => r.status === 'fulfilled')).toHaveLength(
       CAPACITE,
     );
@@ -151,7 +163,7 @@ describe('AppointmentsService — réservations concurrentes (vraie base)', () =
     const refus = résultats
       .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
       .map((r) => String(r.reason?.message ?? r.reason));
-    expect(refus).toHaveLength(5 - CAPACITE);
+    expect(refus).toHaveLength(CANDIDATES - CAPACITE);
     refus.forEach((m) => expect(m).toMatch(/complet/));
 
     // Et la base le confirme : pas de 3ᵉ ligne écrite en douce.

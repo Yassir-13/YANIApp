@@ -5,12 +5,13 @@ import { AppointmentStatus, Prisma } from '@prisma/client';
 import { AppointmentsService } from './appointments.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoyaltyService } from '../loyalty/loyalty.service';
+import { SettingsService } from '../settings/settings.service';
 
 /**
- * Règles de réservation : capacité des cabines, horaires d'ouverture et
- * conversion de fuseau. Ce sont les règles qui décident si deux clientes
- * peuvent se retrouver au même moment, ou si un rendez-vous tombe à la
- * mauvaise heure.
+ * Règles de réservation : capacité des cabines, plages d'ouverture, fermetures
+ * exceptionnelles et conversion de fuseau. Ce sont les règles qui décident si
+ * deux clientes peuvent se retrouver au même moment, ou si un rendez-vous
+ * tombe à la mauvaise heure.
  */
 describe('AppointmentsService — disponibilité des créneaux', () => {
   let service: AppointmentsService;
@@ -44,13 +45,22 @@ describe('AppointmentsService — disponibilité des créneaux', () => {
         // prestation du catalogue (I5). Ici tout dure 60 minutes.
         aggregate: jest.fn().mockResolvedValue({ _max: { durationMin: 60 } }),
       },
+      // Une seule plage 09:00–19:00 par défaut : les tests qui portent sur la
+      // pause déjeuner redéfinissent cette liste.
       openingHours: {
+        findMany: jest.fn().mockResolvedValue([
+          { dayOfWeek: 3, startTime: '09:00', endTime: '19:00' },
+        ]),
+      },
+      // Aucune fermeture exceptionnelle par défaut.
+      closure: { findFirst: jest.fn().mockResolvedValue(null) },
+      centerSettings: {
         findUnique: jest.fn().mockResolvedValue({
-          dayOfWeek: 3,
-          openTime: '09:00',
-          closeTime: '19:00',
-          isClosed: false,
+          id: 1,
+          capacity: 2,
+          slotIntervalMin: 30,
         }),
+        create: jest.fn(),
       },
       appointment: {
         findMany: jest.fn().mockResolvedValue([]),
@@ -70,6 +80,9 @@ describe('AppointmentsService — disponibilité des créneaux', () => {
         AppointmentsService,
         { provide: PrismaService, useValue: prisma },
         { provide: LoyaltyService, useValue: { earnFromAppointment: jest.fn() } },
+        // Le vrai service : la capacité et l'écart entre créneaux se lisent
+        // désormais en base, et c'est cette lecture qu'on veut exercer.
+        { provide: SettingsService, useValue: new SettingsService(prisma) },
         { provide: ConfigService, useValue: { get: () => 'Africa/Casablanca' } },
       ],
     }).compile();
@@ -191,44 +204,128 @@ describe('AppointmentsService — disponibilité des créneaux', () => {
   });
 
   // ═══════════════════════════════════════════════════════════
-  //  HORAIRES D'OUVERTURE
+  //  PLAGES D'OUVERTURE
   // ═══════════════════════════════════════════════════════════
-  describe("horaires d'ouverture", () => {
-    it('refuse un jour de fermeture', async () => {
-      prisma.openingHours.findUnique.mockResolvedValue({
-        dayOfWeek: 3,
-        openTime: '09:00',
-        closeTime: '19:00',
-        isClosed: true,
-      });
-      await expect(reserver()).rejects.toThrow(/fermé/);
-    });
-
-    it('refuse un jour non configuré', async () => {
-      prisma.openingHours.findUnique.mockResolvedValue(null);
+  describe("plages d'ouverture", () => {
+    // Un jour sans aucune plage est fermé. C'est ce qui a remplacé l'ancien
+    // booléen `isClosed` : il n'y a plus de ligne « fermée » à interpréter.
+    it('refuse un jour sans aucune plage', async () => {
+      prisma.openingHours.findMany.mockResolvedValue([]);
       await expect(reserver()).rejects.toThrow(/fermé/);
     });
 
     // Le RDV commence dans les horaires mais déborde après la fermeture :
     // sans ce contrôle, une cliente resterait seule dans un centre fermé.
     it('refuse un créneau qui déborde après la fermeture', async () => {
-      prisma.openingHours.findUnique.mockResolvedValue({
-        dayOfWeek: 3,
-        openTime: '09:00',
-        closeTime: '14:30', // 14:00 + 60 min = 15:00 > 14:30
-        isClosed: false,
-      });
-      await expect(reserver()).rejects.toThrow(/compris entre/);
+      prisma.openingHours.findMany.mockResolvedValue([
+        { dayOfWeek: 3, startTime: '09:00', endTime: '14:30' }, // 14:00 + 60 min = 15:00
+      ]);
+      await expect(reserver()).rejects.toThrow(/plage d'ouverture/);
     });
 
     it("refuse un créneau avant l'ouverture", async () => {
-      prisma.openingHours.findUnique.mockResolvedValue({
-        dayOfWeek: 3,
-        openTime: '15:00',
-        closeTime: '19:00',
-        isClosed: false,
+      prisma.openingHours.findMany.mockResolvedValue([
+        { dayOfWeek: 3, startTime: '15:00', endTime: '19:00' },
+      ]);
+      await expect(reserver()).rejects.toThrow(/plage d'ouverture/);
+    });
+
+    // Le cœur du modèle à plusieurs plages : 14:00 tombe entre les deux, dans
+    // la pause déjeuner. Avec une amplitude continue 09:00–19:00 il passait.
+    it('refuse un créneau tombant dans la pause déjeuner', async () => {
+      prisma.openingHours.findMany.mockResolvedValue([
+        { dayOfWeek: 3, startTime: '09:00', endTime: '13:00' },
+        { dayOfWeek: 3, startTime: '15:00', endTime: '19:00' },
+      ]);
+      await expect(reserver()).rejects.toThrow(/plage d'ouverture/);
+    });
+
+    // Le rendez-vous doit tenir dans UNE plage, pas dans l'amplitude du jour :
+    // à cheval sur la pause, il n'y aurait personne pour le finir.
+    it('refuse un créneau à cheval sur deux plages', async () => {
+      prisma.openingHours.findMany.mockResolvedValue([
+        { dayOfWeek: 3, startTime: '09:00', endTime: '14:30' },
+        { dayOfWeek: 3, startTime: '14:30', endTime: '19:00' },
+      ]);
+      // 14:00 → 15:00 : commence dans la première, finit dans la seconde.
+      await expect(reserver()).rejects.toThrow(/plage d'ouverture/);
+    });
+
+    it("accepte un créneau qui tient dans la plage de l'après-midi", async () => {
+      prisma.openingHours.findMany.mockResolvedValue([
+        { dayOfWeek: 3, startTime: '09:00', endTime: '13:00' },
+        { dayOfWeek: 3, startTime: '14:00', endTime: '19:00' },
+      ]);
+      await expect(reserver()).resolves.toBeDefined();
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  //  FERMETURES EXCEPTIONNELLES
+  // ═══════════════════════════════════════════════════════════
+  //
+  // Congés et jours fériés. Sans elles, l'institut ne pouvait fermer qu'un jour
+  // de la semaine de façon RÉCURRENTE : partir une semaine laissait les
+  // clientes réserver.
+  describe('fermetures exceptionnelles', () => {
+    it('refuse de réserver un jour couvert par une fermeture', async () => {
+      prisma.closure.findFirst.mockResolvedValue({ id: 'conges-1' });
+      await expect(reserver()).rejects.toThrow(/fermé/);
+    });
+
+    it('ne propose aucun créneau un jour de fermeture, même ouvert', async () => {
+      prisma.closure.findFirst.mockResolvedValue({ id: 'conges-1' });
+      const res = await service.getAvailability('service-1', '2099-01-07');
+      expect(res.closed).toBe(true);
+      expect(res.slots).toEqual([]);
+    });
+
+    // Les bornes sont incluses et comparées comme des chaînes : aucun fuseau
+    // ne s'invite dans le calcul, une fermeture est un jour du calendrier.
+    it('interroge les fermetures sur le jour local du centre', async () => {
+      await service.getAvailability('service-1', '2099-01-07');
+      expect(prisma.closure.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            startDate: { lte: '2099-01-07' },
+            endDate: { gte: '2099-01-07' },
+          },
+        }),
+      );
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  //  RÉGLAGES LUS EN BASE
+  // ═══════════════════════════════════════════════════════════
+  //
+  // Capacité et écart entre créneaux vivaient en constantes dans ce fichier :
+  // ajouter une cabine demandait un redéploiement.
+  describe('réglages du centre', () => {
+    it('suit la capacité réglée en base, pas une constante', async () => {
+      prisma.centerSettings.findUnique.mockResolvedValue({
+        id: 1,
+        capacity: 3,
+        slotIntervalMin: 30,
       });
-      await expect(reserver()).rejects.toThrow(/compris entre/);
+      // Deux RDV en cours : refusé à 2 cabines, accepté à 3.
+      prisma.appointment.findMany.mockResolvedValue([
+        rdvExistant('2099-01-07T13:00:00.000Z'),
+        rdvExistant('2099-01-07T13:00:00.000Z'),
+      ]);
+      await expect(reserver()).resolves.toBeDefined();
+    });
+
+    it("suit l'écart entre créneaux réglé en base", async () => {
+      prisma.centerSettings.findUnique.mockResolvedValue({
+        id: 1,
+        capacity: 2,
+        slotIntervalMin: 60,
+      });
+      const res = await service.getAvailability('service-1', '2099-01-07');
+      const heures = res.slots.map((s) => s.time);
+      expect(heures).toContain('10:00');
+      expect(heures).not.toContain('09:30');
     });
   });
 
@@ -294,12 +391,7 @@ describe('AppointmentsService — disponibilité des créneaux', () => {
     });
 
     it('signale un jour fermé sans proposer de créneau', async () => {
-      prisma.openingHours.findUnique.mockResolvedValue({
-        dayOfWeek: 3,
-        openTime: '09:00',
-        closeTime: '19:00',
-        isClosed: true,
-      });
+      prisma.openingHours.findMany.mockResolvedValue([]);
       const res = await service.getAvailability('service-1', '2099-01-07');
       expect(res.closed).toBe(true);
       expect(res.slots).toEqual([]);
@@ -312,6 +404,54 @@ describe('AppointmentsService — disponibilité des créneaux', () => {
       expect(heures).toContain('18:00');
       expect(heures).not.toContain('18:30');
       expect(heures).not.toContain('19:00');
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  //  GÉNÉRATION DES CRÉNEAUX PLAGE PAR PLAGE
+  // ═══════════════════════════════════════════════════════════
+  describe('génération sur plusieurs plages', () => {
+    const AVEC_PAUSE = [
+      { dayOfWeek: 3, startTime: '09:00', endTime: '13:00' },
+      { dayOfWeek: 3, startTime: '14:00', endTime: '18:00' },
+    ];
+
+    it('ne propose aucun créneau pendant la pause déjeuner', async () => {
+      prisma.openingHours.findMany.mockResolvedValue(AVEC_PAUSE);
+      const heures = (
+        await service.getAvailability('service-1', '2099-01-07')
+      ).slots.map((s) => s.time);
+
+      expect(heures).toContain('11:00');
+      expect(heures).toContain('14:00');
+      // 13:00 et 13:30 tombent dans la pause ; 12:30 déborderait dessus.
+      expect(heures).not.toContain('12:30');
+      expect(heures).not.toContain('13:00');
+      expect(heures).not.toContain('13:30');
+    });
+
+    // La propriété qui compte : une prestation ne déborde jamais de SA plage.
+    // C'est ce que coûtait, en logique d'exclusion, l'approche « une plage
+    // trouée » — ici c'est la condition d'arrêt de la boucle qui l'assure.
+    it('borne chaque plage par la durée de la prestation', async () => {
+      prisma.openingHours.findMany.mockResolvedValue(AVEC_PAUSE);
+      const heures = (
+        await service.getAvailability('service-1', '2099-01-07')
+      ).slots.map((s) => s.time);
+
+      // Prestation de 60 min : dernier départ 12:00 le matin, 17:00 l'après-midi.
+      expect(heures).toContain('12:00');
+      expect(heures).toContain('17:00');
+      expect(heures).not.toContain('17:30');
+    });
+
+    it('rend les créneaux dans l’ordre des heures', async () => {
+      prisma.openingHours.findMany.mockResolvedValue(AVEC_PAUSE);
+      const heures = (
+        await service.getAvailability('service-1', '2099-01-07')
+      ).slots.map((s) => s.time);
+
+      expect(heures).toEqual([...heures].sort());
     });
   });
 });
