@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { appointmentsApi, Appointment, Slot } from '../api/appointments';
 import { servicesApi, Service } from '../api/services';
 import { usersApi, AppUser } from '../api/users';
-import { fullName, formatDateTime } from '../utils';
+import { fullName, formatDateTime, todayLocal } from '../utils';
 
 type Mode = 'create' | 'reschedule';
 
@@ -13,13 +13,6 @@ interface Props {
   appointment?: Appointment | null;
   onClose: () => void;
   onDone: () => void; // recharge la liste parente
-}
-
-// Date locale du jour au format YYYY-MM-DD (évite le décalage UTC de toISOString).
-function todayLocal(): string {
-  const d = new Date();
-  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
-  return local.toISOString().slice(0, 10);
 }
 
 export default function AppointmentBookingModal({

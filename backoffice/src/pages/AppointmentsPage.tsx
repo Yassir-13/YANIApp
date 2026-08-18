@@ -5,6 +5,9 @@ import { formatPrice, formatDateTime, formatTime, fullName, isToday } from '../u
 import Confirm from '../components/Confirm';
 import AppointmentBookingModal from '../components/AppointmentBookingModal';
 import Pagination from '../components/Pagination';
+import ExportModal from '../components/ExportModal';
+import { exportsApi } from '../api/exports';
+import { useAuthStore } from '../stores/authStore';
 
 // Lignes affichées par page. Les filtres et compteurs continuent de porter
 // sur l'ensemble des rendez-vous : seul l'affichage est découpé.
@@ -39,6 +42,10 @@ const ACTION_WARNING: Partial<Record<AppointmentStatus, string>> = {
 
 type Filter = AppointmentStatus | 'ALL' | 'TODAY' | 'UPCOMING';
 
+// Les onglets qui sont de vrais statuts, par opposition à « Aujourd'hui » et
+// « À venir » qui découpent le temps.
+const STATUTS: AppointmentStatus[] = ['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED'];
+
 const FILTERS: { key: Filter; label: string }[] = [
   { key: 'TODAY', label: "Aujourd'hui" },
   { key: 'UPCOMING', label: 'À venir' },
@@ -50,6 +57,10 @@ const FILTERS: { key: Filter; label: string }[] = [
 ];
 
 export default function AppointmentsPage() {
+  // Le bilan chiffré de l'institut est réservé à l'administratrice. Le verrou
+  // est côté serveur ; ceci ne fait que ne pas proposer un bouton qui refuserait.
+  const isAdmin = useAuthStore((s) => s.user?.role === 'ADMIN');
+  const [exportOuvert, setExportOuvert] = useState(false);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   // Compteurs des onglets, calculés par le serveur sur l'ENSEMBLE des
   // rendez-vous — y compris « Aujourd'hui », désormais évalué dans le fuseau
@@ -147,6 +158,11 @@ export default function AppointmentsPage() {
           </div>
         </div>
         <div className="row gap-2">
+          {isAdmin && (
+            <button className="btn btn-outline btn-sm" onClick={() => setExportOuvert(true)}>
+              Exporter Excel
+            </button>
+          )}
           <button className="btn btn-outline btn-sm" onClick={() => load()}>Actualiser</button>
           <button className="btn btn-gold btn-sm" onClick={() => setBooking(true)}>
             + Nouveau RDV
@@ -301,6 +317,30 @@ export default function AppointmentsPage() {
           />
         </div>
       )}
+
+      <ExportModal
+        open={exportOuvert}
+        titre="Exporter les rendez-vous"
+        periodeLabel="Période — jour du rendez-vous"
+        contenu="Deux feuilles : les rendez-vous ligne par ligne, puis les services payés (nombre et chiffre d'affaires par prestation). Les services payés ne comptent que les rendez-vous terminés."
+        filtre={{
+          label: 'Statut',
+          options: [
+            { value: '', label: 'Tous les statuts' },
+            ...FILTERS.filter((f) => STATUTS.includes(f.key as AppointmentStatus)).map((f) => ({
+              value: f.key,
+              label: f.label,
+            })),
+          ],
+          // « Aujourd'hui » et « À venir » ne sont pas des statuts : la période
+          // les remplace, l'export repart alors de tous les statuts.
+          defaut: STATUTS.includes(filter as AppointmentStatus) ? filter : '',
+        }}
+        onExport={({ from, to, filtre }) =>
+          exportsApi.appointments({ from, to, status: filtre })
+        }
+        onClose={() => setExportOuvert(false)}
+      />
 
       <Confirm
         open={!!pendingAction}

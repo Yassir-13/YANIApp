@@ -35,6 +35,13 @@ apiClient.interceptors.request.use((config) => {
 let isRefreshing = false;
 let pending: ((token: string | null) => void)[] = [];
 
+// Session refusée par le serveur : on efface et on renvoie à la connexion.
+// À n'appeler QUE lorsque le serveur a répondu — voir le commentaire du catch.
+function terminerLaSession() {
+  tokenStorage.clear();
+  window.location.href = '/login';
+}
+
 apiClient.interceptors.response.use(
   (res) => res,
   async (error) => {
@@ -62,7 +69,15 @@ apiClient.interceptors.response.use(
 
     try {
       const refreshToken = tokenStorage.getRefresh();
-      if (!refreshToken) throw new Error('no refresh token');
+      if (!refreshToken) {
+        // Un 401 sans jeton de renouvellement : il n'y a rien à tenter, la
+        // session est bel et bien finie. Ce cas est traité ici et non dans le
+        // `catch`, où il serait confondu avec une panne réseau.
+        pending.forEach((cb) => cb(null));
+        pending = [];
+        terminerLaSession();
+        return Promise.reject(error);
+      }
 
       const { data } = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken });
       tokenStorage.save(data.accessToken, data.refreshToken);
@@ -73,11 +88,25 @@ apiClient.interceptors.response.use(
       original.headers.Authorization = `Bearer ${data.accessToken}`;
       return apiClient(original);
     } catch (e) {
+      // Les requêtes en attente sont REJETÉES, jamais oubliées : sans ça leurs
+      // promesses resteraient en suspens et l'écran tournerait indéfiniment
+      // (c'est le défaut N3, qui n'a jamais touché le backoffice).
       pending.forEach((cb) => cb(null));
       pending = [];
-      tokenStorage.clear();
-      // Session morte : on renvoie vers la connexion
-      window.location.href = '/login';
+
+      // Le renouvellement a échoué — mais pas forcément parce que la session
+      // est morte. Sans réponse du serveur, c'est le RÉSEAU qui a manqué, et
+      // déconnecter dans ce cas éjecte Fati en pleine saisie pour une
+      // micro-coupure : filtres perdus, page en cours perdue, mot de passe à
+      // ressaisir pour rien. L'access token expire toutes les 15 minutes, donc
+      // l'occasion se présente souvent.
+      //
+      // Même correctif qu'I14 côté mobile, même raisonnement.
+      const refuseParLeServeur = axios.isAxiosError(e) && !!e.response;
+      if (refuseParLeServeur) {
+        terminerLaSession();
+      }
+
       return Promise.reject(e);
     } finally {
       isRefreshing = false;

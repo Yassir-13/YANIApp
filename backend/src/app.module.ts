@@ -14,6 +14,7 @@ import { OpeningHoursModule } from './opening-hours/opening-hours.module';
 import { SettingsModule } from './settings/settings.module';
 import { LoyaltyModule } from './loyalty/loyalty.module';
 import { OrdersModule } from './orders/orders.module';
+import { ExportsModule } from './exports/exports.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { OrdersModule } from './orders/orders.module';
     SettingsModule,
     LoyaltyModule,
     OrdersModule,
+    ExportsModule,
   ],
   providers: [
     // Garde global : toute route est comptée, sauf @SkipThrottle explicite.

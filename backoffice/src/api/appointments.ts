@@ -13,7 +13,10 @@ export type AppointmentStatus = 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELL
 export interface Appointment {
   id: string;
   startAt: string;
-  endAt: string;
+  // Pas de `endAt` : la colonne n'existe pas et l'API ne l'a jamais renvoyée.
+  // Le champ était déclaré obligatoire, donc TypeScript le croyait présent et
+  // compilait sans rien dire — il valait `undefined` à l'exécution. La fin d'un
+  // rendez-vous se déduit de `startAt` et de `service.durationMin`.
   status: AppointmentStatus;
   // Prix figé au moment de la réservation : c'est CE montant qui a été annoncé
   // à la cliente, et donc celui à lui facturer — même si le tarif de la

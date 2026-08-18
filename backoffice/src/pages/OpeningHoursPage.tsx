@@ -13,6 +13,7 @@ import {
   CAPACITE_MAX,
 } from '../api/settings';
 import { useAuthStore } from '../stores/authStore';
+import { todayLocal } from '../utils';
 import Confirm from '../components/Confirm';
 
 // Ordre d'affichage à la française : lundi d'abord, dimanche en dernier.
@@ -42,12 +43,6 @@ interface EditableDay {
 // Empreinte d'un jour, pour détecter une modification non enregistrée.
 const signature = (ranges: RangePayload[]) =>
   ranges.map((r) => `${r.startTime}-${r.endTime}`).join('|');
-
-// Le jour du navigateur, au format des fermetures. Il ne sert qu'à griser les
-// fermetures déjà passées et à borner le sélecteur de date : aucune
-// disponibilité ne se décide ici, c'est le serveur qui tient le fuseau du
-// centre. Un poste réglé de travers affiche un badge à côté, rien de plus.
-const aujourdhui = () => new Date().toLocaleDateString('sv-SE');
 
 // « 2026-08-20 » → « 20 août 2026 ». Construit en heure LOCALE, et non via
 // `new Date(iso)` qui interpréterait la chaîne en UTC et afficherait la veille
@@ -289,7 +284,12 @@ function SectionHoraires({
 
                 <div style={{ flex: 1, minWidth: 260 }}>
                   {d.ranges.length === 0 ? (
-                    <span className="badge badge-muted">Fermé</span>
+                    // Même conteneur en bloc que les lignes de plage : sans lui
+                    // le badge et le bouton se retrouvaient collés l'un à
+                    // l'autre sur la même ligne.
+                    <div style={{ marginBottom: 6 }}>
+                      <span className="badge badge-muted">Fermé</span>
+                    </div>
                   ) : (
                     d.ranges.map((r, index) => (
                       <div
@@ -388,7 +388,10 @@ function SectionFermetures({
   const [aSupprimer, setASupprimer] = useState<Closure | null>(null);
   const [suppression, setSuppression] = useState(false);
 
-  const jour = aujourdhui();
+  // Le jour du CENTRE. Il ne sert ici qu'à griser les fermetures déjà passées
+  // et à borner le sélecteur de date — aucune disponibilité ne se décide dans
+  // le navigateur.
+  const jour = todayLocal();
 
   const ajouter = async (e: FormEvent) => {
     e.preventDefault();

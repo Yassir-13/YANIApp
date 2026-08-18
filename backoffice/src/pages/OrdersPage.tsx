@@ -4,6 +4,9 @@ import type { TabCounts } from '../api/pagination';
 import { formatPrice, formatDateTime, fullName } from '../utils';
 import Confirm from '../components/Confirm';
 import Pagination from '../components/Pagination';
+import ExportModal from '../components/ExportModal';
+import { exportsApi } from '../api/exports';
+import { useAuthStore } from '../stores/authStore';
 
 // Lignes affichées par page. Les filtres et compteurs portent sur l'ensemble
 // des commandes, pas sur la page : seul l'affichage est découpé.
@@ -52,6 +55,10 @@ const ACTION_WARNING: Partial<Record<OrderStatus, string>> = {
 };
 
 export default function OrdersPage() {
+  // Le bilan chiffré de l'institut est réservé à l'administratrice. Le verrou
+  // est côté serveur ; ceci ne fait que ne pas proposer un bouton qui refuserait.
+  const isAdmin = useAuthStore((s) => s.user?.role === 'ADMIN');
+  const [exportOuvert, setExportOuvert] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
   // Compteurs des onglets, calculés par le serveur sur l'ENSEMBLE des
   // commandes. Les recalculer ici ne porterait plus que sur la page reçue.
@@ -148,7 +155,14 @@ export default function OrdersPage() {
             Appelez la cliente, confirmez, préparez, puis remettez la commande.
           </div>
         </div>
-        <button className="btn btn-outline btn-sm" onClick={() => load()}>Actualiser</button>
+        <div className="row gap-2">
+          {isAdmin && (
+            <button className="btn btn-outline btn-sm" onClick={() => setExportOuvert(true)}>
+              Exporter Excel
+            </button>
+          )}
+          <button className="btn btn-outline btn-sm" onClick={() => load()}>Actualiser</button>
+        </div>
       </div>
 
       {/* Onglets de filtre */}
@@ -324,6 +338,26 @@ export default function OrdersPage() {
           />
         </div>
       )}
+
+      <ExportModal
+        open={exportOuvert}
+        titre="Exporter les commandes"
+        periodeLabel="Période — date de la commande"
+        contenu="Deux feuilles : les commandes ligne par ligne, puis les produits vendus (quantités et chiffre d'affaires). Les produits vendus ne comptent que les commandes terminées."
+        filtre={{
+          label: 'Statut',
+          options: [
+            { value: '', label: 'Tous les statuts' },
+            ...FILTERS.filter((f) => f.key !== 'ALL').map((f) => ({ value: f.key, label: f.label })),
+          ],
+          // Pré-rempli sur l'onglet ouvert : on exporte ce qu'on regarde.
+          defaut: filter === 'ALL' ? '' : filter,
+        }}
+        onExport={({ from, to, filtre }) =>
+          exportsApi.orders({ from, to, status: filtre })
+        }
+        onClose={() => setExportOuvert(false)}
+      />
 
       {/* Confirmation d'action */}
       <Confirm

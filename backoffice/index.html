@@ -4,11 +4,40 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Yani Concept — Administration</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&family=Inter:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
+
+    <!--
+      Politique de sécurité du contenu (I33).
+
+      Les jetons du backoffice vivent dans le `localStorage`, et c'est assumé :
+      le poste est à l'institut, sur une connexion maîtrisée. Ce qui rendrait ce
+      choix dangereux, c'est un script étranger capable de les lire — d'où cette
+      politique, dont la ligne qui compte est `script-src 'self'` : seuls les
+      scripts livrés avec l'application peuvent s'exécuter. Les polices, seule
+      ressource externe qui restait, sont désormais embarquées dans le build.
+
+      Deux assouplissements assumés :
+        · `style-src 'unsafe-inline'` — l'interface est écrite avec des styles
+          en ligne React (`style={{…}}`), que le navigateur traite comme du
+          style inline. Les retirer voudrait dire réécrire toutes les pages,
+          pour un gain nul : un style ne peut pas lire le `localStorage`.
+        · `connect-src` reste ouvert — l'adresse de l'API dépend du déploiement
+          (localhost en dev, un domaine en production) et cette balise est
+          figée au build. La version stricte de cette directive a sa place dans
+          l'en-tête HTTP du reverse proxy, avec HTTPS (point 33 du récap).
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+        default-src 'self';
+        script-src 'self';
+        style-src 'self' 'unsafe-inline';
+        font-src 'self';
+        img-src 'self' data: https:;
+        connect-src * ws: wss:;
+        object-src 'none';
+        base-uri 'self';
+        form-action 'self';
+      "
     />
   </head>
   <body>

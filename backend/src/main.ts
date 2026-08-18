@@ -54,9 +54,16 @@ async function bootstrap() {
   // ── CORS : autorise le backoffice web à consommer l'API ──
   // En dev, Vite tourne sur 5173. En prod, définir CORS_ORIGINS dans le .env
   // (liste séparée par des virgules, ex. https://admin.yaniconcept.ma).
+  //
+  // `exposedHeaders` : sans lui, le navigateur CACHE l'en-tête
+  // Content-Disposition au code JavaScript. Le backoffice télécharge les
+  // exports Excel par requête authentifiée (le jeton ne voyage pas dans une
+  // URL) et y lit le nom du fichier : sans cette ligne, tous les exports
+  // arriveraient sous un nom générique.
   app.enableCors({
     origin: config.get<string>('CORS_ORIGINS')?.split(',') ?? ['http://localhost:5173'],
     credentials: true,
+    exposedHeaders: ['Content-Disposition'],
   });
 
   app.useGlobalPipes(
@@ -95,6 +102,7 @@ async function bootstrap() {
       .addTag('orders', 'Commandes de produits')
       .addTag('loyalty', 'Programme de fidélité')
       .addTag('opening-hours', "Horaires d'ouverture")
+      .addTag('exports', 'Exports Excel (administratrice)')
       .build();
 
     const document = SwaggerModule.createDocument(app, swaggerConfig);

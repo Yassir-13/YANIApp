@@ -4,6 +4,8 @@ import { useAuthStore } from '../stores/authStore';
 import { formatDate, fullName } from '../utils';
 import Confirm from '../components/Confirm';
 import Pagination from '../components/Pagination';
+import ExportModal from '../components/ExportModal';
+import { exportsApi } from '../api/exports';
 
 const ROLE_META: Record<Role, { label: string; badge: string }> = {
   CLIENT: { label: 'Cliente', badge: 'badge-muted' },
@@ -20,6 +22,10 @@ const ROLE_FILTERS: { key: Role | 'ALL'; label: string }[] = [
 
 export default function UsersPage() {
   const me = useAuthStore((s) => s.user);
+
+  // Pas de garde de rôle ici : toute la page est déjà réservée à
+  // l'administratrice (route /users), et le serveur refuse l'export aux autres.
+  const [exportOuvert, setExportOuvert] = useState(false);
 
   const [users, setUsers] = useState<AppUser[]>([]);
   const [search, setSearch] = useState('');
@@ -163,9 +169,14 @@ export default function UsersPage() {
             Clientes et personnel de l'institut. Un seul administrateur est autorisé.
           </div>
         </div>
-        <button className="btn btn-outline btn-sm" onClick={() => load()}>
-          Actualiser
-        </button>
+        <div className="row gap-2">
+          <button className="btn btn-outline btn-sm" onClick={() => setExportOuvert(true)}>
+            Exporter Excel
+          </button>
+          <button className="btn btn-outline btn-sm" onClick={() => load()}>
+            Actualiser
+          </button>
+        </div>
       </div>
 
       {/* Recherche + filtres */}
@@ -306,6 +317,26 @@ export default function UsersPage() {
           />
         </div>
       )}
+
+      <ExportModal
+        open={exportOuvert}
+        titre="Exporter les comptes"
+        periodeLabel="Période — date d'inscription"
+        // Un fichier clientes se veut complet : la période sert à isoler les
+        // nouvelles inscrites, pas l'inverse.
+        periodeParDefaut="tout"
+        contenu="Une feuille : nom, contact, rôle, date d'inscription et email vérifié ou non. Les comptes supprimés sont exclus."
+        filtre={{
+          label: 'Rôle',
+          options: ROLE_FILTERS.map((f) => ({
+            value: f.key === 'ALL' ? '' : f.key,
+            label: f.key === 'ALL' ? 'Tous les rôles' : f.label,
+          })),
+          defaut: roleFilter === 'ALL' ? '' : roleFilter,
+        }}
+        onExport={({ from, to, filtre }) => exportsApi.users({ from, to, role: filtre })}
+        onClose={() => setExportOuvert(false)}
+      />
 
       <Confirm
         open={!!pending}
