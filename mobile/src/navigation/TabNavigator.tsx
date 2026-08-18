@@ -1,6 +1,7 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import HomeScreen from '../screens/HomeScreen';
 import ServicesStack from './ServicesStack';
@@ -19,6 +20,7 @@ const ICONS: Record<string, { active: keyof typeof Ionicons.glyphMap; inactive: 
 export default function TabNavigator() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   return (
     <Tab.Navigator
@@ -44,10 +46,14 @@ export default function TabNavigator() {
         },
       })}
     >
-      <Tab.Screen name="Accueil" component={HomeScreen} />
+      {/* `name` reste un identifiant technique — c'est lui que reçoivent les
+          `navigation.navigate()` du reste de l'app. Seul `tabBarLabel` est
+          traduit. */}
+      <Tab.Screen name="Accueil" component={HomeScreen} options={{ tabBarLabel: t('nav.home') }} />
       <Tab.Screen
         name="Services"
         component={ServicesStack}
+        options={{ tabBarLabel: t('nav.services') }}
         listeners={({ navigation }) => ({
           // Un onglet conserve l'état de sa pile : après avoir consulté une
           // prestation, revenir sur l'onglet réaffichait cette fiche au lieu
@@ -60,13 +66,14 @@ export default function TabNavigator() {
       <Tab.Screen
         name="Produits"
         component={ProductsStack}
+        options={{ tabBarLabel: t('nav.products') }}
         listeners={({ navigation }) => ({
           tabPress: () => {
             navigation.navigate('Produits', { screen: 'ProductsList' });
           },
         })}
       />
-      <Tab.Screen name="Fidélité" component={LoyaltyScreen} />
+      <Tab.Screen name="Fidélité" component={LoyaltyScreen} options={{ tabBarLabel: t('nav.loyalty') }} />
     </Tab.Navigator>
   );
 }

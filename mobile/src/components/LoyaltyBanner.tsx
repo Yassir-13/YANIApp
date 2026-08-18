@@ -1,9 +1,11 @@
 import { View, Text, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import Drop from './Drop';
+import { mirroredIcon } from '../i18n';
 
 interface LoyaltyBannerProps {
   points: number;
@@ -26,6 +28,7 @@ export default function LoyaltyBanner({
   style,
 }: LoyaltyBannerProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View style={[styles.container, { backgroundColor: theme.loyaltyBg }, style]}>
@@ -41,12 +44,12 @@ export default function LoyaltyBanner({
       <View style={styles.topRow}>
         <View style={{ flex: 1 }}>
           <Text style={[typography.sectionLabel, { color: theme.goldLight, letterSpacing: 2 }]}>
-            Fidélité
+            {t('loyalty.title')}
           </Text>
           <View style={styles.pointsRow}>
             <Text style={[typography.priceLg, { color: theme.goldLight }]}>{points}</Text>
             <Text style={[typography.body, { color: theme.loyaltyText, marginLeft: 6 }]}>
-              points
+              {t('common.points')}
             </Text>
           </View>
         </View>
@@ -69,7 +72,7 @@ export default function LoyaltyBanner({
             style={styles.cta}
           >
             <Text style={[typography.subtitle, { color: theme.goldLight }]}>{ctaLabel}</Text>
-            <Ionicons name="arrow-forward" size={16} color={theme.goldLight} />
+            <Ionicons name={mirroredIcon('arrow-forward')} size={16} color={theme.goldLight} />
           </TouchableOpacity>
         )}
       </View>

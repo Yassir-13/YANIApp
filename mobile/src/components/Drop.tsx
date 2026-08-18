@@ -1,4 +1,5 @@
 import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
 
 interface DropProps {
   size?: number;          // hauteur en px (largeur ~0.72 * hauteur)
@@ -10,9 +11,11 @@ export default function Drop({
   size = 52,
   colors = ['#E4C15E', '#D8A848', '#886028'],
 }: DropProps) {
+  const { t } = useTranslation();
   const width = size * 0.72;
+  const label = t('home.dropA11y');
   return (
-    <Svg width={width} height={size} viewBox="0 0 24 33" accessibilityLabel="Goutte Yani">
+    <Svg width={width} height={size} viewBox="0 0 24 33" accessibilityLabel={label}>
       <Defs>
         <LinearGradient id="dropGold" x1="0" y1="0" x2="1" y2="1">
           <Stop offset="0" stopColor={colors[0]} />

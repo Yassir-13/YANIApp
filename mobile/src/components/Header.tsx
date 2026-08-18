@@ -3,6 +3,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
+import { mirroredIcon } from '../i18n';
 
 interface HeaderProps {
   title?: string;           // titre serif optionnel (« Choisir un créneau »)
@@ -31,7 +32,7 @@ export default function Header({ title, onBack }: HeaderProps) {
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             style={[styles.round, { backgroundColor: theme.surface, borderColor: theme.border }]}
           >
-            <Ionicons name="chevron-back" size={22} color={theme.text} />
+            <Ionicons name={mirroredIcon('chevron-back')} size={22} color={theme.text} />
           </TouchableOpacity>
         )}
       </View>

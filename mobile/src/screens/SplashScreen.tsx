@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Text, StyleSheet, Animated, Easing, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
+import { useTranslation } from 'react-i18next';
 import { typography, spacing } from '../theme/typography';
 import Drop from '../components/Drop';
 
@@ -27,6 +28,7 @@ interface SplashScreenProps {
 // risque de saccade vient donc du MONTAGE de l'app (création des vues natives),
 // qui est repoussé après la dernière animation visible via `onExitStart`.
 export default function SplashScreen({ onFinish, onExitStart }: SplashScreenProps) {
+  const { t } = useTranslation();
   const rootOpacity = useRef(new Animated.Value(0)).current;
   const dropOpacity = useRef(new Animated.Value(0)).current;
   const dropTranslate = useRef(new Animated.Value(-20)).current;
@@ -164,7 +166,7 @@ export default function SplashScreen({ onFinish, onExitStart }: SplashScreenProp
         {/* Barre dorée */}
         <Animated.View style={[styles.bar, { transform: [{ scaleX: barScale }] }]} />
 
-            <Text style={[typography.sectionLabel, styles.tagline]}>Centre de beauté</Text>
+            <Text style={[typography.sectionLabel, styles.tagline]}>{t('home.tagline')}</Text>
 
         {/* Reflet : bande lumineuse inclinée qui traverse le lettrage une fois.
             Volontairement SANS overflow:hidden — un clip rectangulaire donnait

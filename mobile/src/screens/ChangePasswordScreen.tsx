@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { usersApi } from '../api/users';
@@ -13,6 +14,7 @@ import { useAlert } from '../components/AlertProvider';
 
 export default function ChangePasswordScreen({ navigation }: any) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { alert } = useAlert();
 
@@ -27,7 +29,7 @@ export default function ChangePasswordScreen({ navigation }: any) {
 
   const handleSave = async () => {
     if (!currentPassword || !newPassword) {
-      alert('Champs requis', 'Tous les champs sont obligatoires.');
+      alert(t('auth.fieldsRequired'), t('auth.allFieldsRequired'));
       return;
     }
     // La règle complète, celle du serveur : longueur, majuscule, minuscule.
@@ -36,11 +38,11 @@ export default function ChangePasswordScreen({ navigation }: any) {
     // serveur après coup.
     const erreurMotDePasse = validatePassword(newPassword);
     if (erreurMotDePasse) {
-      alert('Mot de passe refusé', erreurMotDePasse);
+      alert(t('auth.passwordRejected'), t(erreurMotDePasse, { min: PASSWORD_MIN_LENGTH }));
       return;
     }
     if (newPassword !== confirmPassword) {
-      alert('Non concordant', 'La confirmation ne correspond pas au nouveau mot de passe.');
+      alert(t('auth.mismatchTitle'), t('auth.mismatchMessage'));
       return;
     }
     setSaving(true);
@@ -68,23 +70,17 @@ export default function ChangePasswordScreen({ navigation }: any) {
         // à l'accueil : rester sur ce formulaire, désormais déconnectée,
         // n'aurait aucun sens.
         await logout();
-        alert(
-          'Mot de passe modifié',
-          'Votre mot de passe a bien été changé. Reconnectez-vous avec le nouveau.',
-        );
+        alert(t('auth.changedTitle'), t('auth.changedMessage'));
         navigation.popToTop();
         return;
       }
 
       // Le message du serveur, et non un texte codé en dur : il dit déjà ce
       // qu'il faut, y compris que les autres appareils ont été déconnectés.
-      alert('Mot de passe modifié', message);
+      alert(t('auth.changedTitle'), message);
       navigation.goBack();
     } catch (e) {
-      alert(
-        'Erreur',
-        apiErrorMessage(e, 'Modification impossible. Vérifiez votre mot de passe actuel.'),
-      );
+      alert(t('common.error'), apiErrorMessage(e, t('auth.changeFailed')));
     } finally {
       setSaving(false);
     }
@@ -100,26 +96,26 @@ export default function ChangePasswordScreen({ navigation }: any) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={[styles.container, { backgroundColor: theme.background }]}
     >
-      <Header title="Mot de passe" onBack={() => navigation.goBack()} />
+      <Header title={t('auth.password')} onBack={() => navigation.goBack()} />
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: insets.bottom + spacing.xl }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <Field label="Mot de passe actuel" theme={theme}>
+        <Field label={t('auth.currentPassword')} theme={theme}>
           <TextInput style={inputStyle} value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry placeholder="••••••••" placeholderTextColor={theme.textMuted} />
         </Field>
         <Field
-          label={`Nouveau mot de passe (min. ${PASSWORD_MIN_LENGTH} caractères, une majuscule et une minuscule)`}
+          label={t('auth.newPasswordRulesPlaceholder', { min: PASSWORD_MIN_LENGTH })}
           theme={theme}
         >
           <TextInput style={inputStyle} value={newPassword} onChangeText={setNewPassword} secureTextEntry placeholder="••••••••" placeholderTextColor={theme.textMuted} />
         </Field>
-        <Field label="Confirmer le nouveau mot de passe" theme={theme}>
+        <Field label={t('auth.confirmNewPassword')} theme={theme}>
           <TextInput style={inputStyle} value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry placeholder="••••••••" placeholderTextColor={theme.textMuted} />
         </Field>
 
-        <Button label={saving ? 'Modification…' : 'Modifier le mot de passe'} onPress={handleSave} loading={saving} style={{ marginTop: spacing.lg }} />
+        <Button label={saving ? t('auth.changing') : t('auth.changeTitle')} onPress={handleSave} loading={saving} style={{ marginTop: spacing.lg }} />
       </ScrollView>
     </KeyboardAvoidingView>
   );

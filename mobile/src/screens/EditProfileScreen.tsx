@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { useAuthStore } from '../stores/authStore';
@@ -13,6 +14,7 @@ import { useAlert } from '../components/AlertProvider';
 
 export default function EditProfileScreen({ navigation }: any) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
@@ -25,11 +27,11 @@ export default function EditProfileScreen({ navigation }: any) {
 
   const handleSave = async () => {
     if (!firstName.trim()) {
-      alert('Champ requis', 'Le prénom est obligatoire.');
+      alert(t('auth.fieldRequired'), t('auth.firstNameRequired'));
       return;
     }
     if (!lastName.trim()) {
-      alert('Champ requis', 'Le nom est obligatoire.');
+      alert(t('auth.fieldRequired'), t('auth.lastNameRequired'));
       return;
     }
     // Le champ est optionnel, mais s'il est rempli il doit être valide — le
@@ -39,7 +41,7 @@ export default function EditProfileScreen({ navigation }: any) {
     if (numero) {
       const erreurNumero = validatePhone(numero);
       if (erreurNumero) {
-        alert('Numéro invalide', erreurNumero);
+        alert(t('auth.invalidPhone'), t(erreurNumero));
         return;
       }
     }
@@ -56,10 +58,10 @@ export default function EditProfileScreen({ navigation }: any) {
         phone: numero || null,
       });
       if (user) setUser({ ...user, ...updated });
-      alert('Enregistré', 'Votre profil a été mis à jour.');
+      alert(t('auth.savedTitle'), t('auth.savedMessage'));
       navigation.goBack();
     } catch (e) {
-      alert('Erreur', apiErrorMessage(e, 'Mise à jour impossible.'));
+      alert(t('common.error'), apiErrorMessage(e, t('auth.updateFailed')));
     } finally {
       setSaving(false);
     }
@@ -75,19 +77,19 @@ export default function EditProfileScreen({ navigation }: any) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={[styles.container, { backgroundColor: theme.background }]}
     >
-      <Header title="Modifier le profil" onBack={() => navigation.goBack()} />
+      <Header title={t('auth.editProfileTitle')} onBack={() => navigation.goBack()} />
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: insets.bottom + spacing.xl }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <Field label="Prénom" theme={theme}>
-          <TextInput style={inputStyle} value={firstName} onChangeText={setFirstName} placeholder="Prénom" placeholderTextColor={theme.textMuted} />
+        <Field label={t('auth.firstName')} theme={theme}>
+          <TextInput style={inputStyle} value={firstName} onChangeText={setFirstName} placeholder={t('auth.firstName')} placeholderTextColor={theme.textMuted} />
         </Field>
-        <Field label="Nom" theme={theme}>
-          <TextInput style={inputStyle} value={lastName} onChangeText={setLastName} placeholder="Nom" placeholderTextColor={theme.textMuted} />
+        <Field label={t('auth.lastName')} theme={theme}>
+          <TextInput style={inputStyle} value={lastName} onChangeText={setLastName} placeholder={t('auth.lastName')} placeholderTextColor={theme.textMuted} />
         </Field>
-        <Field label="Téléphone (optionnel)" theme={theme}>
+        <Field label={t('auth.phoneOptional')} theme={theme}>
           <TextInput
             style={inputStyle}
             value={phone}
@@ -99,13 +101,13 @@ export default function EditProfileScreen({ navigation }: any) {
         </Field>
 
         {/* Email en lecture seule (non modifiable via l'API) */}
-        <Field label="Email" theme={theme}>
+        <Field label={t('auth.email')} theme={theme}>
           <View style={[styles.input, styles.readonly, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
             <Text style={[typography.body, { color: theme.textMuted }]}>{user?.email}</Text>
           </View>
         </Field>
 
-        <Button label={saving ? 'Enregistrement…' : 'Enregistrer'} onPress={handleSave} loading={saving} style={{ marginTop: spacing.md }} />
+        <Button label={saving ? t('auth.saving') : t('common.save')} onPress={handleSave} loading={saving} style={{ marginTop: spacing.md }} />
       </ScrollView>
     </KeyboardAvoidingView>
   );

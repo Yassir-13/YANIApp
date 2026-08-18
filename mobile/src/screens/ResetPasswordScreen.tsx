@@ -10,6 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { authApi, RESEND_COOLDOWN_SECONDS } from '../api/auth';
@@ -23,6 +24,7 @@ const CODE_LENGTH = 6;
 
 export default function ResetPasswordScreen({ navigation, route }: any) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { alert } = useAlert();
 
@@ -45,18 +47,18 @@ export default function ResetPasswordScreen({ navigation, route }: any) {
 
   const handleReset = async () => {
     if (code.length !== CODE_LENGTH) {
-      alert('Code incomplet', `Le code contient ${CODE_LENGTH} chiffres.`);
+      alert(t('auth.codeIncomplete'), t('auth.codeLength', { length: CODE_LENGTH }));
       return;
     }
 
     const passwordError = validatePassword(newPassword);
     if (passwordError) {
-      alert('Mot de passe refusé', passwordError);
+      alert(t('auth.passwordRejected'), t(passwordError, { min: PASSWORD_MIN_LENGTH }));
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      alert('Non concordant', 'La confirmation ne correspond pas au nouveau mot de passe.');
+      alert(t('auth.mismatchTitle'), t('auth.mismatchMessage'));
       return;
     }
 
@@ -64,14 +66,14 @@ export default function ResetPasswordScreen({ navigation, route }: any) {
     try {
       await authApi.resetPassword({ email, code, newPassword });
       alert(
-        'Mot de passe réinitialisé',
-        'Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.',
+        t('auth.resetDoneTitle'),
+        t('auth.resetDoneMessage'),
       );
       // Retour à l'écran de connexion : la réinitialisation a révoqué toutes
       // les sessions, il n'y a donc rien à reprendre en arrière.
       navigation.navigate('Login');
     } catch (e) {
-      alert('Erreur', apiErrorMessage(e, 'Réinitialisation impossible.'));
+      alert(t('common.error'), apiErrorMessage(e, t('auth.resetFailed')));
     } finally {
       setSaving(false);
     }
@@ -87,9 +89,9 @@ export default function ResetPasswordScreen({ navigation, route }: any) {
       await authApi.forgotPassword(email);
       setSecondsLeft(RESEND_COOLDOWN_SECONDS);
       setCode('');
-      alert('Code renvoyé', `Un nouveau code a été envoyé à ${email}.`);
+      alert(t('auth.codeResentTitle'), t('auth.codeResentMessage', { email }));
     } catch (e) {
-      alert('Erreur', apiErrorMessage(e, 'Envoi impossible. Réessayez dans un instant.'));
+      alert(t('common.error'), apiErrorMessage(e, t('auth.resendFailedSoon')));
     }
   };
 
@@ -103,7 +105,7 @@ export default function ResetPasswordScreen({ navigation, route }: any) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={[styles.container, { backgroundColor: theme.background }]}
     >
-      <Header title="Nouveau mot de passe" onBack={() => navigation.goBack()} />
+      <Header title={t('auth.resetTitle')} onBack={() => navigation.goBack()} />
 
       <ScrollView
         contentContainerStyle={{
@@ -124,7 +126,7 @@ export default function ResetPasswordScreen({ navigation, route }: any) {
             },
           ]}
         >
-          Si un compte existe pour
+          {t('auth.ifAccountExists')}
         </Text>
         <Text
           style={[
@@ -149,7 +151,7 @@ export default function ResetPasswordScreen({ navigation, route }: any) {
           bout de 15 minutes.
         </Text>
 
-        <Field label="Code reçu par email" theme={theme}>
+        <Field label={t('auth.codeFromEmail')} theme={theme}>
           <TextInput
             style={[
               styles.codeInput,
@@ -171,7 +173,7 @@ export default function ResetPasswordScreen({ navigation, route }: any) {
         </Field>
 
         <Field
-          label={`Nouveau mot de passe (min. ${PASSWORD_MIN_LENGTH} caractères)`}
+          label={t('auth.newPasswordPlaceholder', { min: PASSWORD_MIN_LENGTH })}
           theme={theme}
         >
           <TextInput
@@ -184,7 +186,7 @@ export default function ResetPasswordScreen({ navigation, route }: any) {
           />
         </Field>
 
-        <Field label="Confirmer le nouveau mot de passe" theme={theme}>
+        <Field label={t('auth.confirmNewPassword')} theme={theme}>
           <TextInput
             style={inputStyle}
             value={confirmPassword}
@@ -196,7 +198,7 @@ export default function ResetPasswordScreen({ navigation, route }: any) {
         </Field>
 
         <Button
-          label={saving ? 'Enregistrement…' : 'Réinitialiser le mot de passe'}
+          label={saving ? t('auth.saving') : t('auth.resetAction')}
           onPress={handleReset}
           loading={saving}
           style={{ marginTop: spacing.lg }}
@@ -219,8 +221,8 @@ export default function ResetPasswordScreen({ navigation, route }: any) {
             ]}
           >
             {secondsLeft > 0
-              ? `Renvoyer le code dans ${secondsLeft} s`
-              : 'Je n’ai rien reçu — renvoyer le code'}
+              ? t('auth.resendIn', { seconds: secondsLeft })
+              : t('auth.nothingReceived')}
           </Text>
         </TouchableOpacity>
       </ScrollView>

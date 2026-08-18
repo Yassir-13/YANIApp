@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { Request, Response } from 'express';
+import { pickLanguage, translateMessage } from '../../i18n';
 
 /**
  * Filtre global : dernier passage obligé avant que la réponse ne parte.
@@ -31,6 +32,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     const { status, message } = this.resolve(exception);
 
+    // Traduction au tout dernier moment, ici et nulle part ailleurs : les
+    // services continuent de lever leurs exceptions en français, et c'est ce
+    // seul passage obligé qui les rend dans la langue de la requête. Sans
+    // en-tête `Accept-Language` — le cas du back-office — rien ne change.
+    const langue = pickLanguage(request.headers['accept-language']);
+    const messageTraduit = translateMessage(message, langue);
+
     if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
       // Anomalie : on veut tout, y compris la pile d'appels. L'identifiant
       // de l'utilisateur (jamais son email) aide à rejouer l'incident.
@@ -46,7 +54,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     response.status(status).json({
       statusCode: status,
-      message,
+      message: messageTraduit,
       path: request.url,
       timestamp: new Date().toISOString(),
     });

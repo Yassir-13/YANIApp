@@ -4,6 +4,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { Service } from '../api/services';
 import { formatPrice, formatDuration } from '../utils/format';
+import { mirroredIcon } from '../i18n';
 
 interface ServiceRowProps {
   service: Service;
@@ -49,7 +50,7 @@ export default function ServiceRow({ service, onPress }: ServiceRowProps) {
         </Text>
       </View>
 
-      <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
+      <Ionicons name={mirroredIcon('chevron-forward')} size={20} color={theme.textMuted} />
     </TouchableOpacity>
   );
 }

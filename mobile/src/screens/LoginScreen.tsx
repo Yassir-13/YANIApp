@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { useAuthStore } from '../stores/authStore';
 import Button from '../components/Button';
 import { useAlert } from '../components/AlertProvider';
+import { mirroredIcon } from '../i18n';
 
 export default function LoginScreen({ navigation }: any) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const login = useAuthStore((s) => s.login);
   const isLoading = useAuthStore((s) => s.isLoading);
   const { alert } = useAlert();
@@ -18,14 +21,14 @@ export default function LoginScreen({ navigation }: any) {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      alert('Champs requis', 'Merci de saisir votre email et mot de passe.');
+      alert(t('auth.fieldsRequired'), t('auth.loginFieldsMessage'));
       return;
     }
     try {
       await login(email.trim(), password);
       if (navigation.canGoBack()) navigation.goBack();
     } catch (error: any) {
-      alert('Erreur', error.response?.data?.message || 'Connexion impossible. Réessayez.');
+      alert(t('common.error'), error.response?.data?.message || t('auth.loginFailed'));
     }
   };
 
@@ -40,19 +43,19 @@ export default function LoginScreen({ navigation }: any) {
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons name="chevron-back" size={26} color={theme.text} />
+          <Ionicons name={mirroredIcon('chevron-back')} size={26} color={theme.text} />
         </TouchableOpacity>
       )}
 
       <View style={styles.content}>
-        <Text style={[typography.heading, { color: theme.gold, textAlign: 'center' }]}>Yani Concept</Text>
+        <Text style={[typography.heading, { color: theme.gold, textAlign: 'center' }]}>{t('auth.loginBrand')}</Text>
         <Text style={[typography.caption, { color: theme.textSecondary, textAlign: 'center', marginBottom: spacing.xl }]}>
-          Connectez-vous à votre compte
+          {t('auth.loginSubtitle')}
         </Text>
 
         <TextInput
           style={[styles.input, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]}
-          placeholder="Email"
+          placeholder={t('auth.email')}
           placeholderTextColor={theme.textMuted}
           value={email}
           onChangeText={setEmail}
@@ -61,7 +64,7 @@ export default function LoginScreen({ navigation }: any) {
         />
         <TextInput
           style={[styles.input, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]}
-          placeholder="Mot de passe"
+          placeholder={t('auth.password')}
           placeholderTextColor={theme.textMuted}
           value={password}
           onChangeText={setPassword}
@@ -69,7 +72,7 @@ export default function LoginScreen({ navigation }: any) {
         />
 
         <Button
-          label={isLoading ? 'Connexion...' : 'Se connecter'}
+          label={isLoading ? t('auth.loggingIn') : t('common.signIn')}
           onPress={handleLogin}
           loading={isLoading}
           style={{ marginTop: spacing.sm }}
@@ -81,13 +84,13 @@ export default function LoginScreen({ navigation }: any) {
           style={{ marginTop: spacing.lg }}
         >
           <Text style={[typography.caption, { color: theme.gold, textAlign: 'center' }]}>
-            Mot de passe oublié ?
+            {t('auth.forgotPassword')}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => navigation.navigate('Register')} style={{ marginTop: spacing.lg }}>
           <Text style={[typography.caption, { color: theme.textSecondary, textAlign: 'center' }]}>
-            Pas encore de compte ? Créer un compte
+            {t('auth.noAccount')}
           </Text>
         </TouchableOpacity>
       </View>

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
+import { intlLocale } from '../i18n';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { appointmentsApi, Slot } from '../api/appointments';
@@ -32,9 +34,9 @@ function getNextDays(count: number) {
     const d = new Date(today);
     d.setDate(today.getDate() + i);
     const dateStr = jourLocal(d);
-    const weekday = d.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', '');
+    const weekday = d.toLocaleDateString(intlLocale(), { weekday: 'short' }).replace('.', '');
     const dayNum = d.getDate();
-    const month = d.toLocaleDateString('fr-FR', { month: 'long' });
+    const month = d.toLocaleDateString(intlLocale(), { month: 'long' });
     days.push({ dateStr, weekday, dayNum, month });
   }
   return days;
@@ -42,6 +44,7 @@ function getNextDays(count: number) {
 
 export default function BookingScreen({ route, navigation }: any) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { serviceId } = route.params;
 
@@ -87,11 +90,11 @@ export default function BookingScreen({ route, navigation }: any) {
   // Libellé du mois de la date sélectionnée (ex. « MARS 2026 »)
   const selectedDay = days.find((d) => d.dateStr === selectedDate)!;
   const monthLabel = `${selectedDay.month} ${selectedDate.split('-')[0]}`.toUpperCase();
-  const slotsLabel = `Créneaux du ${selectedDay.dayNum} ${selectedDay.month}`;
+  const slotsLabel = t('booking.slotsOf', { day: selectedDay.dayNum, month: selectedDay.month });
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <Header title="Choisir un créneau" onBack={() => navigation.goBack()} />
+      <Header title={t('booking.title')} onBack={() => navigation.goBack()} />
 
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.xl }}
@@ -147,11 +150,11 @@ export default function BookingScreen({ route, navigation }: any) {
           <ActivityIndicator size="large" color={theme.gold} style={{ marginTop: spacing.xl }} />
         ) : closed ? (
           <Text style={[typography.body, { color: theme.textSecondary, textAlign: 'center', marginTop: spacing.xl }]}>
-            Le centre est fermé ce jour-là.
+            {t('booking.closed')}
           </Text>
         ) : slots.length === 0 ? (
           <Text style={[typography.body, { color: theme.textSecondary, textAlign: 'center', marginTop: spacing.xl }]}>
-            Aucun créneau disponible.
+            {t('booking.noSlots')}
           </Text>
         ) : (
           <View style={styles.slotsGrid}>
@@ -200,7 +203,11 @@ export default function BookingScreen({ route, navigation }: any) {
         ]}
       >
         <Button
-          label={selectedSlot ? `Continuer · ${selectedDay.dayNum} ${selectedDay.month}, ${selectedSlot}` : 'Choisir un créneau'}
+          label={
+            selectedSlot
+              ? t('booking.continueWith', { day: selectedDay.dayNum, month: selectedDay.month, time: selectedSlot })
+              : t('booking.title')
+          }
           onPress={handleContinue}
           disabled={!selectedSlot}
         />

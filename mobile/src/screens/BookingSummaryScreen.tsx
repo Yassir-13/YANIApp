@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator,ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
+import { intlLocale } from '../i18n';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { servicesApi, Service } from '../api/services';
@@ -13,12 +15,13 @@ import { useAlert } from '../components/AlertProvider';
 
 function formatDate(dateStr: string): string {
   const d = new Date(`${dateStr}T12:00:00`);
-  const s = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const s = d.toLocaleDateString(intlLocale(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 export default function BookingSummaryScreen({ route, navigation }: any) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { alert } = useAlert();
   // startAt : instant UTC fourni par le serveur (voir BookingScreen).
@@ -38,7 +41,7 @@ export default function BookingSummaryScreen({ route, navigation }: any) {
       await appointmentsApi.create(serviceId, startAt);
       navigation.replace('BookingConfirmation', { serviceName: service?.name, date, time });
     } catch (e: any) {
-      alert('Erreur', e.response?.data?.message || 'Réservation impossible.');
+      alert(t('common.error'), e.response?.data?.message || t('booking.bookingFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -54,7 +57,7 @@ export default function BookingSummaryScreen({ route, navigation }: any) {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <Header title="Récapitulatif" onBack={() => navigation.goBack()} />
+      <Header title={t('booking.summaryTitle')} onBack={() => navigation.goBack()} />
 
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.xl }}
@@ -62,17 +65,17 @@ export default function BookingSummaryScreen({ route, navigation }: any) {
       >
         {service && (
           <View style={{ marginBottom: spacing.lg }}>
-            <ServiceMiniCard service={service} subtitle="Institut Yani Concept" />
+            <ServiceMiniCard service={service} subtitle={t('booking.brandSubtitle')} />
           </View>
         )}
 
         {/* Détails */}
         <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-          <Row label="Date" value={formatDate(date)} theme={theme} />
+          <Row label={t('booking.date')} value={formatDate(date)} theme={theme} />
           <Divider theme={theme} />
-          <Row label="Heure" value={time} theme={theme} />
+          <Row label={t('booking.time')} value={time} theme={theme} />
           <Divider theme={theme} />
-          <Row label="Durée" value={service ? formatDuration(service.durationMin) : '—'} theme={theme} />
+          <Row label={t('services.duration')} value={service ? formatDuration(service.durationMin) : '—'} theme={theme} />
         </View>
       </ScrollView>
 
@@ -84,13 +87,13 @@ export default function BookingSummaryScreen({ route, navigation }: any) {
         ]}
       >
         <View style={styles.totalRow}>
-          <Text style={[typography.body, { color: theme.textSecondary }]}>Total à régler sur place</Text>
+          <Text style={[typography.body, { color: theme.textSecondary }]}>{t('booking.totalOnSite')}</Text>
           <Text style={[typography.priceLg, { color: theme.gold }]}>
             {service ? formatPrice(service.price) : '—'}
           </Text>
         </View>
         <Button
-          label={submitting ? 'Confirmation…' : 'Confirmer la réservation'}
+          label={submitting ? t('booking.confirming') : t('booking.confirmBooking')}
           onPress={handleConfirm}
           loading={submitting}
         />

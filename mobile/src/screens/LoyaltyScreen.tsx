@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { useAuthStore } from '../stores/authStore';
@@ -21,11 +22,13 @@ import { useAlert } from '../components/AlertProvider';
 import Button from '../components/Button';
 import ErrorView from '../components/ErrorView';
 import Drop from '../components/Drop';
+import { mirroredIcon } from '../i18n';
 
 export default function LoyaltyScreen() {
   const { theme } = useTheme();
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const { alert, show } = useAlert();
   const user = useAuthStore((s) => s.user);
 
@@ -38,7 +41,9 @@ export default function LoyaltyScreen() {
   const [claimingId, setClaimingId] = useState<string | null>(null);
   const [redeemingId, setRedeemingId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Un drapeau plutôt que le message lui-même : un texte figé dans l'état
+  // resterait dans l'ancienne langue après un changement de langue.
+  const [error, setError] = useState(false);
 
   // Cet écran lance six requêtes à chaque focus. Deux allers-retours rapides
   // en lançaient douze, et l'affichage revenait à la dernière RÉPONSE ARRIVÉE
@@ -50,7 +55,7 @@ export default function LoyaltyScreen() {
     const demande = ++derniereDemande.current;
     const depassee = () => demande !== derniereDemande.current;
     try {
-      setError(null);
+      setError(false);
       const [acc, hist, rwd, mil, grt, vch] = await Promise.all([
         loyaltyApi.getMyAccount(),
         loyaltyApi.getMyHistory(),
@@ -68,7 +73,7 @@ export default function LoyaltyScreen() {
       setVouchers(vch);
     } catch {
       if (depassee()) return;
-      setError('Impossible de charger votre fidélité.');
+      setError(true);
     } finally {
       if (!depassee()) setIsLoading(false);
     }
@@ -94,7 +99,7 @@ export default function LoyaltyScreen() {
     setVouchers([]);
     setClaimingId(null);
     setRedeemingId(null);
-    setError(null);
+    setError(false);
     setIsLoading(!!user);
   }, [user?.id]);
 
@@ -159,31 +164,31 @@ export default function LoyaltyScreen() {
       title: titre,
       message,
       buttons: [
-        { text: 'Plus tard', style: 'cancel' },
-        { text: 'Voir mon bon', onPress: () => navigation.navigate('MyRewards') },
+        { text: t('common.later'), style: 'cancel' },
+        { text: t('loyalty.seeMyVoucher'), onPress: () => navigation.navigate('MyRewards') },
       ],
     });
   };
 
   const handleClaim = (grant: MilestoneGrant) => {
     show({
-      title: 'Récompense offerte',
-      message: `Réclamer « ${grant.reward.name} » ? Présentez-la ensuite à l'institut.`,
+      title: t('loyalty.claimTitle'),
+      message: t('loyalty.claimMessage', { reward: grant.reward.name }),
       buttons: [
-        { text: 'Annuler', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Réclamer',
+          text: t('loyalty.claim'),
           onPress: async () => {
             setClaimingId(grant.id);
             try {
               const res = await loyaltyApi.claimGrant(grant.id);
               await load();
               annonceBon(
-                'Récompense réclamée',
-                `Votre code : ${res.voucher.code}. Présentez-le à l'institut.`
+                t('loyalty.claimedTitle'),
+                t('loyalty.voucherCode', { code: res.voucher.code })
               );
             } catch (e: any) {
-              alert('Erreur', e.response?.data?.message || 'Réclamation impossible.');
+              alert(t('common.error'), e.response?.data?.message || t('loyalty.claimFailed'));
             } finally {
               setClaimingId(null);
             }
@@ -195,12 +200,12 @@ export default function LoyaltyScreen() {
 
   const handleRedeem = (reward: Reward) => {
     show({
-      title: 'Échanger',
-      message: `Échanger « ${reward.name} » contre ${reward.pointsCost} points ?`,
+      title: t('loyalty.redeemTitle'),
+      message: t('loyalty.redeemMessage', { reward: reward.name, points: reward.pointsCost }),
       buttons: [
-        { text: 'Annuler', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Confirmer',
+          text: t('common.confirm'),
           onPress: async () => {
             // Verrou pendant la requête : sans lui, rien n'empêchait de
             // confirmer deux fois. Le serveur refuse bien le second débit,
@@ -210,11 +215,11 @@ export default function LoyaltyScreen() {
               const res = await loyaltyApi.redeem(reward.id);
               await load();
               annonceBon(
-                'Récompense échangée',
-                `Votre code : ${res.voucher.code}. Présentez-le à l'institut.`
+                t('loyalty.redeemedTitle'),
+                t('loyalty.voucherCode', { code: res.voucher.code })
               );
             } catch (e: any) {
-              alert('Erreur', e.response?.data?.message || 'Échange impossible.');
+              alert(t('common.error'), e.response?.data?.message || t('loyalty.redeemFailed'));
             } finally {
               setRedeemingId(null);
             }
@@ -228,11 +233,11 @@ export default function LoyaltyScreen() {
   if (!user) {
     return (
       <View style={[styles.centered, { backgroundColor: theme.background, paddingTop: insets.top }]}>
-        <Text style={[typography.display, { color: theme.text }]}>Fidélité</Text>
+        <Text style={[typography.display, { color: theme.text }]}>{t('loyalty.title')}</Text>
         <Text style={[typography.body, { color: theme.textSecondary, textAlign: 'center', marginTop: spacing.md }]}>
-          Connectez-vous pour suivre vos points et profiter de vos récompenses.
+          {t('loyalty.signedOutSubtitle')}
         </Text>
-        <Button label="Se connecter" onPress={() => navigation.navigate('Login')} style={{ marginTop: spacing.xl, alignSelf: 'stretch' }} />
+        <Button label={t('common.signIn')} onPress={() => navigation.navigate('Login')} style={{ marginTop: spacing.xl, alignSelf: 'stretch' }} />
       </View>
     );
   }
@@ -248,7 +253,7 @@ export default function LoyaltyScreen() {
   if (error) {
     return (
       <View style={[styles.fill, { backgroundColor: theme.background, paddingTop: insets.top + spacing.md }]}>
-        <ErrorView message={error} onRetry={load} />
+        <ErrorView message={t('loyalty.loadFailed')} onRetry={load} />
       </View>
     );
   }
@@ -259,7 +264,7 @@ export default function LoyaltyScreen() {
       contentContainerStyle={{ paddingTop: insets.top + spacing.md, paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl }}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={[typography.display, { color: theme.text, marginBottom: spacing.lg }]}>Fidélité</Text>
+      <Text style={[typography.display, { color: theme.text, marginBottom: spacing.lg }]}>{t('loyalty.title')}</Text>
 
       {/* Carte solde à halo */}
       <View style={[styles.balanceCard, { backgroundColor: theme.loyaltyBg }]}>
@@ -273,11 +278,11 @@ export default function LoyaltyScreen() {
         <View style={styles.balanceTop}>
           <View style={{ flex: 1 }}>
             <Text style={[typography.sectionLabel, { color: theme.goldLight, letterSpacing: 1.5 }]}>
-              Votre solde
+              {t('loyalty.yourBalance')}
             </Text>
             <View style={styles.pointsRow}>
               <Text style={[typography.priceLg, { color: theme.goldLight, fontSize: 40 }]}>{balance}</Text>
-              <Text style={[typography.body, { color: theme.loyaltyText, marginLeft: 6 }]}>points</Text>
+              <Text style={[typography.body, { color: theme.loyaltyText, marginLeft: 6 }]}>{t('common.points')}</Text>
             </View>
           </View>
           <Drop size={44} colors={[theme.goldLight, theme.gold, theme.goldDeep]} />
@@ -289,7 +294,7 @@ export default function LoyaltyScreen() {
               <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: theme.gold }]} />
             </View>
             <Text style={[typography.caption, { color: 'rgba(245,239,225,0.7)', marginTop: spacing.sm }]}>
-              Plus que {remaining} pts pour « {nextReward.name} »
+              {t('loyalty.remainingForReward', { points: remaining, reward: nextReward.name })}
             </Text>
           </>
         )}
@@ -299,7 +304,7 @@ export default function LoyaltyScreen() {
           <View style={styles.visitBlock}>
             <View style={styles.visitHeader}>
               <Text style={[typography.sectionLabel, { color: theme.goldLight, letterSpacing: 1.5 }]}>
-                Vos visites
+                {t('loyalty.yourVisits')}
               </Text>
               <Text style={[typography.caption, { color: theme.loyaltyText }]}>
                 {visitsInCycle} / {nextMilestone.milestone.visitThreshold}
@@ -323,9 +328,10 @@ export default function LoyaltyScreen() {
             </View>
 
             <Text style={[typography.caption, { color: 'rgba(245,239,225,0.7)', marginTop: spacing.sm }]}>
-              {nextMilestone.remaining === 1
-                ? `Encore 1 visite et « ${nextMilestone.milestone.reward.name} » vous est offert`
-                : `Encore ${nextMilestone.remaining} visites pour « ${nextMilestone.milestone.reward.name} » offert`}
+              {t('loyalty.visitsRemaining', {
+                count: nextMilestone.remaining,
+                reward: nextMilestone.milestone.reward.name,
+              })}
             </Text>
           </View>
         )}
@@ -339,8 +345,8 @@ export default function LoyaltyScreen() {
         accessibilityRole="button"
         accessibilityLabel={
           aPresenter > 0
-            ? `Mes récompenses, ${aPresenter} à présenter`
-            : 'Mes récompenses'
+            ? t('loyalty.myRewardsA11y', { count: aPresenter })
+            : t('loyalty.myRewards')
         }
         style={[
           styles.vouchersRow,
@@ -352,14 +358,12 @@ export default function LoyaltyScreen() {
         </View>
         <View style={{ flex: 1 }}>
           <Text style={[typography.subtitle, { color: theme.text }]}>
-            Mes récompenses
+            {t('loyalty.myRewards')}
           </Text>
           <Text style={[typography.small, { color: theme.textSecondary, marginTop: 2 }]}>
             {aPresenter === 0
-              ? 'Vos récompenses obtenues et utilisées'
-              : aPresenter === 1
-                ? '1 récompense à présenter à l’institut'
-                : `${aPresenter} récompenses à présenter à l’institut`}
+              ? t('loyalty.myRewardsEmpty')
+              : t('loyalty.myRewardsPending', { count: aPresenter })}
           </Text>
         </View>
         {aPresenter > 0 && (
@@ -369,14 +373,14 @@ export default function LoyaltyScreen() {
             </Text>
           </View>
         )}
-        <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
+        <Ionicons name={mirroredIcon('chevron-forward')} size={20} color={theme.textMuted} />
       </TouchableOpacity>
 
       {/* Récompenses offertes débloquées, en attente de réclamation */}
       {unclaimed.length > 0 && (
         <>
           <Text style={[typography.headingSm, { color: theme.text, marginTop: spacing.xl, marginBottom: spacing.md }]}>
-            Offert pour vous
+            {t('loyalty.grantsTitle')}
           </Text>
           {unclaimed.map((g) => (
             <View
@@ -389,7 +393,7 @@ export default function LoyaltyScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={[typography.subtitle, { color: theme.text }]}>{g.reward.name}</Text>
                 <Text style={[typography.small, { color: theme.textSecondary, marginTop: 2 }]}>
-                  Débloqué à votre {g.cycle * g.milestone.visitThreshold}e visite
+                  {t('loyalty.grantUnlockedAt', { count: g.cycle * g.milestone.visitThreshold })}
                 </Text>
               </View>
               <TouchableOpacity
@@ -397,11 +401,11 @@ export default function LoyaltyScreen() {
                 disabled={claimingId === g.id}
                 activeOpacity={0.85}
                 accessibilityRole="button"
-                accessibilityLabel={`Réclamer ${g.reward.name}`}
+                accessibilityLabel={t('loyalty.claimA11y', { reward: g.reward.name })}
                 style={[styles.claimBtn, { backgroundColor: theme.gold, opacity: claimingId === g.id ? 0.6 : 1 }]}
               >
                 <Text style={[typography.subtitle, { color: theme.surface }]}>
-                  {claimingId === g.id ? '…' : 'Réclamer'}
+                  {claimingId === g.id ? '…' : t('loyalty.claim')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -411,10 +415,10 @@ export default function LoyaltyScreen() {
 
       {/* Récompenses en grille 2 colonnes */}
       <Text style={[typography.headingSm, { color: theme.text, marginTop: spacing.xl, marginBottom: spacing.md }]}>
-        Récompenses
+        {t('loyalty.rewardsTitle')}
       </Text>
       {rewards.length === 0 ? (
-        <Text style={[typography.caption, { color: theme.textMuted }]}>Aucune récompense disponible.</Text>
+        <Text style={[typography.caption, { color: theme.textMuted }]}>{t('loyalty.rewardsEmpty')}</Text>
       ) : (
         <View style={styles.grid}>
           {rewards.map((r) => {
@@ -435,8 +439,12 @@ export default function LoyaltyScreen() {
                 accessibilityState={{ disabled }}
                 accessibilityLabel={
                   affordable
-                    ? `${r.name}, ${r.pointsCost} points`
-                    : `${r.name}, ${r.pointsCost} points, il vous manque ${r.pointsCost - balance} points`
+                    ? t('loyalty.rewardA11y', { reward: r.name, points: r.pointsCost })
+                    : t('loyalty.rewardA11yMissing', {
+                        reward: r.name,
+                        cost: r.pointsCost,
+                        missing: r.pointsCost - balance,
+                      })
                 }
                 style={[
                   styles.rewardCard,
@@ -454,11 +462,11 @@ export default function LoyaltyScreen() {
                   {r.name}
                 </Text>
                 <Text style={[typography.caption, { color: affordable ? theme.gold : theme.textMuted, marginTop: 2 }]}>
-                  {r.pointsCost} pts
+                  {r.pointsCost} {t('common.pts')}
                 </Text>
                 {!affordable && (
                   <Text style={[typography.small, { color: theme.textMuted, marginTop: 2 }]}>
-                    Il vous manque {r.pointsCost - balance} pts
+                    {t('loyalty.missingPoints', { points: r.pointsCost - balance })}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -469,15 +477,16 @@ export default function LoyaltyScreen() {
 
       {/* Historique */}
       <Text style={[typography.headingSm, { color: theme.text, marginTop: spacing.xl, marginBottom: spacing.md }]}>
-        Historique
+        {t('loyalty.historyTitle')}
       </Text>
       {history.length === 0 ? (
-        <Text style={[typography.caption, { color: theme.textMuted }]}>Aucune transaction.</Text>
+        <Text style={[typography.caption, { color: theme.textMuted }]}>{t('loyalty.historyEmpty')}</Text>
       ) : (
         history.map((tx) => {
           // Une récompense de palier ne bouge pas le solde : ni gain ni dépense.
           const offered = tx.type === 'MILESTONE';
           const positive = tx.pointsDelta >= 0;
+          const typeKey = keyForType(tx.type);
           return (
             <View key={tx.id} style={[styles.txRow, { borderBottomColor: theme.border }]}>
               <View
@@ -493,7 +502,9 @@ export default function LoyaltyScreen() {
                 />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[typography.bodyMedium, { color: theme.text }]}>{labelForType(tx.type)}</Text>
+                <Text style={[typography.bodyMedium, { color: theme.text }]}>
+                  {typeKey ? t(typeKey) : tx.type}
+                </Text>
                 {/* « Récompense échangée » sans dire laquelle ne servait à
                     rien des mois plus tard. Le nom vient du serveur. */}
                 <Text style={[typography.small, { color: theme.textMuted }]}>
@@ -507,7 +518,7 @@ export default function LoyaltyScreen() {
                   { color: offered ? theme.gold : positive ? theme.success : theme.danger },
                 ]}
               >
-                {offered ? 'Offert' : `${positive ? '+' : ''}${tx.pointsDelta}`}
+                {offered ? t('loyalty.offered') : `${positive ? '+' : ''}${tx.pointsDelta}`}
               </Text>
             </View>
           );
@@ -517,13 +528,16 @@ export default function LoyaltyScreen() {
   );
 }
 
-function labelForType(type: string): string {
+// Renvoie la CLÉ de traduction et non le libellé : la fonction vit hors du
+// composant, elle n'a donc pas accès à `t`. Un type inconnu renvoie `null`,
+// et l'écran retombe alors sur le code brut du serveur.
+function keyForType(type: string) {
   switch (type) {
-    case 'EARN': return 'Points gagnés';
-    case 'REDEEM': return 'Récompense échangée';
-    case 'MANUAL': return 'Ajout manuel';
-    case 'MILESTONE': return 'Récompense offerte';
-    default: return type;
+    case 'EARN': return 'loyalty.typeEarn' as const;
+    case 'REDEEM': return 'loyalty.typeRedeem' as const;
+    case 'MANUAL': return 'loyalty.typeManual' as const;
+    case 'MILESTONE': return 'loyalty.typeMilestone' as const;
+    default: return null;
   }
 }
 

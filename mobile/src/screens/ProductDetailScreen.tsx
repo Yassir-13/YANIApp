@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Image, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { productsApi, Product } from '../api/products';
@@ -9,12 +10,14 @@ import Badge from '../components/Badge';
 import DetailBottomBar from '../components/DetailBottomBar';
 import { useCartStore } from '../stores/cartStore';
 import { useAlert } from '../components/AlertProvider';
+import { mirroredIcon } from '../i18n';
 
 const { width } = Dimensions.get('window');
 const HERO_H = width * 0.9;
 
 export default function ProductDetailScreen({ route, navigation }: any) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { productId } = route.params;
 
@@ -43,7 +46,7 @@ export default function ProductDetailScreen({ route, navigation }: any) {
   if (!product) {
     return (
       <View style={[styles.centered, { backgroundColor: theme.background }]}>
-        <Text style={[typography.body, { color: theme.danger }]}>Produit introuvable.</Text>
+        <Text style={[typography.body, { color: theme.danger }]}>{t('products.notFound')}</Text>
       </View>
     );
   }
@@ -56,7 +59,7 @@ export default function ProductDetailScreen({ route, navigation }: any) {
 
   const handleAddToCart = () => {
     addToCart(product, 1);
-    alert('Ajouté au panier', `« ${product.name} » a été ajouté à votre panier.`);
+    alert(t('products.addedTitle'), t('products.addedMessage', { name: product.name }));
   };
 
   return (
@@ -75,7 +78,7 @@ export default function ProductDetailScreen({ route, navigation }: any) {
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           style={[styles.round, { backgroundColor: 'rgba(20,16,12,0.55)' }]}
         >
-          <Ionicons name="chevron-back" size={22} color="#F8F8F8" />
+          <Ionicons name={mirroredIcon('chevron-back')} size={22} color="#F8F8F8" />
         </TouchableOpacity>
       </View>
 
@@ -114,18 +117,23 @@ export default function ProductDetailScreen({ route, navigation }: any) {
               explication se lit comme une panne de l'app. */}
           {inStock && restant <= 0 && (
             <Text style={[typography.small, { color: theme.textMuted, marginTop: spacing.md }]}>
-              Tout le stock disponible est déjà dans votre panier
-              {product.stockQty > 1 ? ` (${product.stockQty})` : ''}.
+              {product.stockQty > 1
+                ? t('products.allStockInCartQty', { qty: product.stockQty })
+                : t('products.allStockInCart')}
             </Text>
           )}
         </View>
       </ScrollView>
 
       <DetailBottomBar
-        priceLabel="Prix"
+        priceLabel={t('products.price')}
         price={product.price}
         ctaLabel={
-          !inStock ? 'Épuisé' : restant > 0 ? 'Ajouter au panier' : 'Maximum atteint'
+          !inStock
+            ? t('products.outOfStock')
+            : restant > 0
+              ? t('products.addToCart')
+              : t('products.maxReached')
         }
         onPress={handleAddToCart}
         disabled={restant <= 0}

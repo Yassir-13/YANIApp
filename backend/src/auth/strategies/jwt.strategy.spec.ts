@@ -23,6 +23,7 @@ describe('JwtStrategy — validation du porteur', () => {
     phone: null,
     passwordHash: 'hash',
     role: Role.CLIENT,
+    locale: 'fr',
     firstName: 'Fati',
     lastName: null,
     createdAt: new Date(),

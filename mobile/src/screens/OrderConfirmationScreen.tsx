@@ -2,6 +2,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing } from '../theme/typography';
 import { formatPrice } from '../utils/format';
@@ -9,13 +10,14 @@ import Button from '../components/Button';
 
 export default function OrderConfirmationScreen({ route, navigation }: any) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { fulfillment, total } = route.params;
 
   const message =
     fulfillment === 'PICKUP'
-      ? "Votre commande est enregistrée. L'institut vous appellera pour confirmer le retrait."
-      : "Votre commande est enregistrée. L'institut vous appellera pour confirmer la livraison.";
+      ? t('orders.confirmedPickup')
+      : t('orders.confirmedDelivery');
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background, paddingBottom: insets.bottom + spacing.lg }]}>
@@ -33,7 +35,7 @@ export default function OrderConfirmationScreen({ route, navigation }: any) {
         </View>
 
         <Text style={[typography.display, { color: theme.text, textAlign: 'center', marginTop: spacing.xl }]}>
-          Commande confirmée
+          {t('orders.confirmedTitle')}
         </Text>
         <Text style={[typography.body, { color: theme.textSecondary, textAlign: 'center', marginTop: spacing.sm }]}>
           {message}
@@ -48,14 +50,14 @@ export default function OrderConfirmationScreen({ route, navigation }: any) {
 
       <View style={{ paddingHorizontal: spacing.lg }}>
         <Button
-          label="Voir mes commandes"
+          label={t('orders.seeMyOrders')}
           onPress={() => {
             navigation.popToTop();
             navigation.navigate('MyOrders');
           }}
         />
         <Button
-          label="Retour à l'accueil"
+          label={t('orders.backHome')}
           variant="outline"
           onPress={() => navigation.popToTop()}
           style={{ marginTop: spacing.md }}

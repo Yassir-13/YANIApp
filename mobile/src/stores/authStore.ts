@@ -6,6 +6,7 @@ import axios from 'axios';
 import { secureStorage } from '../utils/secureStorage';
 import { setSessionExpiredHandler } from '../api/sessionEvents';
 import { useCartStore } from './cartStore';
+import { currentLanguage } from '../i18n';
 
 interface User {
   id: string;
@@ -66,6 +67,10 @@ export const useAuthStore = create<AuthState>((set) => ({
         firstName,
         lastName,
         phone,
+        // Enregistrée dès l'inscription : le code de confirmation, tout
+        // premier email reçu, part ainsi déjà dans la bonne langue.
+        // `axios` direct et non `apiClient` ici : pas d'en-tête à ajouter.
+        locale: currentLanguage(),
       });
       await secureStorage.saveTokens(data.accessToken, data.refreshToken);
       set({ user: data.user });

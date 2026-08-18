@@ -1,64 +1,95 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { useAuthStore } from '../stores/authStore';
 import { useAlert } from '../components/AlertProvider';
 import Button from '../components/Button';
 import SettingsRow from '../components/SettingsRow';
+import { usersApi } from '../api/users';
+import { LANGUAGES, LANGUAGE_NAMES, currentLanguage, setLanguage, type Language, mirroredIcon } from '../i18n';
 
 export default function ProfileScreen({ navigation }: any) {
   const { theme, preference, setPreference } = useTheme();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const { alert, show } = useAlert();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const deleteAccount = useAuthStore((s) => s.deleteAccount);
 
   const themeOptions: { key: 'system' | 'light' | 'dark'; label: string }[] = [
-    { key: 'system', label: 'Système' },
-    { key: 'light', label: 'Clair' },
-    { key: 'dark', label: 'Sombre' },
+    { key: 'system', label: t('profile.themeSystem') },
+    { key: 'light', label: t('profile.themeLight') },
+    { key: 'dark', label: t('profile.themeDark') },
   ];
+
+  // `useTranslation` réabonne le composant aux changements de langue : la
+  // coche se déplace donc dès la sélection, sans attendre le redémarrage.
+  const activeLanguage = currentLanguage();
+
+  const handleLanguageChange = async (lang: Language) => {
+    const { needsRestart } = await setLanguage(lang);
+
+    // Le serveur doit connaître la langue pour ses EMAILS : ils partent
+    // longtemps après, sans requête en cours dont lire l'en-tête.
+    //
+    // Volontairement silencieux en cas d'échec : la langue de l'application
+    // est déjà changée, et faire échouer un simple choix de langue à cause du
+    // réseau serait absurde. La prochaine modification du profil corrigera.
+    if (user) {
+      usersApi.updateProfile({ locale: lang }).catch(() => {});
+    }
+
+    if (needsRestart) {
+      // Le message s'affiche dans la langue qui vient d'être choisie — c'est
+      // elle que la cliente doit pouvoir lire.
+      show({
+        title: t('language.restartTitle'),
+        message: t('language.restartMessage'),
+        buttons: [{ text: t('language.restartUnderstood') }],
+      });
+    }
+  };
 
   const confirmLogout = () => {
     show({
-      title: 'Se déconnecter',
-      message: 'Voulez-vous vraiment vous déconnecter ?',
+      title: t('profile.logout'),
+      message: t('profile.logoutConfirmMessage'),
       buttons: [
-        { text: 'Annuler', style: 'cancel' },
-        { text: 'Se déconnecter', style: 'destructive', onPress: () => logout() },
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('profile.logout'), style: 'destructive', onPress: () => logout() },
       ],
     });
   };
 
   const confirmDelete = () => {
     show({
-      title: 'Supprimer le compte',
-      message:
-        'Cette action est définitive. Toutes vos données (rendez-vous, points de fidélité) seront supprimées. Voulez-vous continuer ?',
+      title: t('profile.deleteTitle'),
+      message: t('profile.deleteMessage'),
       buttons: [
-        { text: 'Annuler', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Supprimer',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: () => {
             // Seconde confirmation forte avant l'irréversible
             show({
-              title: 'Confirmer',
-              message: 'Confirmez-vous la suppression définitive de votre compte ?',
+              title: t('profile.deleteConfirmTitle'),
+              message: t('profile.deleteConfirmMessage'),
               buttons: [
-                { text: 'Annuler', style: 'cancel' },
+                { text: t('common.cancel'), style: 'cancel' },
                 {
-                  text: 'Oui, supprimer',
+                  text: t('profile.deleteConfirmAction'),
                   style: 'destructive',
                   onPress: async () => {
                     try {
                       await deleteAccount();
                       navigation.goBack();
                     } catch (e: any) {
-                      alert('Erreur', e.response?.data?.message || 'Suppression impossible.');
+                      alert(t('common.error'), e.response?.data?.message || t('profile.deleteFailed'));
                     }
                   },
                 },
@@ -73,7 +104,7 @@ export default function ProfileScreen({ navigation }: any) {
   const displayName =
     user && (user.firstName || user.lastName)
       ? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim()
-      : 'Client';
+      : t('profile.defaultName');
 
   return (
     <ScrollView
@@ -81,7 +112,7 @@ export default function ProfileScreen({ navigation }: any) {
       contentContainerStyle={{ paddingTop: insets.top + spacing.md, paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl }}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={[typography.display, { color: theme.text, marginBottom: spacing.lg }]}>Profil</Text>
+      <Text style={[typography.display, { color: theme.text, marginBottom: spacing.lg }]}>{t('profile.title')}</Text>
 
       {/* Carte compte */}
       <View style={[styles.accountCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
@@ -95,9 +126,9 @@ export default function ProfileScreen({ navigation }: any) {
           </View>
         ) : (
           <View style={{ flex: 1 }}>
-            <Text style={[typography.subtitle, { color: theme.text }]}>Bonjour, invité</Text>
+            <Text style={[typography.subtitle, { color: theme.text }]}>{t('profile.guestGreeting')}</Text>
             <Text style={[typography.caption, { color: theme.textSecondary }]}>
-              Connectez-vous pour vos points & réservations
+              {t('profile.guestSubtitle')}
             </Text>
           </View>
         )}
@@ -116,18 +147,18 @@ export default function ProfileScreen({ navigation }: any) {
         >
           <Ionicons name="mail-unread-outline" size={22} color={theme.gold} />
           <View style={{ flex: 1 }}>
-            <Text style={[typography.body, { color: theme.text }]}>Confirmez votre adresse email</Text>
+            <Text style={[typography.body, { color: theme.text }]}>{t('profile.verifyEmailTitle')}</Text>
             <Text style={[typography.caption, { color: theme.textSecondary, marginTop: 2 }]}>
-              Nécessaire pour récupérer votre compte en cas d’oubli de mot de passe.
+              {t('profile.verifyEmailSubtitle')}
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+          <Ionicons name={mirroredIcon('chevron-forward')} size={18} color={theme.textMuted} />
         </TouchableOpacity>
       )}
 
       {!user && (
         <Button
-          label="Se connecter / Créer un compte"
+          label={t('profile.signInOrRegister')}
           onPress={() => navigation.navigate('Login')}
           style={{ marginTop: spacing.md }}
         />
@@ -136,23 +167,23 @@ export default function ProfileScreen({ navigation }: any) {
       {/* Compte (si connecté) */}
       {user && (
         <>
-          <SectionLabel theme={theme}>Compte</SectionLabel>
+          <SectionLabel theme={theme}>{t('profile.sectionAccount')}</SectionLabel>
           <Group theme={theme}>
-            <SettingsRow icon="person-outline" label="Modifier le profil" onPress={() => navigation.navigate('EditProfile')} />
-            <SettingsRow icon="bag-outline" label="Mes commandes" onPress={() => navigation.navigate('MyOrders')} />
-            <SettingsRow icon="calendar-outline" label="Mes rendez-vous" onPress={() => navigation.navigate('MyAppointments')} />
-            <SettingsRow icon="heart-outline" label="Ma fidélité" onPress={() => { navigation.goBack(); navigation.navigate('Main', { screen: 'Fidélité' }); }} last />
+            <SettingsRow icon="person-outline" label={t('profile.editProfile')} onPress={() => navigation.navigate('EditProfile')} />
+            <SettingsRow icon="bag-outline" label={t('profile.myOrders')} onPress={() => navigation.navigate('MyOrders')} />
+            <SettingsRow icon="calendar-outline" label={t('profile.myAppointments')} onPress={() => navigation.navigate('MyAppointments')} />
+            <SettingsRow icon="heart-outline" label={t('profile.myLoyalty')} onPress={() => { navigation.goBack(); navigation.navigate('Main', { screen: 'Fidélité' }); }} last />
           </Group>
 
-          <SectionLabel theme={theme}>Sécurité</SectionLabel>
+          <SectionLabel theme={theme}>{t('profile.sectionSecurity')}</SectionLabel>
           <Group theme={theme}>
-            <SettingsRow icon="lock-closed-outline" label="Changer le mot de passe" onPress={() => navigation.navigate('ChangePassword')} last />
+            <SettingsRow icon="lock-closed-outline" label={t('profile.changePassword')} onPress={() => navigation.navigate('ChangePassword')} last />
           </Group>
         </>
       )}
 
       {/* Apparence */}
-      <SectionLabel theme={theme}>Apparence</SectionLabel>
+      <SectionLabel theme={theme}>{t('profile.sectionAppearance')}</SectionLabel>
       <Group theme={theme}>
         {themeOptions.map((opt, i) => (
           <TouchableOpacity
@@ -172,12 +203,36 @@ export default function ProfileScreen({ navigation }: any) {
         ))}
       </Group>
 
+      {/* Langue.
+          Chaque langue est écrite dans sa propre écriture, jamais traduite :
+          une cliente qui ne lit pas le français ne trouverait pas « Arabe »
+          dans une liste rédigée en français. */}
+      <SectionLabel theme={theme}>{t('profile.sectionLanguage')}</SectionLabel>
+      <Group theme={theme}>
+        {LANGUAGES.map((lang, i) => (
+          <TouchableOpacity
+            key={lang}
+            onPress={() => handleLanguageChange(lang)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityState={{ selected: activeLanguage === lang }}
+            style={[
+              styles.themeRow,
+              { borderBottomColor: theme.border, borderBottomWidth: i < LANGUAGES.length - 1 ? StyleSheet.hairlineWidth : 0 },
+            ]}
+          >
+            <Text style={[typography.body, { color: theme.text }]}>{LANGUAGE_NAMES[lang]}</Text>
+            {activeLanguage === lang && <Ionicons name="checkmark" size={20} color={theme.gold} />}
+          </TouchableOpacity>
+        ))}
+      </Group>
+
       {/* Actions de compte */}
       {user && (
         <>
-          <Button label="Se déconnecter" variant="outline" onPress={confirmLogout} style={{ marginTop: spacing.xl }} />
+          <Button label={t('profile.logout')} variant="outline" onPress={confirmLogout} style={{ marginTop: spacing.xl }} />
           <TouchableOpacity onPress={confirmDelete} accessibilityRole="button" style={{ marginTop: spacing.lg, alignItems: 'center' }}>
-            <Text style={[typography.caption, { color: theme.danger }]}>Supprimer mon compte</Text>
+            <Text style={[typography.caption, { color: theme.danger }]}>{t('profile.deleteAccount')}</Text>
           </TouchableOpacity>
         </>
       )}

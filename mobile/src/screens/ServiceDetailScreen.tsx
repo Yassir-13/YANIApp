@@ -2,18 +2,21 @@ import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Image, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { servicesApi, Service } from '../api/services';
 import { useRequireAuth } from '../utils/useRequireAuth';
 import { formatDuration } from '../utils/format';
 import DetailBottomBar from '../components/DetailBottomBar';
+import { mirroredIcon } from '../i18n';
 
 const { width } = Dimensions.get('window');
 const HERO_H = width * 0.9;
 
 export default function ServiceDetailScreen({ route, navigation }: any) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { serviceId } = route.params;
   const requireAuth = useRequireAuth();
@@ -40,7 +43,7 @@ export default function ServiceDetailScreen({ route, navigation }: any) {
   if (!service) {
     return (
       <View style={[styles.centered, { backgroundColor: theme.background }]}>
-        <Text style={[typography.body, { color: theme.danger }]}>Service introuvable.</Text>
+        <Text style={[typography.body, { color: theme.danger }]}>{t('services.notFound')}</Text>
       </View>
     );
   }
@@ -56,7 +59,7 @@ export default function ServiceDetailScreen({ route, navigation }: any) {
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           style={[styles.round, { backgroundColor: 'rgba(20,16,12,0.55)' }]}
         >
-          <Ionicons name="chevron-back" size={22} color="#F8F8F8" />
+          <Ionicons name={mirroredIcon('chevron-back')} size={22} color="#F8F8F8" />
         </TouchableOpacity>
       </View>
 
@@ -99,9 +102,9 @@ export default function ServiceDetailScreen({ route, navigation }: any) {
       </ScrollView>
 
       <DetailBottomBar
-        priceLabel="À partir de"
+        priceLabel={t('services.priceFrom')}
         price={service.price}
-        ctaLabel="Réserver"
+        ctaLabel={t('services.book')}
         onPress={handleReserve}
       />
     </View>

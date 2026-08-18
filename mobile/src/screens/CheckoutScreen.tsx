@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { useCartStore } from '../stores/cartStore';
@@ -14,6 +15,7 @@ import Button from '../components/Button';
 
 export default function CheckoutScreen({ navigation }: any) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { alert } = useAlert();
   const lines = useCartStore((s) => s.lines);
@@ -34,7 +36,7 @@ export default function CheckoutScreen({ navigation }: any) {
       return;
     }
     if (fulfillment === 'DELIVERY' && !address.trim()) {
-      alert('Adresse requise', 'Merci d’indiquer une adresse de livraison.');
+      alert(t('checkout.addressRequiredTitle'), t('checkout.addressRequiredMessage'));
       return;
     }
     setSubmitting(true);
@@ -52,7 +54,7 @@ export default function CheckoutScreen({ navigation }: any) {
         total: order.total,
       });
     } catch (e: any) {
-      alert('Erreur', e.response?.data?.message || 'Commande impossible. Réessayez.');
+      alert(t('common.error'), e.response?.data?.message || t('checkout.failed'));
     } finally {
       setSubmitting(false);
     }
@@ -90,7 +92,7 @@ export default function CheckoutScreen({ navigation }: any) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={[styles.container, { backgroundColor: theme.background }]}
     >
-      <Header title="Finaliser" onBack={() => navigation.goBack()} />
+      <Header title={t('checkout.title')} onBack={() => navigation.goBack()} />
 
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.xl }}
@@ -98,21 +100,21 @@ export default function CheckoutScreen({ navigation }: any) {
         keyboardShouldPersistTaps="handled"
       >
         <Text style={[typography.sectionLabel, { color: theme.gold, marginBottom: spacing.md }]}>
-          Mode de récupération
+          {t('checkout.sectionMethod')}
         </Text>
 
-        <Option type="PICKUP" icon="storefront-outline" label="Retrait à l'institut" desc="Récupérez votre commande sur place" />
+        <Option type="PICKUP" icon="storefront-outline" label={t('checkout.pickup')} desc={t('checkout.pickupDesc')} />
         <View style={{ height: spacing.sm }} />
-        <Option type="DELIVERY" icon="bicycle-outline" label="Livraison à domicile" desc="Nous vous livrons à l'adresse indiquée" />
+        <Option type="DELIVERY" icon="bicycle-outline" label={t('checkout.delivery')} desc={t('checkout.deliveryDesc')} />
 
         {fulfillment === 'DELIVERY' && (
           <View style={{ marginTop: spacing.lg }}>
             <Text style={[typography.caption, { color: theme.textSecondary, marginBottom: spacing.sm }]}>
-              Adresse de livraison
+              {t('checkout.sectionAddress')}
             </Text>
             <TextInput
               style={[styles.input, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]}
-              placeholder="14 rue des Oliviers, Casablanca"
+              placeholder={t('checkout.addressPlaceholder')}
               placeholderTextColor={theme.textMuted}
               value={address}
               onChangeText={setAddress}
@@ -123,11 +125,11 @@ export default function CheckoutScreen({ navigation }: any) {
 
         <View style={{ marginTop: spacing.lg }}>
           <Text style={[typography.caption, { color: theme.textSecondary, marginBottom: spacing.sm }]}>
-            Note (optionnel)
+            {t('checkout.sectionNote')}
           </Text>
           <TextInput
             style={[styles.input, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]}
-            placeholder="Une précision pour l'institut…"
+            placeholder={t('checkout.notePlaceholder')}
             placeholderTextColor={theme.textMuted}
             value={note}
             onChangeText={setNote}
@@ -138,7 +140,7 @@ export default function CheckoutScreen({ navigation }: any) {
         <View style={[styles.payNote, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <Ionicons name="cash-outline" size={20} color={theme.gold} />
           <Text style={[typography.caption, { color: theme.textSecondary, flex: 1, marginLeft: spacing.sm }]}>
-            Paiement {fulfillment === 'PICKUP' ? 'sur place au retrait' : 'à la livraison'}.
+            {fulfillment === 'PICKUP' ? t('checkout.paymentPickup') : t('checkout.paymentDelivery')}
           </Text>
         </View>
       </ScrollView>
@@ -150,11 +152,11 @@ export default function CheckoutScreen({ navigation }: any) {
         ]}
       >
         <View style={styles.totalRow}>
-          <Text style={[typography.body, { color: theme.textSecondary }]}>Total à régler</Text>
+          <Text style={[typography.body, { color: theme.textSecondary }]}>{t('checkout.totalDue')}</Text>
           <Text style={[typography.priceLg, { color: theme.gold }]}>{formatPrice(total)}</Text>
         </View>
         <Button
-          label={submitting ? 'Envoi…' : user ? 'Confirmer la commande' : 'Se connecter pour commander'}
+          label={submitting ? t('checkout.sending') : user ? t('checkout.confirm') : t('checkout.loginToOrder')}
           onPress={handleConfirm}
           loading={submitting}
         />

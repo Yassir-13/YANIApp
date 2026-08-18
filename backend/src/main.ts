@@ -6,6 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { TranslateResponseInterceptor } from './common/interceptors/translate-response.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -31,6 +32,13 @@ async function bootstrap() {
   // Sans ce filtre, les erreurs Prisma partaient brutes au client, avec les
   // noms de tables et de contraintes.
   app.useGlobalFilters(new AllExceptionsFilter());
+
+  // ── Langue des réponses ──
+  // Le filtre ci-dessus ne voit que les erreurs. Plusieurs routes répondent
+  // 200 avec une phrase destinée à la cliente (« Mot de passe modifié… ») que
+  // l'application affiche telle quelle : cet intercepteur les traduit aussi,
+  // d'après le même en-tête `Accept-Language`.
+  app.useGlobalInterceptors(new TranslateResponseInterceptor());
 
   // ── Adresse IP réelle derrière un reverse proxy ──
   // Le rate limiting compte les requêtes par IP. Derrière nginx ou un

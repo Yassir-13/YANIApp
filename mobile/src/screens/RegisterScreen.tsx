@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { useAuthStore } from '../stores/authStore';
 import Button from '../components/Button';
 import { useAlert } from '../components/AlertProvider';
-import { validatePassword } from '../utils/passwordRules';
+import { validatePassword, PASSWORD_MIN_LENGTH } from '../utils/passwordRules';
 import { validatePhone, formatPhoneForDisplay } from '../utils/phoneRules';
 import { apiErrorMessage } from '../utils/apiError';
+import { mirroredIcon } from '../i18n';
 
 // Les règles de numéro et de mot de passe vivaient ici, recopiées à la main.
 // Elles sont désormais dans utils/ : trois écrans les appliquaient, chacun à sa
@@ -16,6 +18,7 @@ import { apiErrorMessage } from '../utils/apiError';
 
 export default function RegisterScreen({ navigation }: any) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const register = useAuthStore((s) => s.register);
   const isLoading = useAuthStore((s) => s.isLoading);
   const { alert , show } = useAlert();
@@ -27,25 +30,27 @@ export default function RegisterScreen({ navigation }: any) {
 
   const handleRegister = async () => {
     if (!firstName.trim()) {
-      alert('Champ requis', 'Le prénom est obligatoire.');
+      alert(t('auth.fieldRequired'), t('auth.firstNameRequired'));
       return;
     }
     if (!lastName.trim()) {
-      alert('Champ requis', 'Le nom est obligatoire.');
+      alert(t('auth.fieldRequired'), t('auth.lastNameRequired'));
       return;
     }
+    // Les validateurs renvoient une CLÉ, pas un message : c'est ici qu'elle
+    // devient du texte, dans la langue active.
     const erreurNumero = validatePhone(phone.trim());
     if (erreurNumero) {
-      alert('Numéro invalide', erreurNumero);
+      alert(t('auth.invalidPhone'), t(erreurNumero));
       return;
     }
     if (!email || !password) {
-      alert('Champs requis', 'Email et mot de passe sont obligatoires.');
+      alert(t('auth.fieldsRequired'), t('auth.emailPasswordRequired'));
       return;
     }
     const erreurMotDePasse = validatePassword(password);
     if (erreurMotDePasse) {
-      alert('Mot de passe refusé', erreurMotDePasse);
+      alert(t('auth.passwordRejected'), t(erreurMotDePasse, { min: PASSWORD_MIN_LENGTH }));
       return;
     }
 
@@ -53,11 +58,11 @@ export default function RegisterScreen({ navigation }: any) {
     // C'est le seul moyen de contact de l'institut : une faute de frappe et
     // la cliente ne peut être ni rappelée pour sa commande, ni pour son RDV.
     show({
-      title: 'Vérifiez votre numéro',
-      message: `${formatPhoneForDisplay(phone.trim())}\n\nC'est avec ce numéro que l'institut vous contactera pour vos commandes et vos rendez-vous.`,
+      title: t('auth.checkPhoneTitle'),
+      message: t('auth.checkPhoneMessage', { phone: formatPhoneForDisplay(phone.trim()) }),
       buttons: [
-        { text: 'Modifier', style: 'cancel' },
-        { text: "C'est correct", onPress: submitRegistration },
+        { text: t('auth.editPhone'), style: 'cancel' },
+        { text: t('auth.phoneCorrect'), onPress: submitRegistration },
       ],
     });
   };
@@ -73,7 +78,7 @@ export default function RegisterScreen({ navigation }: any) {
       // endroit que le retour direct d'avant.
       navigation.replace('VerifyEmail', { skippable: true });
     } catch (error) {
-      alert('Erreur', apiErrorMessage(error, 'Inscription impossible. Réessayez.'));
+      alert(t('common.error'), apiErrorMessage(error, t('auth.registerFailed')));
     }
   };
 
@@ -93,21 +98,21 @@ export default function RegisterScreen({ navigation }: any) {
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons name="chevron-back" size={26} color={theme.text} />
+          <Ionicons name={mirroredIcon('chevron-back')} size={26} color={theme.text} />
         </TouchableOpacity>
       )}
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-        <Text style={[typography.display, { color: theme.text, textAlign: 'center' }]}>Créer un compte</Text>
+        <Text style={[typography.display, { color: theme.text, textAlign: 'center' }]}>{t('auth.registerTitle')}</Text>
         <Text style={[typography.caption, { color: theme.textSecondary, textAlign: 'center', marginBottom: spacing.xl }]}>
-          Rejoignez Yani Concept
+          {t('auth.registerSubtitle')}
         </Text>
 
-        <TextInput style={inputStyle} placeholder="Prénom" placeholderTextColor={theme.textMuted} value={firstName} onChangeText={setFirstName} />
-        <TextInput style={inputStyle} placeholder="Nom" placeholderTextColor={theme.textMuted} value={lastName} onChangeText={setLastName} />
+        <TextInput style={inputStyle} placeholder={t('auth.firstName')} placeholderTextColor={theme.textMuted} value={firstName} onChangeText={setFirstName} />
+        <TextInput style={inputStyle} placeholder={t('auth.lastName')} placeholderTextColor={theme.textMuted} value={lastName} onChangeText={setLastName} />
         <TextInput
           style={inputStyle}
-          placeholder="Téléphone (ex. 0612345678)"
+          placeholder={t('auth.phone')}
           placeholderTextColor={theme.textMuted}
           value={phone}
           onChangeText={setPhone}
@@ -115,7 +120,7 @@ export default function RegisterScreen({ navigation }: any) {
         />
         <TextInput
           style={inputStyle}
-          placeholder="Email"
+          placeholder={t('auth.email')}
           placeholderTextColor={theme.textMuted}
           value={email}
           onChangeText={setEmail}
@@ -124,7 +129,9 @@ export default function RegisterScreen({ navigation }: any) {
         />
         <TextInput
           style={inputStyle}
-          placeholder="Mot de passe (min. 8 caractères)"
+          // Le minimum vient de la constante et non d'un « 8 » recopié : les
+          // deux pouvaient diverger.
+          placeholder={t('auth.passwordMinPlaceholder', { min: PASSWORD_MIN_LENGTH })}
           placeholderTextColor={theme.textMuted}
           value={password}
           onChangeText={setPassword}
@@ -132,7 +139,7 @@ export default function RegisterScreen({ navigation }: any) {
         />
 
         <Button
-          label={isLoading ? 'Création…' : "S'inscrire"}
+          label={isLoading ? t('auth.registering') : t('auth.register')}
           onPress={handleRegister}
           loading={isLoading}
           style={{ marginTop: spacing.sm }}
@@ -140,7 +147,7 @@ export default function RegisterScreen({ navigation }: any) {
 
         <TouchableOpacity onPress={() => { if (navigation.canGoBack()) navigation.goBack(); }} style={{ marginTop: spacing.lg }}>
           <Text style={[typography.caption, { color: theme.textSecondary, textAlign: 'center' }]}>
-            Déjà un compte ? Se connecter
+            {t('auth.alreadyAccount')}
           </Text>
         </TouchableOpacity>
       </ScrollView>

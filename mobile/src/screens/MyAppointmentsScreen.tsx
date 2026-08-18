@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
+import { intlLocale, mirroredIcon } from '../i18n';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { appointmentsApi, Appointment } from '../api/appointments';
@@ -10,19 +12,20 @@ import Card from '../components/Card';
 import ErrorView from '../components/ErrorView';
 import EmptyView from '../components/EmptyView';
 
+// Hors composant, donc sans accès à `t` : renvoie la CLÉ de traduction.
 function statusInfo(status: string, theme: any) {
   switch (status) {
-    case 'PENDING': return { label: 'En attente', color: theme.textSecondary };
-    case 'CONFIRMED': return { label: 'Confirmé', color: theme.success };
-    case 'COMPLETED': return { label: 'Terminé', color: theme.gold };
-    case 'CANCELLED': return { label: 'Annulé', color: theme.danger };
-    default: return { label: status, color: theme.textSecondary };
+    case 'PENDING': return { key: 'appointments.statusPending' as const, color: theme.textSecondary };
+    case 'CONFIRMED': return { key: 'appointments.statusConfirmed' as const, color: theme.success };
+    case 'COMPLETED': return { key: 'appointments.statusCompleted' as const, color: theme.gold };
+    case 'CANCELLED': return { key: 'appointments.statusCancelled' as const, color: theme.danger };
+    default: return { key: null, color: theme.textSecondary };
   }
 }
 
 function formatDateTime(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleString('fr-FR', {
+  return d.toLocaleString(intlLocale(), {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
@@ -33,19 +36,22 @@ function formatDateTime(iso: string): string {
 
 export default function MyAppointmentsScreen({ navigation }: any) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const { alert, show } = useAlert();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Un drapeau et non le message : un texte figé dans l'état resterait
+  // dans l'ancienne langue après un changement de langue.
+  const [error, setError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      setError(null);
+      setError(false);
       const data = await appointmentsApi.getMine();
       setAppointments(data);
     } catch {
-      setError('Impossible de charger vos rendez-vous.');
+      setError(true);
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -58,19 +64,19 @@ export default function MyAppointmentsScreen({ navigation }: any) {
 
   const handleCancel = (appt: Appointment) => {
     show({
-      title: 'Annuler le rendez-vous',
-      message: "Confirmez-vous l'annulation ?",
+      title: t('appointments.cancelTitle'),
+      message: t('appointments.cancelMessage'),
       buttons: [
-        { text: 'Non', style: 'cancel' },
+        { text: t('orders.no'), style: 'cancel' },
         {
-          text: 'Oui, annuler',
+          text: t('orders.cancelConfirm'),
           style: 'destructive',
           onPress: async () => {
             try {
               await appointmentsApi.cancel(appt.id);
               load();
             } catch (e: any) {
-              alert('Erreur', e.response?.data?.message || 'Annulation impossible.');
+              alert(t('common.error'), e.response?.data?.message || t('orders.cancelFailed'));
             }
           },
         },
@@ -94,9 +100,9 @@ export default function MyAppointmentsScreen({ navigation }: any) {
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons name="chevron-back" size={26} color={theme.text} />
+          <Ionicons name={mirroredIcon('chevron-back')} size={26} color={theme.text} />
         </TouchableOpacity>
-        <ErrorView message={error} onRetry={load} />
+        <ErrorView message={t('appointments.loadFailed')} onRetry={load} />
       </View>
     );
   }
@@ -108,7 +114,7 @@ export default function MyAppointmentsScreen({ navigation }: any) {
         onPress={() => navigation.goBack()}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
-        <Ionicons name="chevron-back" size={26} color={theme.text} />
+        <Ionicons name={mirroredIcon('chevron-back')} size={26} color={theme.text} />
       </TouchableOpacity>
 
       <FlatList
@@ -120,11 +126,11 @@ export default function MyAppointmentsScreen({ navigation }: any) {
         }
         ListHeaderComponent={
           <Text style={[typography.heading, { color: theme.text, marginBottom: spacing.lg }]}>
-            Mes rendez-vous
+            {t('appointments.title')}
           </Text>
         }
         ListEmptyComponent={
-          <EmptyView message="Vous n'avez aucun rendez-vous." icon="calendar-outline" />
+          <EmptyView message={t('appointments.empty')} icon="calendar-outline" />
         }
         renderItem={({ item }) => {
           const info = statusInfo(item.status, theme);
@@ -133,10 +139,10 @@ export default function MyAppointmentsScreen({ navigation }: any) {
             <Card>
               <View style={styles.cardHeader}>
                 <Text style={[typography.subtitle, { color: theme.text }]}>
-                  {item.service?.name ?? 'Service'}
+                  {item.service?.name ?? t('services.fallbackName')}
                 </Text>
                 <Text style={[typography.small, { color: info.color, fontWeight: '600' }]}>
-                  {info.label}
+                  {info.key ? t(info.key) : item.status}
                 </Text>
               </View>
               <View style={styles.cardMeta}>
@@ -158,7 +164,7 @@ export default function MyAppointmentsScreen({ navigation }: any) {
                   style={[styles.cancelBtn, { borderColor: theme.danger }]}
                   onPress={() => handleCancel(item)}
                 >
-                  <Text style={[typography.caption, { color: theme.danger }]}>Annuler</Text>
+                  <Text style={[typography.caption, { color: theme.danger }]}>{t('orders.cancel')}</Text>
                 </TouchableOpacity>
               )}
             </Card>

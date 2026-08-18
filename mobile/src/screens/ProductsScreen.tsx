@@ -5,6 +5,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing } from '../theme/typography';
 import { productsApi, Product } from '../api/products';
@@ -19,13 +20,16 @@ const ALL = '__all__';
 
 export default function ProductsScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const cartCount = useCartStore((s) => s.count());
 
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Un drapeau et non le message : un texte figé dans l'état resterait
+  // dans l'ancienne langue après un changement de langue.
+  const [error, setError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [activeCat, setActiveCat] = useState<string>(ALL);
 
@@ -42,13 +46,13 @@ export default function ProductsScreen() {
     // c'est la dernière demande qui décide de ce qui s'affiche.
     const depassee = () => demande !== derniereDemande.current;
     try {
-      setError(null);
+      setError(false);
       const data = await productsApi.getAll();
       if (depassee()) return;
       setProducts(data);
     } catch {
       if (depassee()) return;
-      setError('Impossible de charger les produits.');
+      setError(true);
     } finally {
       if (!depassee()) {
         setIsLoading(false);
@@ -90,7 +94,7 @@ export default function ProductsScreen() {
     const groups = new Map<string, { id: string; name: string; items: Product[] }>();
     for (const p of visible) {
       const key = p.category?.id ?? 'autres';
-      const name = p.category?.name ?? 'Autres';
+      const name = p.category?.name ?? t('products.otherCategory');
       if (!groups.has(key)) groups.set(key, { id: key, name, items: [] });
       groups.get(key)!.items.push(p);
     }
@@ -130,7 +134,7 @@ export default function ProductsScreen() {
   if (error && products.length === 0) {
     return (
       <View style={[styles.fill, { backgroundColor: theme.background, paddingTop: insets.top + spacing.md }]}>
-        <ErrorView message={error} onRetry={load} />
+        <ErrorView message={t('products.loadFailed')} onRetry={load} />
       </View>
     );
   }
@@ -170,8 +174,8 @@ export default function ProductsScreen() {
           <EmptyView
             message={
               activeCat === ALL
-                ? 'Aucun produit disponible pour le moment.'
-                : 'Aucun produit dans cette catégorie.'
+                ? t('products.empty')
+                : t('products.emptyCategory')
             }
             icon="sparkles-outline"
           />
@@ -181,11 +185,11 @@ export default function ProductsScreen() {
         <>
           {/* Titre + panier */}
           <View style={[styles.headerRow, { paddingHorizontal: spacing.lg }]}>
-            <Text style={[typography.display, { color: theme.text, flex: 1 }]}>Produits</Text>
+            <Text style={[typography.display, { color: theme.text, flex: 1 }]}>{t('nav.products')}</Text>
             <TouchableOpacity
               onPress={() => navigation.navigate('Cart')}
               accessibilityRole="button"
-              accessibilityLabel="Panier"
+              accessibilityLabel={t('products.cartA11y')}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               style={[styles.searchBtn, { backgroundColor: theme.surface, borderColor: theme.border }]}
             >
@@ -200,7 +204,7 @@ export default function ProductsScreen() {
 
           {/* Échec du rafraîchissement, sans masquer le catalogue déjà affiché */}
           {error && (
-            <ErrorBanner message="Catalogue non actualisé (connexion)." onRetry={load} />
+            <ErrorBanner message={t('products.staleBanner')} onRetry={load} />
           )}
 
           {/* Chips de filtres */}
@@ -209,7 +213,7 @@ export default function ProductsScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.chips}
           >
-            <Chip label="Tous" active={activeCat === ALL} onPress={() => setActiveCat(ALL)} />
+            <Chip label={t('products.allCategories')} active={activeCat === ALL} onPress={() => setActiveCat(ALL)} />
             {categories.map((c) => (
               <Chip
                 key={c.id}

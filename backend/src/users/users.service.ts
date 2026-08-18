@@ -49,6 +49,7 @@ export class UsersService {
     firstName?: string;
     lastName?: string;
     phone?: string;
+    locale?: string;
   }): Promise<User> {
     return this.prisma.user.create({
       data: {
@@ -56,6 +57,9 @@ export class UsersService {
         passwordHash: data.passwordHash,
         firstName: data.firstName,
         lastName: data.lastName,
+        // Omise, la colonne prend son défaut « fr » : un client qui ne
+        // transmet pas de langue se comporte exactement comme avant.
+        ...(data.locale ? { locale: data.locale } : {}),
         phone: data.phone,
         loyaltyAccount: { create: {} },
       },

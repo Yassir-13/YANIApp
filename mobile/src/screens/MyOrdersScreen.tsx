@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
+import { intlLocale } from '../i18n';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { ordersApi, Order, OrderStatus } from '../api/orders';
@@ -10,40 +12,45 @@ import Header from '../components/Header';
 import ErrorView from '../components/ErrorView';
 import EmptyView from '../components/EmptyView';
 
+// Hors composant, donc sans accès à `t` : renvoie la CLÉ de traduction.
+// `key: null` pour un statut inconnu — l'écran affiche alors le code brut.
 function statusInfo(status: OrderStatus, theme: any) {
   switch (status) {
-    case 'PENDING': return { label: 'En attente', color: theme.textSecondary };
-    case 'CONFIRMED': return { label: 'Confirmée', color: theme.success };
-    case 'READY': return { label: 'Prête', color: theme.gold };
-    case 'COMPLETED': return { label: 'Terminée', color: theme.gold };
-    case 'CANCELLED': return { label: 'Annulée', color: theme.danger };
-    default: return { label: status, color: theme.textSecondary };
+    case 'PENDING': return { key: 'orders.statusPending' as const, color: theme.textSecondary };
+    case 'CONFIRMED': return { key: 'orders.statusConfirmed' as const, color: theme.success };
+    case 'READY': return { key: 'orders.statusReady' as const, color: theme.gold };
+    case 'COMPLETED': return { key: 'orders.statusCompleted' as const, color: theme.gold };
+    case 'CANCELLED': return { key: 'orders.statusCancelled' as const, color: theme.danger };
+    default: return { key: null, color: theme.textSecondary };
   }
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+  return new Date(iso).toLocaleDateString(intlLocale(), { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 const CANCELLABLE: OrderStatus[] = ['PENDING', 'CONFIRMED', 'READY'];
 
 export default function MyOrdersScreen({ navigation }: any) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { alert, show } = useAlert();
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Un drapeau et non le message : un texte figé dans l'état resterait
+  // dans l'ancienne langue après un changement de langue.
+  const [error, setError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      setError(null);
+      setError(false);
       const data = await ordersApi.getMine();
       setOrders(data);
     } catch {
-      setError('Impossible de charger vos commandes.');
+      setError(true);
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -56,19 +63,19 @@ export default function MyOrdersScreen({ navigation }: any) {
 
   const handleCancel = (order: Order) => {
     show({
-      title: 'Annuler la commande',
-      message: "Confirmez-vous l'annulation de cette commande ?",
+      title: t('orders.cancelTitle'),
+      message: t('orders.cancelMessage'),
       buttons: [
-        { text: 'Non', style: 'cancel' },
+        { text: t('orders.no'), style: 'cancel' },
         {
-          text: 'Oui, annuler',
+          text: t('orders.cancelConfirm'),
           style: 'destructive',
           onPress: async () => {
             try {
               await ordersApi.cancel(order.id);
               load();
             } catch (e: any) {
-              alert('Erreur', e.response?.data?.message || 'Annulation impossible.');
+              alert(t('common.error'), e.response?.data?.message || t('orders.cancelFailed'));
             }
           },
         },
@@ -87,15 +94,15 @@ export default function MyOrdersScreen({ navigation }: any) {
   if (error) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
-        <Header title="Mes commandes" onBack={() => navigation.goBack()} />
-        <ErrorView message={error} onRetry={load} />
+        <Header title={t('orders.title')} onBack={() => navigation.goBack()} />
+        <ErrorView message={t('orders.loadFailed')} onRetry={load} />
       </View>
     );
   }
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <Header title="Mes commandes" onBack={() => navigation.goBack()} />
+      <Header title={t('orders.title')} onBack={() => navigation.goBack()} />
 
       <FlatList
         data={orders}
@@ -104,7 +111,7 @@ export default function MyOrdersScreen({ navigation }: any) {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={theme.gold} />
         }
-        ListEmptyComponent={<EmptyView message="Vous n'avez aucune commande." icon="bag-outline" />}
+        ListEmptyComponent={<EmptyView message={t('orders.empty')} icon="bag-outline" />}
         renderItem={({ item }) => {
           const info = statusInfo(item.status, theme);
           const itemCount = item.items.reduce((n, i) => n + i.quantity, 0);
@@ -113,9 +120,11 @@ export default function MyOrdersScreen({ navigation }: any) {
             <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
               <View style={styles.cardHeader}>
                 <Text style={[typography.subtitle, { color: theme.text }]}>
-                  {item.fulfillment === 'PICKUP' ? 'Retrait' : 'Livraison'} · {itemCount} article{itemCount > 1 ? 's' : ''}
+                  {item.fulfillment === 'PICKUP' ? t('orders.pickup') : t('orders.delivery')} · {t('orders.itemCount', { count: itemCount })}
                 </Text>
-                <Text style={[typography.small, { color: info.color }]}>{info.label}</Text>
+                <Text style={[typography.small, { color: info.color }]}>
+                  {info.key ? t(info.key) : item.status}
+                </Text>
               </View>
 
               <Text style={[typography.caption, { color: theme.textMuted, marginTop: 2 }]}>
@@ -125,7 +134,7 @@ export default function MyOrdersScreen({ navigation }: any) {
               <View style={{ marginTop: spacing.sm }}>
                 {item.items.slice(0, 3).map((it) => (
                   <Text key={it.id} numberOfLines={1} style={[typography.caption, { color: theme.textSecondary }]}>
-                    {it.quantity}× {it.product?.name ?? 'Produit'}
+                    {it.quantity}× {it.product?.name ?? t('products.fallbackName')}
                   </Text>
                 ))}
                 {item.items.length > 3 && (
@@ -142,7 +151,7 @@ export default function MyOrdersScreen({ navigation }: any) {
                     onPress={() => handleCancel(item)}
                     style={[styles.cancelBtn, { borderColor: theme.danger }]}
                   >
-                    <Text style={[typography.caption, { color: theme.danger }]}>Annuler</Text>
+                    <Text style={[typography.caption, { color: theme.danger }]}>{t('orders.cancel')}</Text>
                   </TouchableOpacity>
                 )}
               </View>

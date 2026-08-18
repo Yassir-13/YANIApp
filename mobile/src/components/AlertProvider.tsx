@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { View, Text, Modal, TouchableOpacity, StyleSheet, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 
@@ -29,6 +30,7 @@ const AlertContext = createContext<AlertContextValue | null>(null);
 // ── Provider ─────────────────────────────────────────────────────────────
 export function AlertProvider({ children }: { children: ReactNode }) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
   const [options, setOptions] = useState<AlertOptions>({ title: '' });
 
@@ -38,12 +40,12 @@ export function AlertProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const alert = useCallback((title: string, message?: string) => {
-    show({ title, message, buttons: [{ text: 'OK' }] });
-  }, [show]);
+    show({ title, message, buttons: [{ text: t('common.ok') }] });
+  }, [show, t]);
 
   const close = () => setVisible(false);
 
-  const buttons = options.buttons?.length ? options.buttons : [{ text: 'OK' }];
+  const buttons = options.buttons?.length ? options.buttons : [{ text: t('common.ok') }];
 
   return (
     <AlertContext.Provider value={{ alert, show }}>

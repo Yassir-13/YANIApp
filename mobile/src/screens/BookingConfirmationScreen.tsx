@@ -2,16 +2,19 @@ import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
+import { intlLocale } from '../i18n';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing } from '../theme/typography';
 import Button from '../components/Button';
 
 export default function BookingConfirmationScreen({ route, navigation }: any) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { serviceName, date, time } = route.params;
 
-  const formattedDate = new Date(`${date}T12:00:00`).toLocaleDateString('fr-FR', {
+  const formattedDate = new Date(`${date}T12:00:00`).toLocaleDateString(intlLocale(), {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -34,24 +37,24 @@ export default function BookingConfirmationScreen({ route, navigation }: any) {
         </View>
 
         <Text style={[typography.display, { color: theme.text, textAlign: 'center', marginTop: spacing.xl }]}>
-          Réservation confirmée
+          {t('booking.confirmedTitle')}
         </Text>
         <Text style={[typography.body, { color: theme.textSecondary, textAlign: 'center', marginTop: spacing.sm }]}>
           Nous vous attendons le {formattedDate} à {time}
-          {serviceName ? ` pour votre ${serviceName.toLowerCase()}.` : '.'}
+          {serviceName ? t('booking.confirmedFor', { service: serviceName.toLowerCase() }) : '.'}
         </Text>
       </View>
 
       <View style={{ paddingHorizontal: spacing.lg }}>
         <Button
-          label="Voir mes rendez-vous"
+          label={t('appointments.seeMyAppointments')}
           onPress={() => {
             navigation.popToTop();
             navigation.navigate('MyAppointments');
           }}
         />
         <Button
-          label="Retour à l'accueil"
+          label={t('orders.backHome')}
           variant="outline"
           onPress={() => navigation.popToTop()}
           style={{ marginTop: spacing.md }}

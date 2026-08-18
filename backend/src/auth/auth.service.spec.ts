@@ -60,6 +60,7 @@ describe('AuthService — défenses de sécurité', () => {
     phone: null,
     passwordHash: hashDuBonMotDePasse,
     role: Role.CLIENT,
+    locale: 'fr',
     firstName: 'Fati',
     lastName: 'Cliente',
     createdAt: new Date('2026-01-01T00:00:00.000Z'),

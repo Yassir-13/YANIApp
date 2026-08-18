@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 
@@ -17,6 +18,7 @@ interface ErrorBannerProps {
  */
 export default function ErrorBanner({ message, onRetry }: ErrorBannerProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View
@@ -39,7 +41,7 @@ export default function ErrorBanner({ message, onRetry }: ErrorBannerProps) {
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Text style={[typography.caption, { color: theme.gold, fontWeight: '600' }]}>
-            Réessayer
+            {t('common.retry')}
           </Text>
         </TouchableOpacity>
       )}

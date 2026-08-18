@@ -8,6 +8,9 @@ export interface UpdateProfilePayload {
   // donc aucun champ `phone` et ne touche pas à la colonne — un champ vidé
   // dans l'app restait alors renseigné en base.
   phone?: string | null;
+  // Langue des EMAILS. Les messages de l'API, eux, suivent l'en-tête
+  // `Accept-Language` posé par `client.ts` à chaque requête.
+  locale?: string;
 }
 
 export const usersApi = {

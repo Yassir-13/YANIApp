@@ -10,6 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { loyaltyApi, RewardVoucher } from '../api/loyalty';
@@ -24,19 +25,22 @@ import EmptyView from '../components/EmptyView';
 
 export default function MyRewardsScreen({ navigation }: any) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
   const [vouchers, setVouchers] = useState<RewardVoucher[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Un drapeau et non le message : un texte figé dans l'état resterait
+  // dans l'ancienne langue après un changement de langue.
+  const [error, setError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      setError(null);
+      setError(false);
       setVouchers(await loyaltyApi.getMyVouchers());
     } catch {
-      setError('Impossible de charger vos récompenses.');
+      setError(true);
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -64,15 +68,15 @@ export default function MyRewardsScreen({ navigation }: any) {
   if (error) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
-        <Header title="Mes récompenses" onBack={() => navigation.goBack()} />
-        <ErrorView message={error} onRetry={load} />
+        <Header title={t('loyalty.myRewards')} onBack={() => navigation.goBack()} />
+        <ErrorView message={t('rewards.loadFailed')} onRetry={load} />
       </View>
     );
   }
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <Header title="Mes récompenses" onBack={() => navigation.goBack()} />
+      <Header title={t('loyalty.myRewards')} onBack={() => navigation.goBack()} />
 
       <FlatList
         data={vouchers}
@@ -100,13 +104,13 @@ export default function MyRewardsScreen({ navigation }: any) {
                 { color: theme.textSecondary, marginBottom: spacing.md },
               ]}
             >
-              Présentez le code à l'institut lors de votre prochaine visite.
+              {t('rewards.presentCode')}
             </Text>
           ) : null
         }
         ListEmptyComponent={
           <EmptyView
-            message="Vous n'avez aucune récompense pour le moment."
+            message={t('rewards.empty')}
             icon="gift-outline"
           />
         }
@@ -118,14 +122,15 @@ export default function MyRewardsScreen({ navigation }: any) {
 
 function VoucherCard({ voucher }: { voucher: RewardVoucher }) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const utilise = !!voucher.honoredAt;
 
   // Ce qui a permis d'obtenir la récompense : offerte par les visites, ou
   // payée en points. La cliente doit pouvoir le relire des mois plus tard.
   const origine =
     voucher.source === 'MILESTONE'
-      ? 'Offerte pour vos visites'
-      : `Échangée contre ${voucher.pointsSpent} points`;
+      ? t('rewards.fromVisits')
+      : t('rewards.redeemedFor', { points: voucher.pointsSpent });
 
   return (
     <View
@@ -169,12 +174,12 @@ function VoucherCard({ voucher }: { voucher: RewardVoucher }) {
       ) : (
         <View style={[styles.codeBox, { borderColor: theme.gold }]}>
           <Text style={[typography.caption, { color: theme.textSecondary }]}>
-            À présenter
+            {t('rewards.toPresent')}
           </Text>
           {/* Espacé et sélectionnable : il se lit à voix haute au comptoir. */}
           <Text
             selectable
-            accessibilityLabel={`Code ${voucher.code.split('').join(' ')}`}
+            accessibilityLabel={t('rewards.codeA11y', { code: voucher.code.split('').join(' ') })}
             style={[styles.code, { color: theme.gold }]}
           >
             {voucher.code}

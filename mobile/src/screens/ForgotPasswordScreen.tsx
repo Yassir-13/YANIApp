@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { authApi } from '../api/auth';
@@ -19,6 +20,7 @@ import { useAlert } from '../components/AlertProvider';
 
 export default function ForgotPasswordScreen({ navigation }: any) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { alert } = useAlert();
 
@@ -28,7 +30,7 @@ export default function ForgotPasswordScreen({ navigation }: any) {
   const handleSend = async () => {
     const cleaned = email.trim();
     if (!cleaned) {
-      alert('Champ requis', 'Saisissez votre adresse email.');
+      alert(t('auth.fieldRequired'), t('auth.emailRequired'));
       return;
     }
 
@@ -42,8 +44,8 @@ export default function ForgotPasswordScreen({ navigation }: any) {
     } catch (e: any) {
       const msg = e.response?.data?.message;
       alert(
-        'Erreur',
-        Array.isArray(msg) ? msg.join('\n') : msg || 'Envoi impossible. Réessayez.',
+        t('common.error'),
+        Array.isArray(msg) ? msg.join('\n') : msg || t('auth.resendFailed'),
       );
     } finally {
       setSending(false);
@@ -55,7 +57,7 @@ export default function ForgotPasswordScreen({ navigation }: any) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={[styles.container, { backgroundColor: theme.background }]}
     >
-      <Header title="Mot de passe oublié" onBack={() => navigation.goBack()} />
+      <Header title={t('auth.forgotTitle')} onBack={() => navigation.goBack()} />
 
       <ScrollView
         contentContainerStyle={{
@@ -80,8 +82,7 @@ export default function ForgotPasswordScreen({ navigation }: any) {
             },
           ]}
         >
-          Saisissez l’adresse email de votre compte. Nous vous enverrons un code
-          à 6 chiffres pour choisir un nouveau mot de passe.
+          {t('auth.forgotIntro')}
         </Text>
 
         <TextInput
@@ -93,7 +94,7 @@ export default function ForgotPasswordScreen({ navigation }: any) {
               borderColor: theme.border,
             },
           ]}
-          placeholder="Email"
+          placeholder={t('auth.email')}
           placeholderTextColor={theme.textMuted}
           value={email}
           onChangeText={setEmail}
@@ -103,7 +104,7 @@ export default function ForgotPasswordScreen({ navigation }: any) {
         />
 
         <Button
-          label={sending ? 'Envoi…' : 'Recevoir un code'}
+          label={sending ? t('auth.sending') : t('auth.receiveCode')}
           onPress={handleSend}
           loading={sending}
           style={{ marginTop: spacing.md }}

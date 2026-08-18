@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing } from '../theme/typography';
 import { useAuthStore } from '../stores/authStore';
@@ -21,22 +22,25 @@ export default function HomeScreen() {
   const { theme } = useTheme();
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
 
   const [services, setServices] = useState<Service[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [points, setPoints] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Un drapeau et non le message : un texte figé dans l'état resterait dans
+  // l'ancienne langue après un changement de langue.
+  const [error, setError] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      setError(null);
+      setError(false);
       const [srv, prd] = await Promise.all([servicesApi.getAll(), productsApi.getAll()]);
       setServices(srv);
       setProducts(prd);
     } catch {
-      setError('Impossible de charger le contenu.');
+      setError(true);
     } finally {
       setIsLoading(false);
     }
@@ -78,7 +82,7 @@ export default function HomeScreen() {
   if (error && services.length === 0 && products.length === 0) {
     return (
       <View style={[styles.fill, { backgroundColor: theme.background, paddingTop: insets.top + spacing.md }]}>
-        <ErrorView message={error} onRetry={load} />
+        <ErrorView message={t('home.loadFailed')} onRetry={load} />
       </View>
     );
   }
@@ -90,18 +94,18 @@ export default function HomeScreen() {
       showsVerticalScrollIndicator={false}
     >
       {/* Échec du rafraîchissement, sans masquer le contenu déjà chargé */}
-      {error && <ErrorBanner message="Contenu non actualisé (connexion)." onRetry={load} />}
+      {error && <ErrorBanner message={t('home.staleBanner')} onRetry={load} />}
 
       {/* En-tête : salutation serif + bouton profil */}
       <View style={[styles.headerRow, { paddingHorizontal: spacing.lg }]}>
         <View style={{ flex: 1 }}>
-          <Text style={[typography.body, { color: theme.textSecondary }]}>Bonjour</Text>
-          <Text style={[typography.headingSm, { color: theme.text }]}>Bienvenue chez Yani</Text>
+          <Text style={[typography.body, { color: theme.textSecondary }]}>{t('home.greeting')}</Text>
+          <Text style={[typography.headingSm, { color: theme.text }]}>{t('home.welcome')}</Text>
         </View>
         <TouchableOpacity
           onPress={() => navigation.navigate('Profile')}
           accessibilityRole="button"
-          accessibilityLabel="Profil"
+          accessibilityLabel={t('home.profileA11y')}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           style={[styles.profileBtn, { borderColor: theme.gold }]}
         >
@@ -116,17 +120,18 @@ export default function HomeScreen() {
           guest={!user}
           subtitle={
             user
-              ? `Bonjour ${user.firstName}`
-              : 'Mode invité · suivez vos points'
+              ? t('home.greetingNamed', { name: user.firstName })
+              : t('home.guestMode')
           }
-          ctaLabel="Se connecter"
+          ctaLabel={t('common.signIn')}
           onCtaPress={() => navigation.navigate('Login')}
         />
       </View>
 
       {/* Produits */}
       <SectionHeader
-        title="Produits"
+        title={t('nav.products')}
+        seeMoreLabel={t('home.seeMore')}
         // On cible explicitement la LISTE. Sans `screen`, React Navigation
         // restaure l'état de l'onglet — qui contient encore la fiche produit
         // ouverte précédemment : la cliente retombait sur ce détail au lieu
@@ -136,7 +141,7 @@ export default function HomeScreen() {
       />
       {products.length === 0 ? (
         <Text style={[typography.caption, styles.emptyMsg, { color: theme.textMuted }]}>
-          Aucun produit disponible pour le moment.
+          {t('products.empty')}
         </Text>
       ) : (
         <ScrollView
@@ -152,7 +157,8 @@ export default function HomeScreen() {
 
       {/* Services */}
       <SectionHeader
-        title="Services"
+        title={t('nav.services')}
+        seeMoreLabel={t('home.seeMore')}
         // Même raison que pour les produits : on vise la liste, pas l'état
         // résiduel de l'onglet.
         onPress={() => navigation.navigate('Services', { screen: 'ServicesList' })}
@@ -160,7 +166,7 @@ export default function HomeScreen() {
       />
       {services.length === 0 ? (
         <Text style={[typography.caption, styles.emptyMsg, { color: theme.textMuted }]}>
-          Aucun service disponible pour le moment.
+          {t('services.empty')}
         </Text>
       ) : (
         <ScrollView
@@ -177,12 +183,12 @@ export default function HomeScreen() {
   );
 }
 
-function SectionHeader({ title, onPress, theme }: any) {
+function SectionHeader({ title, seeMoreLabel, onPress, theme }: any) {
   return (
     <View style={[styles.sectionHeader, { paddingHorizontal: spacing.lg }]}>
       <Text style={[typography.headingSm, { color: theme.text }]}>{title}</Text>
       <TouchableOpacity onPress={onPress} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-        <Text style={[typography.bodyMedium, { color: theme.gold }]}>Voir plus →</Text>
+        <Text style={[typography.bodyMedium, { color: theme.gold }]}>{seeMoreLabel}</Text>
       </TouchableOpacity>
     </View>
   );

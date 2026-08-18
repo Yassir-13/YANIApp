@@ -75,6 +75,14 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
+  // Langue de la cliente : « fr », « ar » ou « en ». Elle décide de la langue
+  // de ses EMAILS — les réponses de l'API, elles, suivent l'en-tête
+  // `Accept-Language` de chaque requête.
+  //
+  // Le défaut « fr » vaut aussi pour les comptes créés avant ce champ : leurs
+  // emails restent exactement ce qu'ils étaient.
+  locale       String   @default("fr")
+
   // Date à laquelle la cliente a prouvé qu'elle recevait bien ses mails à cette
   // adresse. null = jamais confirmée. On garde la date plutôt qu'un booléen :
   // elle sert à dater la preuve, et un email modifié plus tard la remettra à null.

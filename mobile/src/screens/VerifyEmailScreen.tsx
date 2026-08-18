@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { useAuthStore } from '../stores/authStore';
@@ -24,6 +25,7 @@ const CODE_LENGTH = 6;
 
 export default function VerifyEmailScreen({ navigation, route }: any) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { alert } = useAlert();
 
@@ -82,12 +84,12 @@ export default function VerifyEmailScreen({ navigation, route }: any) {
     setSubmitting(true);
     try {
       await verifyEmail(value);
-      alert('Adresse confirmée', 'Merci, votre adresse email est confirmée.');
+      alert(t('auth.verifiedTitle'), t('auth.verifiedMessage'));
       quitter();
     } catch (e) {
       setCode('');
       submittedCode.current = null;
-      alert('Code refusé', apiErrorMessage(e, 'Code invalide ou expiré.'));
+      alert(t('auth.codeRejected'), apiErrorMessage(e, t('auth.codeInvalid')));
     } finally {
       setSubmitting(false);
     }
@@ -99,9 +101,9 @@ export default function VerifyEmailScreen({ navigation, route }: any) {
       setSecondsLeft(RESEND_COOLDOWN_SECONDS);
       setCode('');
       submittedCode.current = null;
-      alert('Code envoyé', `Un nouveau code a été envoyé à ${user?.email}.`);
+      alert(t('auth.codeSentTitle'), t('auth.codeResentMessage', { email: user?.email }));
     } catch (e) {
-      alert('Erreur', apiErrorMessage(e, 'Envoi impossible. Réessayez.'));
+      alert(t('common.error'), apiErrorMessage(e, t('auth.resendFailed')));
     }
   };
 
@@ -110,7 +112,7 @@ export default function VerifyEmailScreen({ navigation, route }: any) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={[styles.container, { backgroundColor: theme.background }]}
     >
-      <Header title="Confirmer votre email" onBack={() => navigation.goBack()} />
+      <Header title={t('auth.verifyTitle')} onBack={() => navigation.goBack()} />
 
       <ScrollView
         contentContainerStyle={{
@@ -163,7 +165,7 @@ export default function VerifyEmailScreen({ navigation, route }: any) {
         />
 
         <Button
-          label={submitting ? 'Vérification…' : 'Confirmer'}
+          label={submitting ? t('auth.verifying') : t('common.confirm')}
           onPress={() => submit(code)}
           loading={submitting}
           disabled={code.length !== CODE_LENGTH}
@@ -187,8 +189,8 @@ export default function VerifyEmailScreen({ navigation, route }: any) {
             ]}
           >
             {secondsLeft > 0
-              ? `Renvoyer le code dans ${secondsLeft} s`
-              : 'Je n’ai rien reçu — renvoyer le code'}
+              ? t('auth.resendIn', { seconds: secondsLeft })
+              : t('auth.nothingReceived')}
           </Text>
         </TouchableOpacity>
 
@@ -203,8 +205,7 @@ export default function VerifyEmailScreen({ navigation, route }: any) {
             },
           ]}
         >
-          Le code expire au bout de 15 minutes. Pensez à regarder dans vos
-          courriers indésirables.
+          {t('auth.codeExpiry')}
         </Text>
 
         {skippable && (
@@ -219,7 +220,7 @@ export default function VerifyEmailScreen({ navigation, route }: any) {
                 { color: theme.textSecondary, textAlign: 'center' },
               ]}
             >
-              Plus tard
+              {t('common.later')}
             </Text>
           </TouchableOpacity>
         )}

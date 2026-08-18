@@ -21,6 +21,13 @@ import {
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import type { MailLanguage } from '../mail/mail.templates';
+
+// `locale` est une colonne texte : elle peut valoir n'importe quoi si elle est
+// modifiée à la main en base. On ne laisse passer que ce qu'on sait écrire.
+function mailLanguage(locale?: string | null): MailLanguage {
+  return locale === 'ar' || locale === 'en' ? locale : 'fr';
+}
 
 @Injectable()
 export class AuthService {
@@ -124,6 +131,9 @@ export class AuthService {
       firstName: dto.firstName,
       lastName: dto.lastName,
       phone: dto.phone,
+      // Enregistrée dès l'inscription : le tout premier email — le code de
+      // confirmation — part ainsi déjà dans la bonne langue.
+      locale: dto.locale,
     });
 
     // Le compte est utilisable immédiatement : la confirmation est demandée,
@@ -166,6 +176,7 @@ export class AuthService {
     id: string;
     email: string;
     firstName: string | null;
+    locale?: string | null;
   }) {
     const code = await this.verificationCodes.issue(
       user.id,
@@ -178,6 +189,9 @@ export class AuthService {
       code,
       expiresInMinutes: CODE_TTL_MINUTES,
       firstName: user.firstName,
+      // La langue de la CLIENTE, et non celle de la requête : un email se lit
+      // longtemps après avoir été reçu, souvent sur un autre appareil.
+      lang: mailLanguage(user.locale),
     });
   }
 
@@ -261,6 +275,7 @@ export class AuthService {
           code,
           expiresInMinutes: CODE_TTL_MINUTES,
           firstName: user.firstName,
+          lang: mailLanguage(user.locale),
         });
       }
     }

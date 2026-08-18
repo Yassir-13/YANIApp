@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, radius } from '../theme/typography';
 
@@ -16,12 +17,13 @@ interface BadgeProps {
 // Un point + un texte : l'info ne repose jamais sur la couleur seule (guide UI color-not-only).
 export default function Badge({ kind }: BadgeProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   const config = {
-    inStock: { bg: theme.badgeInStockBg, fg: theme.badgeInStock, text: 'En stock' },
+    inStock: { bg: theme.badgeInStockBg, fg: theme.badgeInStock, text: t('products.inStock') },
     // Gris neutre et non doré : le doré annonce une bonne nouvelle, une
     // rupture n'en est pas une.
-    outOfStock: { bg: theme.badgeOutBg, fg: theme.badgeOut, text: 'Épuisé' },
+    outOfStock: { bg: theme.badgeOutBg, fg: theme.badgeOut, text: t('products.outOfStock') },
   }[kind];
 
   return (

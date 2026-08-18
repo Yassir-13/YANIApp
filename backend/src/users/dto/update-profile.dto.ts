@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsIn, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 import { IsMoroccanPhone } from '../../common/validators/phone.validator';
 
 // Mise à jour partielle du profil : chaque champ est optionnel, mais s'il est
@@ -30,4 +30,14 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsMoroccanPhone()
   phone?: string | null;
+
+  @ApiPropertyOptional({
+    example: 'ar',
+    enum: ['fr', 'ar', 'en'],
+    description:
+      "Langue des EMAILS de la cliente. Les réponses de l'API, elles, suivent l'en-tête Accept-Language de chaque requête.",
+  })
+  @IsOptional()
+  @IsIn(['fr', 'ar', 'en'], { message: 'locale doit valoir fr, ar ou en.' })
+  locale?: string;
 }

@@ -2,6 +2,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing } from '../theme/typography';
+import { mirroredIcon } from '../i18n';
 
 interface SettingsRowProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -30,7 +31,7 @@ export default function SettingsRow({ icon, label, onPress, last }: SettingsRowP
       <Text style={[typography.body, { color: theme.text, flex: 1, marginLeft: spacing.md }]}>
         {label}
       </Text>
-      <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+      <Ionicons name={mirroredIcon('chevron-forward')} size={18} color={theme.textMuted} />
     </TouchableOpacity>
   );
 }

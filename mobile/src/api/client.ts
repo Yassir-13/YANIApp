@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { currentLanguage } from '../i18n';
 import { API_BASE_URL } from './config';
 import { secureStorage } from '../utils/secureStorage';
 import { notifySessionExpired } from './sessionEvents';
@@ -15,6 +16,12 @@ apiClient.interceptors.request.use(async (config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  // C'est cet en-tête qui décide de la langue des messages du serveur — ses
+  // erreurs comme ses phrases de succès. Le back-office n'en envoie aucun et
+  // continue donc de recevoir du français.
+  config.headers['Accept-Language'] = currentLanguage();
+
   return config;
 });
 

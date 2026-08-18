@@ -5,6 +5,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAlert } from '../components/AlertProvider';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { useCartStore } from '../stores/cartStore';
@@ -17,6 +18,7 @@ import EmptyView from '../components/EmptyView';
 
 export default function CartScreen({ navigation }: any) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const lines = useCartStore((s) => s.lines);
   const increment = useCartStore((s) => s.increment);
@@ -43,28 +45,30 @@ export default function CartScreen({ navigation }: any) {
 
         if (removed.length > 0) {
           alert(
-            removed.length > 1 ? 'Produits indisponibles' : 'Produit indisponible',
-            `${removed.join(', ')} ${removed.length > 1 ? 'ne sont plus disponibles' : "n'est plus disponible"} et ${removed.length > 1 ? 'ont' : 'a'} été retiré${removed.length > 1 ? 's' : ''} de votre panier.`
+            // Les accords étaient bricolés à coups de ternaires ; les formes
+            // CLDR les portent maintenant, y compris le duel arabe.
+            t('cart.unavailableTitle', { count: removed.length }),
+            t('cart.unavailableMessage', { count: removed.length, names: removed.join(', ') })
           );
         } else if (reduced.length > 0) {
           // Le stock a baissé pendant que le panier dormait. On nomme le
           // produit et ce qu'il en reste : le serveur refuserait la commande
           // au dernier moment, sans dire lequel poser.
           alert(
-            'Stock mis à jour',
+            t('cart.stockUpdatedTitle'),
             reduced
               .map((r) =>
                 r.after === 0
-                  ? `${r.name} : épuisé, retiré de votre panier`
-                  : `${r.name} : il n'en reste que ${r.after} (vous en aviez ${r.before})`
+                  ? t('cart.stockSoldOut', { name: r.name })
+                  : t('cart.stockReduced', { name: r.name, after: r.after, before: r.before })
               )
               .join('\n')
           );
         } else if (repriced.length > 0) {
           alert(
-            'Prix mis à jour',
+            t('cart.priceUpdatedTitle'),
             repriced
-              .map((r) => `${r.name} : ${formatPrice(r.before)} → ${formatPrice(r.after)}`)
+              .map((r) => t('cart.priceChanged', { name: r.name, before: formatPrice(r.before), after: formatPrice(r.after) }))
               .join('\n')
           );
         }
@@ -91,7 +95,7 @@ export default function CartScreen({ navigation }: any) {
   if (!hasHydrated || syncing) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
-        <Header title="Mon panier" onBack={() => navigation.goBack()} />
+        <Header title={t('cart.title')} onBack={() => navigation.goBack()} />
         <View style={{ flex: 1, justifyContent: 'center' }}>
           <ActivityIndicator size="large" color={theme.gold} />
         </View>
@@ -101,11 +105,11 @@ export default function CartScreen({ navigation }: any) {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <Header title="Mon panier" onBack={() => navigation.goBack()} />
+      <Header title={t('cart.title')} onBack={() => navigation.goBack()} />
 
       {lines.length === 0 ? (
         <View style={{ flex: 1, paddingHorizontal: spacing.lg }}>
-          <EmptyView message="Votre panier est vide." icon="bag-outline" />
+          <EmptyView message={t('cart.empty')} icon="bag-outline" />
         </View>
       ) : (
         <>
@@ -179,7 +183,7 @@ export default function CartScreen({ navigation }: any) {
                   <Text style={{ color: theme.goldLight }}>+{pointsToEarn} points</Text>
                 </Text>
                 <TouchableOpacity onPress={() => navigation.navigate('Login')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Text style={[typography.subtitle, { color: theme.goldLight }]}>Connexion</Text>
+                  <Text style={[typography.subtitle, { color: theme.goldLight }]}>{t('cart.login')}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -192,19 +196,19 @@ export default function CartScreen({ navigation }: any) {
             ]}
           >
             <View style={styles.recapRow}>
-              <Text style={[typography.body, { color: theme.textSecondary }]}>Sous-total</Text>
+              <Text style={[typography.body, { color: theme.textSecondary }]}>{t('cart.subtotal')}</Text>
               <Text style={[typography.body, { color: theme.text }]}>{formatPrice(total)}</Text>
             </View>
             <View style={styles.recapRow}>
-              <Text style={[typography.body, { color: theme.textSecondary }]}>Livraison</Text>
-              <Text style={[typography.body, { color: theme.success }]}>Offerte</Text>
+              <Text style={[typography.body, { color: theme.textSecondary }]}>{t('cart.delivery')}</Text>
+              <Text style={[typography.body, { color: theme.success }]}>{t('cart.deliveryFree')}</Text>
             </View>
             <View style={[styles.recapRow, { marginTop: spacing.sm }]}>
-              <Text style={[typography.subtitle, { color: theme.text }]}>Total</Text>
+              <Text style={[typography.subtitle, { color: theme.text }]}>{t('cart.total')}</Text>
               <Text style={[typography.priceLg, { color: theme.gold }]}>{formatPrice(total)}</Text>
             </View>
 
-            <Button label="Valider la commande" onPress={goCheckout} style={{ marginTop: spacing.md }} />
+            <Button label={t('cart.checkout')} onPress={goCheckout} style={{ marginTop: spacing.md }} />
           </View>
         </>
       )}

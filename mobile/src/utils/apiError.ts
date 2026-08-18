@@ -1,4 +1,5 @@
 import axios from 'axios';
+import i18n from '../i18n';
 
 // Traduction d'une erreur d'API en une phrase affichable.
 //
@@ -24,10 +25,10 @@ export function apiErrorMessage(e: unknown, repli: string): string {
 
   if (axios.isAxiosError(e)) {
     if (!e.response) {
-      return 'Connexion impossible. Vérifiez votre réseau et réessayez.';
+      return i18n.t('errors.network');
     }
     if (e.response.status === 429) {
-      return 'Trop de tentatives. Patientez une minute avant de réessayer.';
+      return i18n.t('errors.tooManyAttempts');
     }
   }
 

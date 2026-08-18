@@ -14,11 +14,12 @@
 export const PHONE_RE = /^(?:\+212|0)([5-7]\d{8})$/;
 
 /**
- * Renvoie un message d'erreur, ou null si le numéro convient.
+ * Renvoie une clé de message d'erreur, ou null si le numéro convient.
+ * Même raison que `validatePassword` : fonction pure, donc pas de `t` ici.
  */
-export function validatePhone(phone: string): string | null {
+export function validatePhone(phone: string): 'errors.phoneInvalid' | null {
   if (!PHONE_RE.test(phone)) {
-    return 'Saisissez un numéro marocain valide (ex. 0612345678).';
+    return 'errors.phoneInvalid';
   }
   return null;
 }

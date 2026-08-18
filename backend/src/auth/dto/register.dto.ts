@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsString, MinLength, MaxLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsEmail, IsIn, IsOptional, IsString, MinLength, MaxLength } from 'class-validator';
 import {
   IsAppPassword,
   PASSWORD_MIN_LENGTH,
@@ -34,4 +34,14 @@ export class RegisterDto {
   @ApiProperty({ example: '0612345678' })
   @IsMoroccanPhone()
   phone!: string;
+
+  @ApiPropertyOptional({
+    example: 'ar',
+    enum: ['fr', 'ar', 'en'],
+    description:
+      "Langue des EMAILS de la cliente. Les réponses de l'API, elles, suivent l'en-tête Accept-Language de chaque requête.",
+  })
+  @IsOptional()
+  @IsIn(['fr', 'ar', 'en'], { message: 'locale doit valoir fr, ar ou en.' })
+  locale?: string;
 }

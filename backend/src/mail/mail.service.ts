@@ -5,6 +5,7 @@ import {
   MailContent,
   passwordResetCodeMail,
   verificationCodeMail,
+  type MailLanguage,
 } from './mail.templates';
 
 // Deux modes d'envoi :
@@ -94,6 +95,7 @@ export class MailService implements OnModuleInit {
     code: string;
     expiresInMinutes: number;
     firstName?: string | null;
+    lang?: MailLanguage;
   }) {
     await this.send(params.to, verificationCodeMail(params));
   }
@@ -103,6 +105,7 @@ export class MailService implements OnModuleInit {
     code: string;
     expiresInMinutes: number;
     firstName?: string | null;
+    lang?: MailLanguage;
   }) {
     await this.send(params.to, passwordResetCodeMail(params));
   }

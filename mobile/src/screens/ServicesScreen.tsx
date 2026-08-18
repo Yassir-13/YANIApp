@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing } from '../theme/typography';
 import { servicesApi, Service } from '../api/services';
@@ -17,12 +18,15 @@ const ALL = '__all__';
 
 export default function ServicesScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
 
   const [services, setServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Un drapeau et non le message : un texte figé dans l'état resterait
+  // dans l'ancienne langue après un changement de langue.
+  const [error, setError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [activeCat, setActiveCat] = useState<string>(ALL);
 
@@ -34,13 +38,13 @@ export default function ServicesScreen() {
     const demande = ++derniereDemande.current;
     const depassee = () => demande !== derniereDemande.current;
     try {
-      setError(null);
+      setError(false);
       const data = await servicesApi.getAll();
       if (depassee()) return;
       setServices(data);
     } catch {
       if (depassee()) return;
-      setError('Impossible de charger les services.');
+      setError(true);
     } finally {
       if (!depassee()) {
         setIsLoading(false);
@@ -78,7 +82,7 @@ export default function ServicesScreen() {
     const groups = new Map<string, { id: string; name: string; data: Service[] }>();
     for (const s of visible) {
       const key = s.category?.id ?? 'autres';
-      const name = s.category?.name ?? 'Autres';
+      const name = s.category?.name ?? t('products.otherCategory');
       if (!groups.has(key)) groups.set(key, { id: key, name, data: [] });
       groups.get(key)!.data.push(s);
     }
@@ -108,7 +112,7 @@ export default function ServicesScreen() {
   if (error && services.length === 0) {
     return (
       <View style={[styles.fill, { backgroundColor: theme.background, paddingTop: insets.top + spacing.md }]}>
-        <ErrorView message={error} onRetry={load} />
+        <ErrorView message={t('services.loadFailed')} onRetry={load} />
       </View>
     );
   }
@@ -143,8 +147,8 @@ export default function ServicesScreen() {
           <EmptyView
             message={
               activeCat === ALL
-                ? 'Aucun service disponible pour le moment.'
-                : 'Aucun service dans cette catégorie.'
+                ? t('services.empty')
+                : t('services.emptyCategory')
             }
             icon="sparkles-outline"
           />
@@ -160,12 +164,12 @@ export default function ServicesScreen() {
               ci-dessous restent le moyen de s'y retrouver en attendant une
               vraie recherche. */}
           <View style={[styles.headerRow, { paddingHorizontal: spacing.lg }]}>
-            <Text style={[typography.display, { color: theme.text, flex: 1 }]}>Services</Text>
+            <Text style={[typography.display, { color: theme.text, flex: 1 }]}>{t('nav.services')}</Text>
           </View>
 
           {/* Échec du rafraîchissement, sans masquer les prestations affichées */}
           {error && (
-            <ErrorBanner message="Prestations non actualisées (connexion)." onRetry={load} />
+            <ErrorBanner message={t('services.staleBanner')} onRetry={load} />
           )}
 
           {/* Chips de filtres */}
@@ -174,7 +178,7 @@ export default function ServicesScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.chips}
           >
-            <Chip label="Tous" active={activeCat === ALL} onPress={() => setActiveCat(ALL)} />
+            <Chip label={t('products.allCategories')} active={activeCat === ALL} onPress={() => setActiveCat(ALL)} />
             {categories.map((c) => (
               <Chip
                 key={c.id}
