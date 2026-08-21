@@ -15,6 +15,7 @@ import { SettingsModule } from './settings/settings.module';
 import { LoyaltyModule } from './loyalty/loyalty.module';
 import { OrdersModule } from './orders/orders.module';
 import { ExportsModule } from './exports/exports.module';
+import { UploadsModule } from './uploads/uploads.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { ExportsModule } from './exports/exports.module';
     LoyaltyModule,
     OrdersModule,
     ExportsModule,
+    UploadsModule,
   ],
   providers: [
     // Garde global : toute route est comptée, sauf @SkipThrottle explicite.

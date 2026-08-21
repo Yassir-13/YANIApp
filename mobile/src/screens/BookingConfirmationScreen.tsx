@@ -40,7 +40,7 @@ export default function BookingConfirmationScreen({ route, navigation }: any) {
           {t('booking.confirmedTitle')}
         </Text>
         <Text style={[typography.body, { color: theme.textSecondary, textAlign: 'center', marginTop: spacing.sm }]}>
-          Nous vous attendons le {formattedDate} à {time}
+          {t('booking.weExpectYou', { date: formattedDate, time })}
           {serviceName ? t('booking.confirmedFor', { service: serviceName.toLowerCase() }) : '.'}
         </Text>
       </View>

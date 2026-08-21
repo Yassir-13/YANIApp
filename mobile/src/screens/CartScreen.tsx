@@ -15,6 +15,7 @@ import Header from '../components/Header';
 import Button from '../components/Button';
 import Drop from '../components/Drop';
 import EmptyView from '../components/EmptyView';
+import { mediaUrl } from '../api/config';
 
 export default function CartScreen({ navigation }: any) {
   const { theme } = useTheme();
@@ -126,7 +127,7 @@ export default function CartScreen({ navigation }: any) {
                 <View key={line.product.id} style={[styles.line, { borderBottomColor: theme.border }]}>
                   <View style={[styles.thumb, { backgroundColor: theme.surface }]}>
                     {line.product.imageUrl ? (
-                      <Image source={{ uri: line.product.imageUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                      <Image source={{ uri: mediaUrl(line.product.imageUrl) }} style={StyleSheet.absoluteFill} resizeMode="cover" />
                     ) : (
                       <Ionicons name="image-outline" size={22} color={theme.textMuted} />
                     )}
@@ -163,7 +164,7 @@ export default function CartScreen({ navigation }: any) {
 
                     {auMax && (
                       <Text style={[typography.small, { color: theme.textMuted, marginTop: 4 }]}>
-                        Stock maximum : {line.product.stockQty}
+                        {t('cart.maxStock', { qty: line.product.stockQty })}
                       </Text>
                     )}
                   </View>
@@ -179,8 +180,10 @@ export default function CartScreen({ navigation }: any) {
               <View style={[styles.loyaltyHint, { backgroundColor: theme.loyaltyBg }]}>
                 <Drop size={28} colors={[theme.goldLight, theme.gold, theme.goldDeep]} />
                 <Text style={[typography.caption, { color: theme.loyaltyText, flex: 1, marginLeft: spacing.sm }]}>
-                  Connectez-vous pour gagner{' '}
-                  <Text style={{ color: theme.goldLight }}>+{pointsToEarn} points</Text>
+                  {t('cart.loginToEarn')}{' '}
+                  <Text style={{ color: theme.goldLight }}>
+                    {t('cart.pointsToEarn', { points: pointsToEarn })}
+                  </Text>
                 </Text>
                 <TouchableOpacity onPress={() => navigation.navigate('Login')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                   <Text style={[typography.subtitle, { color: theme.goldLight }]}>{t('cart.login')}</Text>

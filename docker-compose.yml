@@ -76,6 +76,11 @@ services:
       # nginx) qui expose l'API au monde, en HTTPS. Publier directement le port
       # reviendrait à servir l'API en clair.
       - "127.0.0.1:${BACKEND_PORT:-3000}:${BACKEND_PORT:-3000}"
+    volumes:
+      # Les images de prestations et de produits, téléversées depuis le
+      # backoffice. Hors de l'image Docker, sinon `docker compose up --build`
+      # les effacerait toutes — et elles ne sont PAS dans le dump SQL.
+      - yani_uploads:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -88,3 +93,4 @@ services:
 
 volumes:
   yani_pgdata:                       # volume nommé, survit aux redémarrages
+  yani_uploads:                      # images du catalogue, idem

@@ -24,7 +24,8 @@ export interface ProductPayload {
   description?: string;
   price?: number;
   stockQty?: number;
-  imageUrl?: string;
+  // `null` pour retirer la photo ; absent pour ne pas y toucher.
+  imageUrl?: string | null;
   active?: boolean;
 }
 

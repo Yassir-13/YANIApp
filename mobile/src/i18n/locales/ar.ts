@@ -100,6 +100,10 @@ export const ar: Translations = {
     resetTitle: 'كلمة مرور جديدة',
     codeFromEmail: 'الرمز المستلم بالبريد',
     ifAccountExists: 'إذا كان هناك حساب مرتبط بـ',
+    // Suite de `ifAccountExists`, coupée par l'adresse email affichée entre
+    // les deux.
+    resetCodeSent:
+      'فقد أُرسل إليه رمز من {{length}} أرقام. تنتهي صلاحيته بعد 15 دقيقة.',
     codeIncomplete: 'رمز ناقص',
     codeLength: 'يتكوّن الرمز من {{length}} أرقام.',
     newPasswordPlaceholder: 'كلمة المرور الجديدة ({{min}} خانات على الأقل)',
@@ -119,6 +123,8 @@ export const ar: Translations = {
     resendFailed: 'تعذّر الإرسال. أعيدي المحاولة.',
 
     verifyTitle: 'تأكيد بريدك الإلكتروني',
+    // Suivi de l'adresse email, sur sa propre ligne.
+    codeSentTo: 'أرسلنا رمزًا من {{length}} أرقام إلى',
     verifying: 'جارٍ التحقّق…',
     codeExpiry:
       'تنتهي صلاحية الرمز بعد 15 دقيقة. تحقّقي أيضًا من مجلّد الرسائل غير المرغوب فيها.',
@@ -199,6 +205,11 @@ export const ar: Translations = {
     total: 'المجموع',
     checkout: 'تأكيد الطلب',
     login: 'تسجيل الدخول',
+    maxStock: 'الكمية القصوى: {{qty}}',
+    // Deux clés : les points sont rendus en doré dans un `<Text>` imbriqué.
+    // L'arabe place la valeur à la fin comme le français, la coupure tient.
+    loginToEarn: 'سجّلي الدخول لتربحي',
+    pointsToEarn: '+{{points}} نقطة',
     unavailableTitle: {
       one: 'منتج غير متوفّر',
       two: 'منتجان غير متوفّرين',
@@ -261,6 +272,14 @@ export const ar: Translations = {
       many: '{{count}} منتجًا',
       other: '{{count}} منتج',
     },
+    // Même grammaire qu'`itemCount`, avec l'accord de « آخر / أخرى ».
+    moreItems: {
+      one: '+{{count}} منتج آخر',
+      two: '+{{count}} منتجان آخران',
+      few: '+{{count}} منتجات أخرى',
+      many: '+{{count}} منتجًا آخر',
+      other: '+{{count}} منتج آخر',
+    },
     statusPending: 'في الانتظار',
     statusConfirmed: 'مؤكَّد',
     statusReady: 'جاهز',
@@ -301,6 +320,7 @@ export const ar: Translations = {
     confirmBooking: 'تأكيد الحجز',
     bookingFailed: 'تعذّر الحجز.',
     confirmedTitle: 'تمّ تأكيد الحجز',
+    weExpectYou: 'ننتظرك يوم {{date}} على الساعة {{time}}',
     confirmedFor: ' لأجل {{service}}.',
   },
 
@@ -310,6 +330,7 @@ export const ar: Translations = {
     fromVisits: 'هدية على زياراتك',
     redeemedFor: 'مستبدلة مقابل {{points}} نقطة',
     toPresent: 'للتقديم',
+    usedOn: 'استُعملت في {{date}}',
     presentCode: 'قدّمي الرمز في المعهد عند زيارتك المقبلة.',
     codeA11y: 'الرمز {{code}}',
   },

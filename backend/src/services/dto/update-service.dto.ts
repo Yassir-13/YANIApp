@@ -1,8 +1,9 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsString, IsNotEmpty, IsOptional, IsInt, IsNumber, IsUUID, IsBoolean,
-  IsUrl, MaxLength, Min,
+  Matches, MaxLength, Min,
 } from 'class-validator';
+import { UPLOADED_IMAGE_PATH } from '../../uploads/uploads.config';
 
 // Mise à jour partielle d'une prestation : tous les champs sont optionnels.
 // `active` permet de réactiver une prestation précédemment désactivée.
@@ -37,13 +38,18 @@ export class UpdateServiceDto {
   @Min(0)
   price?: number;
 
-  @ApiPropertyOptional({ example: 'https://exemple.ma/images/brushing.jpg' })
+  // Chemin renvoyé par POST /uploads/image, et rien d'autre : les images sont
+  // hébergées par l'API, plus par un site tiers. Voir UPLOADED_IMAGE_PATH pour
+  // la raison du chemin relatif.
+  @ApiPropertyOptional({ example: '/uploads/9c8b7a65-4321-4fed-9876-0a1b2c3d4e5f.webp' })
   @IsOptional()
-  @IsUrl(
-    { protocols: ['http', 'https'], require_protocol: true },
-    { message: "imageUrl doit être une adresse http(s) complète." },
-  )
-  imageUrl?: string;
+  @Matches(UPLOADED_IMAGE_PATH, {
+    message: "imageUrl doit être un chemin renvoyé par POST /uploads/image.",
+  })
+  // `null` accepté, et pas seulement `undefined` : c'est ce qui permet de
+  // RETIRER une photo. `undefined` disparaît du JSON, la colonne garderait donc
+  // l'ancienne valeur. @IsOptional() laisse passer les deux.
+  imageUrl?: string | null;
 
   @ApiPropertyOptional({ example: true, description: 'Réactiver ou désactiver la prestation' })
   @IsOptional()

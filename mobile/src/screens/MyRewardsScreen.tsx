@@ -169,7 +169,7 @@ function VoucherCard({ voucher }: { voucher: RewardVoucher }) {
             { color: theme.textMuted, marginTop: spacing.md },
           ]}
         >
-          Utilisée le {formatShortDate(voucher.honoredAt!)}
+          {t('rewards.usedOn', { date: formatShortDate(voucher.honoredAt!) })}
         </Text>
       ) : (
         <View style={[styles.codeBox, { borderColor: theme.gold }]}>

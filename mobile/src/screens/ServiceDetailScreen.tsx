@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { servicesApi, Service } from '../api/services';
+import { mediaUrl } from '../api/config';
 import { useRequireAuth } from '../utils/useRequireAuth';
 import { formatDuration } from '../utils/format';
 import DetailBottomBar from '../components/DetailBottomBar';
@@ -67,7 +68,7 @@ export default function ServiceDetailScreen({ route, navigation }: any) {
         {/* Grand visuel */}
         <View style={[styles.hero, { backgroundColor: theme.surface }]}>
           {service.imageUrl ? (
-            <Image source={{ uri: service.imageUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+            <Image source={{ uri: mediaUrl(service.imageUrl) }} style={StyleSheet.absoluteFill} resizeMode="cover" />
           ) : (
             <Ionicons name="sparkles-outline" size={48} color={theme.textMuted} />
           )}

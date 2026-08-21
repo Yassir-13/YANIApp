@@ -7,6 +7,7 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { TranslateResponseInterceptor } from './common/interceptors/translate-response.interceptor';
+import { UPLOADS_ROUTE, resolveUploadsDir } from './uploads/uploads.config';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -27,6 +28,32 @@ async function bootstrap() {
       contentSecurityPolicy: isProduction ? undefined : false,
     }),
   );
+
+  // ── Images du catalogue ──
+  // Les photos de prestations et de produits sont hébergées par l'API et
+  // servies ici, en clair et sans authentification : ce sont les mêmes images
+  // que n'importe quelle visiteuse voit dans l'application.
+  //
+  // APRÈS helmet, et c'est tout l'enjeu de l'en-tête réécrit plus bas : helmet
+  // pose « Cross-Origin-Resource-Policy: same-origin », qui interdit à une
+  // autre origine d'afficher la ressource. Le backoffice (localhost:5173, ou
+  // un sous-domaine en production) n'est pas la même origine que l'API — ses
+  // vignettes restaient donc vides, sans la moindre erreur réseau visible.
+  //
+  // `immutable` avec un an de cache : chaque fichier porte un nom tiré au sort
+  // et son contenu ne change jamais. Remplacer une photo crée un nouveau nom,
+  // jamais une nouvelle version du même — il n'y a donc rien à invalider.
+  app.useStaticAssets(resolveUploadsDir(config.get<string>('UPLOADS_DIR')), {
+    prefix: UPLOADS_ROUTE,
+    index: false,
+    redirect: false,
+    dotfiles: 'ignore',
+    maxAge: '365d',
+    immutable: true,
+    setHeaders: (res) => {
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    },
+  });
 
   // ── Traitement uniforme des erreurs ──
   // Sans ce filtre, les erreurs Prisma partaient brutes au client, avec les

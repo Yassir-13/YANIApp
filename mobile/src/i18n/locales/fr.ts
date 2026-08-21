@@ -103,6 +103,11 @@ export const fr = {
     resetTitle: 'Nouveau mot de passe',
     codeFromEmail: 'Code reçu par email',
     ifAccountExists: 'Si un compte existe pour',
+    // Suite de `ifAccountExists`, coupée par l'adresse email affichée entre les
+    // deux : « Si un compte existe pour » · cliente@… · « un code … ». D'où la
+    // minuscule initiale, qui n'est pas une coquille.
+    resetCodeSent:
+      'un code à {{length}} chiffres vient d’y être envoyé. Il expire au bout de 15 minutes.',
     codeIncomplete: 'Code incomplet',
     codeLength: 'Le code contient {{length}} chiffres.',
     newPasswordPlaceholder: 'Nouveau mot de passe (min. {{min}} caractères)',
@@ -123,6 +128,9 @@ export const fr = {
     resendFailed: 'Envoi impossible. Réessayez.',
 
     verifyTitle: 'Confirmer votre email',
+    // Suivi de l'adresse email, affichée sur sa propre ligne : la phrase
+    // s'arrête donc volontairement sur « à ».
+    codeSentTo: 'Nous avons envoyé un code à {{length}} chiffres à',
     verifying: 'Vérification…',
     codeExpiry:
       'Le code expire au bout de 15 minutes. Pensez à regarder dans vos courriers indésirables.',
@@ -204,6 +212,13 @@ export const fr = {
     total: 'Total',
     checkout: 'Valider la commande',
     login: 'Connexion',
+    maxStock: 'Stock maximum : {{qty}}',
+    // Deux clés et non une : les points sont rendus en doré dans un `<Text>`
+    // imbriqué. Les trois langues placent bien la valeur à la fin, la coupure
+    // tient donc — mais une quatrième langue qui l'inverserait demanderait un
+    // vrai `<Trans>`.
+    loginToEarn: 'Connectez-vous pour gagner',
+    pointsToEarn: '+{{points}} points',
     unavailableTitle: plural({
       one: 'Produit indisponible',
       other: 'Produits indisponibles',
@@ -254,6 +269,9 @@ export const fr = {
     pickup: 'Retrait',
     delivery: 'Livraison',
     itemCount: plural({ one: '{{count}} article', other: '{{count}} articles' }),
+    // Reste d'une liste tronquée à trois lignes. « autre(s) » était écrit à la
+    // main, comme les accords du panier avant l'étape 11.
+    moreItems: plural({ one: '+{{count}} autre', other: '+{{count}} autres' }),
     statusPending: 'En attente',
     statusConfirmed: 'Confirmée',
     statusReady: 'Prête',
@@ -296,6 +314,9 @@ export const fr = {
     confirmBooking: 'Confirmer la réservation',
     bookingFailed: 'Réservation impossible.',
     confirmedTitle: 'Réservation confirmée',
+    weExpectYou: 'Nous vous attendons le {{date}} à {{time}}',
+    // Suite immédiate de `weExpectYou`, d'où l'espace initial et le point
+    // final. Sans prestation connue, l'écran met simplement « . ».
     confirmedFor: ' pour votre {{service}}.',
   },
 
@@ -305,6 +326,7 @@ export const fr = {
     fromVisits: 'Offerte pour vos visites',
     redeemedFor: 'Échangée contre {{points}} points',
     toPresent: 'À présenter',
+    usedOn: 'Utilisée le {{date}}',
     presentCode: 'Présentez le code à l’institut lors de votre prochaine visite.',
     codeA11y: 'Code {{code}}',
   },

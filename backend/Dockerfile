@@ -71,6 +71,14 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
 COPY package.json ./
 
+# Dossier des images du catalogue, créé ICI et pas au premier téléversement :
+# /app appartient à root, et le processus tourne en `node` (uid 1000). Sans
+# cette ligne, la toute première photo ajoutée par Fati échouait sur un EACCES.
+#
+# En production, un volume se monte par-dessus (voir docker-compose.yml) : sans
+# lui, les images disparaîtraient à chaque reconstruction de l'image.
+RUN mkdir -p /app/uploads && chown node:node /app/uploads
+
 # Utilisateur non privilégié, fourni par l'image officielle (uid 1000). Une
 # faille dans une dépendance ne donne alors pas les droits root du conteneur.
 USER node

@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { productsApi, Product, Category } from '../api/products';
 import { servicesApi, Service } from '../api/services';
+import { mediaUrl } from '../api/config';
 import { useAuthStore } from '../stores/authStore';
 import { formatPrice } from '../utils';
 import CatalogForm, { CatalogFormValues, CatalogKind } from '../components/CatalogForm';
@@ -128,7 +129,11 @@ export default function CatalogPage() {
         name: v.name.trim(),
         description: v.description.trim() || undefined,
         price: parseFloat(v.price),
-        imageUrl: v.imageUrl.trim() || undefined,
+        // Sans image : `undefined` à la création (le champ est simplement
+        // absent), mais `null` à la modification. C'est ce qui distingue
+        // « je ne touche pas à la photo » de « retire la photo » : `undefined`
+        // disparaît du JSON, et le serveur garderait l'ancienne.
+        imageUrl: v.imageUrl.trim() || (editing ? null : undefined),
       };
 
       if (kind === 'product') {
@@ -376,7 +381,7 @@ export default function CatalogPage() {
                     <td>
                       <div style={styles.thumb}>
                         {it.imageUrl ? (
-                          <img src={it.imageUrl} alt="" style={styles.thumbImg} />
+                          <img src={mediaUrl(it.imageUrl)} alt="" style={styles.thumbImg} />
                         ) : (
                           <span className="muted" style={{ fontSize: 10 }}>—</span>
                         )}

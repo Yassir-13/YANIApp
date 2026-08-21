@@ -6,10 +6,11 @@ import {
   IsInt,
   IsNumber,
   IsUUID,
-  IsUrl,
+  Matches,
   MaxLength,
   Min,
 } from 'class-validator';
+import { UPLOADED_IMAGE_PATH } from '../../uploads/uploads.config';
 
 export class CreateProductDto {
   @ApiProperty({ example: '488ec126-3bea-423d-88c1-d282e9210d62' })
@@ -39,14 +40,13 @@ export class CreateProductDto {
   @Min(0)
   stockQty?: number;
 
-  // L'adresse part directement dans un `<img src>` de l'app et du backoffice.
-  // Le protocole est exigé : sans lui, « exemple.ma/img.jpg » passait la
-  // validation et n'affichait rien.
-  @ApiPropertyOptional({ example: 'https://exemple.ma/images/masque.jpg' })
+  // Chemin renvoyé par POST /uploads/image, et rien d'autre : les images sont
+  // hébergées par l'API, plus par un site tiers. Voir UPLOADED_IMAGE_PATH pour
+  // la raison du chemin relatif.
+  @ApiPropertyOptional({ example: '/uploads/3f2e1d0c-9b8a-4756-8432-1a2b3c4d5e6f.webp' })
   @IsOptional()
-  @IsUrl(
-    { protocols: ['http', 'https'], require_protocol: true },
-    { message: "imageUrl doit être une adresse http(s) complète." },
-  )
+  @Matches(UPLOADED_IMAGE_PATH, {
+    message: "imageUrl doit être un chemin renvoyé par POST /uploads/image.",
+  })
   imageUrl?: string;
 }

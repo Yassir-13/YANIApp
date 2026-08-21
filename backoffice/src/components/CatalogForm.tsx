@@ -1,10 +1,14 @@
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, useRef, ChangeEvent, FormEvent } from 'react';
 import { Category } from '../api/products';
+import { mediaUrl } from '../api/config';
+import { uploadsApi, MAX_IMAGE_BYTES } from '../api/uploads';
 
 export type CatalogKind = 'product' | 'service';
 
 // Valeurs du formulaire — communes aux produits et aux prestations.
 // `stockQty` ne concerne que les produits, `durationMin` que les prestations.
+// `imageUrl` n'est PAS une adresse saisie à la main : c'est le chemin renvoyé
+// par le serveur après téléversement (« /uploads/….webp »).
 export interface CatalogFormValues {
   categoryId: string;
   name: string;
@@ -49,16 +53,52 @@ export default function CatalogForm({
   onCancel,
 }: CatalogFormProps) {
   const [values, setValues] = useState<CatalogFormValues>(EMPTY);
+  const [uploading, setUploading] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
 
   // Réinitialise le formulaire à chaque ouverture
   useEffect(() => {
-    if (open) setValues({ ...EMPTY, ...initial });
+    if (open) {
+      setValues({ ...EMPTY, ...initial });
+      setUploading(false);
+      setImageError(null);
+    }
   }, [open, initial]);
 
   if (!open) return null;
 
   const set = (k: keyof CatalogFormValues, v: string) =>
     setValues((prev) => ({ ...prev, [k]: v }));
+
+  // Le fichier part vers l'API dès qu'il est choisi, et non à l'enregistrement :
+  // le formulaire n'a ainsi qu'un chemin de texte à soumettre, exactement comme
+  // avant. C'est aussi ce qui permet d'afficher l'aperçu tout de suite — et de
+  // voir un refus (format, poids) avant d'avoir rempli le reste.
+  const handleFile = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    // Le champ est remis à zéro tout de suite : sans ça, rechoisir LE MÊME
+    // fichier après un échec ne déclenchait aucun `change`, et le bouton
+    // paraissait mort.
+    e.target.value = '';
+    if (!file) return;
+
+    if (file.size > MAX_IMAGE_BYTES) {
+      setImageError(`Image trop lourde (${Math.round(MAX_IMAGE_BYTES / 1024 / 1024)} Mo maximum).`);
+      return;
+    }
+
+    setUploading(true);
+    setImageError(null);
+    try {
+      set('imageUrl', await uploadsApi.uploadImage(file));
+    } catch (err: any) {
+      const msg = err.response?.data?.message;
+      setImageError(Array.isArray(msg) ? msg.join(', ') : msg || "Envoi de l'image impossible.");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -168,12 +208,56 @@ export default function CatalogForm({
             )}
           </div>
 
-          <Field label="Image (URL)">
-            <input
-              value={values.imageUrl}
-              onChange={(e) => set('imageUrl', e.target.value)}
-              placeholder="https://…"
-            />
+          <Field label="Image">
+            <div style={styles.image}>
+              <div style={styles.preview}>
+                {values.imageUrl ? (
+                  <img src={mediaUrl(values.imageUrl)} alt="" style={styles.previewImg} />
+                ) : (
+                  <span className="muted" style={{ fontSize: 11 }}>Aucune</span>
+                )}
+              </div>
+
+              <div style={styles.imageActions}>
+                <input
+                  ref={fileInput}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleFile}
+                  style={{ display: 'none' }}
+                />
+                <div className="row gap-2">
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-sm"
+                    onClick={() => fileInput.current?.click()}
+                    disabled={uploading || loading}
+                  >
+                    {uploading
+                      ? 'Envoi…'
+                      : values.imageUrl
+                        ? 'Remplacer'
+                        : 'Choisir une image'}
+                  </button>
+                  {values.imageUrl && !uploading && (
+                    <button
+                      type="button"
+                      className="btn btn-danger btn-sm"
+                      onClick={() => {
+                        set('imageUrl', '');
+                        setImageError(null);
+                      }}
+                      disabled={loading}
+                    >
+                      Retirer
+                    </button>
+                  )}
+                </div>
+                <div className="small muted">JPEG, PNG ou WebP — 5 Mo maximum.</div>
+              </div>
+            </div>
+
+            {imageError && <div style={styles.error}>{imageError}</div>}
           </Field>
         </div>
 
@@ -183,7 +267,9 @@ export default function CatalogForm({
           <button type="button" className="btn btn-outline" onClick={onCancel} disabled={loading}>
             Annuler
           </button>
-          <button type="submit" className="btn btn-gold" disabled={loading}>
+          {/* Bloqué pendant l'envoi de l'image : enregistrer maintenant
+              sauvegarderait la fiche avec l'ANCIENNE photo, ou sans photo. */}
+          <button type="submit" className="btn btn-gold" disabled={loading || uploading}>
             {loading ? 'Enregistrement…' : isEdit ? 'Enregistrer' : 'Créer'}
           </button>
         </div>
@@ -232,6 +318,20 @@ const styles: Record<string, React.CSSProperties> = {
   },
   fields: { display: 'grid', gap: 'var(--sp-3)' },
   twoCols: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sp-3)' },
+  image: { display: 'flex', gap: 'var(--sp-3)', alignItems: 'center' },
+  preview: {
+    width: 72,
+    height: 72,
+    flexShrink: 0,
+    borderRadius: 'var(--radius-sm)',
+    background: 'var(--surface-alt)',
+    border: '1px solid var(--border)',
+    display: 'grid',
+    placeItems: 'center',
+    overflow: 'hidden',
+  },
+  previewImg: { width: '100%', height: '100%', objectFit: 'cover' },
+  imageActions: { display: 'grid', gap: 6 },
   error: {
     marginTop: 'var(--sp-3)',
     padding: '8px 10px',

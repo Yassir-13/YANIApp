@@ -28,3 +28,17 @@ if (!__DEV__ && !url.startsWith('https://')) {
 }
 
 export const API_BASE_URL = url;
+
+// Adresse complète d'une image du catalogue (prestation ou produit).
+//
+// L'API enregistre un chemin relatif (« /uploads/….webp ») et non une URL
+// entière : le téléphone et le backoffice ne joignent pas le serveur par la
+// même adresse, et une URL absolue en base gèlerait celle du jour où la photo
+// a été ajoutée. Chacun préfixe donc par SA base d'API.
+//
+// Renvoie `undefined` quand il n'y a pas de photo, pour que l'appelant affiche
+// son visuel de repli au lieu d'une image cassée.
+export function mediaUrl(path: string | null | undefined): string | undefined {
+  if (!path) return undefined;
+  return `${API_BASE_URL}${path}`;
+}

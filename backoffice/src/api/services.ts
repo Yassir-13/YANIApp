@@ -19,7 +19,8 @@ export interface ServicePayload {
   description?: string;
   durationMin?: number;
   price?: number;
-  imageUrl?: string;
+  // `null` pour retirer la photo ; absent pour ne pas y toucher.
+  imageUrl?: string | null;
   active?: boolean;
 }
 

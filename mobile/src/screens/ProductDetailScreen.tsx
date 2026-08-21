@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { productsApi, Product } from '../api/products';
+import { mediaUrl } from '../api/config';
 import Badge from '../components/Badge';
 import DetailBottomBar from '../components/DetailBottomBar';
 import { useCartStore } from '../stores/cartStore';
@@ -86,7 +87,7 @@ export default function ProductDetailScreen({ route, navigation }: any) {
         {/* Grand visuel */}
         <View style={[styles.hero, { backgroundColor: theme.surface }]}>
           {product.imageUrl ? (
-            <Image source={{ uri: product.imageUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+            <Image source={{ uri: mediaUrl(product.imageUrl) }} style={StyleSheet.absoluteFill} resizeMode="cover" />
           ) : (
             <Ionicons name="image-outline" size={48} color={theme.textMuted} />
           )}

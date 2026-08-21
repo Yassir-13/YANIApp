@@ -64,6 +64,14 @@ class EnvironmentVariables {
   @IsIn(['0', '1'], { message: "TRUST_PROXY doit valoir '0' ou '1'." })
   TRUST_PROXY?: string;
 
+  // Dossier où sont écrites les images du catalogue. À défaut, `./uploads`.
+  // Ces fichiers ne sont PAS dans la base : la sauvegarde SQL ne les emporte
+  // pas, il faut copier ce dossier à part.
+  @IsOptional()
+  @IsString({ message: 'UPLOADS_DIR doit être un chemin de dossier.' })
+  @MinLength(1, { message: 'UPLOADS_DIR ne doit pas être vide.' })
+  UPLOADS_DIR?: string;
+
   // ── Envoi des emails (codes de confirmation, mot de passe oublié) ──
   // 'console' : rien ne part, les codes s'affichent dans les logs (développement).
   // 'smtp'    : envoi réel. Défaut 'console', pour ne rien envoyer par accident.

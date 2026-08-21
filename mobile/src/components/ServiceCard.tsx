@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { Service } from '../api/services';
+import { mediaUrl } from '../api/config';
 import { formatPrice, formatDuration } from '../utils/format';
 
 interface ServiceCardProps {
@@ -25,7 +26,7 @@ export default function ServiceCard({ service, onPress, width }: ServiceCardProp
     >
       <View style={styles.image}>
         {service.imageUrl ? (
-          <Image source={{ uri: service.imageUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+          <Image source={{ uri: mediaUrl(service.imageUrl) }} style={StyleSheet.absoluteFill} resizeMode="cover" />
         ) : (
           <Ionicons name="sparkles-outline" size={28} color={theme.textMuted} />
         )}

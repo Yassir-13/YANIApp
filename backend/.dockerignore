@@ -26,3 +26,6 @@ test
 Dockerfile
 .dockerignore
 *.log
+
+# Images téléversées : elles vivent dans un volume, jamais dans l'image.
+uploads

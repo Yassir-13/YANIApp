@@ -132,7 +132,7 @@ export default function VerifyEmailScreen({ navigation, route }: any) {
             { color: theme.textSecondary, textAlign: 'center', lineHeight: 22 },
           ]}
         >
-          Nous avons envoyé un code à {CODE_LENGTH} chiffres à
+          {t('auth.codeSentTo', { length: CODE_LENGTH })}
         </Text>
         <Text
           style={[

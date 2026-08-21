@@ -139,7 +139,7 @@ export default function MyOrdersScreen({ navigation }: any) {
                 ))}
                 {item.items.length > 3 && (
                   <Text style={[typography.caption, { color: theme.textMuted }]}>
-                    +{item.items.length - 3} autre(s)
+                    {t('orders.moreItems', { count: item.items.length - 3 })}
                   </Text>
                 )}
               </View>

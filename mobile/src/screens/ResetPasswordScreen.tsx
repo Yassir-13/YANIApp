@@ -147,8 +147,7 @@ export default function ResetPasswordScreen({ navigation, route }: any) {
             },
           ]}
         >
-          un code à {CODE_LENGTH} chiffres vient d’y être envoyé. Il expire au
-          bout de 15 minutes.
+          {t('auth.resetCodeSent', { length: CODE_LENGTH })}
         </Text>
 
         <Field label={t('auth.codeFromEmail')} theme={theme}>

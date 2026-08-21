@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { Product } from '../api/products';
+import { mediaUrl } from '../api/config';
 import { formatPrice } from '../utils/format';
 import Badge from './Badge';
 
@@ -27,7 +28,7 @@ export default function ProductCard({ product, onPress, width }: ProductCardProp
     >
       <View style={[styles.image, { backgroundColor: theme.surface }]}>
         {product.imageUrl ? (
-          <Image source={{ uri: product.imageUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+          <Image source={{ uri: mediaUrl(product.imageUrl) }} style={StyleSheet.absoluteFill} resizeMode="cover" />
         ) : (
           <Ionicons name="image-outline" size={28} color={theme.textMuted} />
         )}

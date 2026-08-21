@@ -56,3 +56,6 @@ pids
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 /generated/prisma
+
+# Images du catalogue téléversées depuis le backoffice (voir UPLOADS_DIR).
+/uploads

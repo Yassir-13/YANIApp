@@ -85,6 +85,10 @@ export const en: Translations = {
     resetTitle: 'New password',
     codeFromEmail: 'Code received by email',
     ifAccountExists: 'If an account exists for',
+    // Continues `ifAccountExists`, split by the email address shown between
+    // the two — hence the lowercase start.
+    resetCodeSent:
+      'a {{length}}-digit code has just been sent to it. It expires after 15 minutes.',
     codeIncomplete: 'Incomplete code',
     codeLength: 'The code is {{length}} digits long.',
     newPasswordPlaceholder: 'New password (min. {{min}} characters)',
@@ -104,6 +108,8 @@ export const en: Translations = {
     resendFailed: 'Could not send. Please try again.',
 
     verifyTitle: 'Confirm your email',
+    // Followed by the email address on its own line.
+    codeSentTo: 'We sent a {{length}}-digit code to',
     verifying: 'Verifying…',
     codeExpiry:
       'The code expires after 15 minutes. Remember to check your spam folder.',
@@ -183,6 +189,10 @@ export const en: Translations = {
     total: 'Total',
     checkout: 'Place the order',
     login: 'Sign in',
+    maxStock: 'Maximum stock: {{qty}}',
+    // Two keys: the points are rendered in gold inside a nested `<Text>`.
+    loginToEarn: 'Sign in to earn',
+    pointsToEarn: '+{{points}} points',
     unavailableTitle: {
       one: 'Product unavailable',
       other: 'Products unavailable',
@@ -233,6 +243,7 @@ export const en: Translations = {
     pickup: 'Pickup',
     delivery: 'Delivery',
     itemCount: { one: '{{count}} item', other: '{{count}} items' },
+    moreItems: { one: '+{{count}} other', other: '+{{count}} others' },
     statusPending: 'Pending',
     statusConfirmed: 'Confirmed',
     statusReady: 'Ready',
@@ -275,6 +286,7 @@ export const en: Translations = {
     confirmBooking: 'Confirm the booking',
     bookingFailed: 'Could not confirm the booking.',
     confirmedTitle: 'Booking confirmed',
+    weExpectYou: 'We look forward to seeing you on {{date}} at {{time}}',
     confirmedFor: ' for your {{service}}.',
   },
 
@@ -284,6 +296,7 @@ export const en: Translations = {
     fromVisits: 'A gift for your visits',
     redeemedFor: 'Redeemed for {{points}} points',
     toPresent: 'To show',
+    usedOn: 'Used on {{date}}',
     presentCode: 'Show the code at the salon on your next visit.',
     codeA11y: 'Code {{code}}',
   },
