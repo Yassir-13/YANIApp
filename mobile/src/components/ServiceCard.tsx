@@ -4,7 +4,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { Service } from '../api/services';
 import { mediaUrl } from '../api/config';
-import { formatPrice, formatDuration } from '../utils/format';
+import { formatPrice } from '../utils/format';
 
 interface ServiceCardProps {
   service: Service;
@@ -36,9 +36,6 @@ export default function ServiceCard({ service, onPress, width }: ServiceCardProp
           {service.name}
         </Text>
         <View style={styles.footer}>
-          <Text style={[typography.caption, { color: theme.textSecondary }]}>
-            {formatDuration(service.durationMin)}
-          </Text>
           <Text style={[typography.price, { color: theme.gold }]}>{formatPrice(service.price)}</Text>
         </View>
       </View>

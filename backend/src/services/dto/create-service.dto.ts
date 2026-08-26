@@ -29,10 +29,19 @@ export class CreateServiceDto {
   @MaxLength(2000)
   description?: string;
 
-  @ApiProperty({ example: 45, description: 'Durée en minutes' })
+  // Facultative, et sans aucun effet sur les réservations : le moteur de
+  // créneaux ne la lit plus. Le centre espace ses rendez-vous d'un écart fixe,
+  // réglé dans les paramètres — voir appointments.service.ts. Cette valeur ne
+  // sert qu'à la gestion interne, dans le backoffice.
+  @ApiPropertyOptional({
+    example: 45,
+    description:
+      "Durée indicative en minutes. N'intervient PAS dans le calcul des créneaux.",
+  })
+  @IsOptional()
   @IsInt()
   @Min(1)
-  durationMin!: number;
+  durationMin?: number;
 
   @ApiProperty({ example: 150.0, description: 'Prix en dirhams' })
   @IsNumber({ maxDecimalPlaces: 2 })

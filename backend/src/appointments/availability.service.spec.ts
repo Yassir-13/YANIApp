@@ -8,19 +8,27 @@ import { LoyaltyService } from '../loyalty/loyalty.service';
 import { SettingsService } from '../settings/settings.service';
 
 /**
- * Règles de réservation : capacité des cabines, plages d'ouverture, fermetures
- * exceptionnelles et conversion de fuseau. Ce sont les règles qui décident si
- * deux clientes peuvent se retrouver au même moment, ou si un rendez-vous
- * tombe à la mauvaise heure.
+ * Règles de réservation : occupation d'un créneau, capacité des salles, plages
+ * d'ouverture, fermetures exceptionnelles et conversion de fuseau. Ce sont les
+ * règles qui décident si deux clientes peuvent se retrouver au même moment, ou
+ * si un rendez-vous tombe à la mauvaise heure.
+ *
+ * ⚠️ LA règle à ne pas perdre de vue en lisant ce fichier : un rendez-vous
+ * occupe UN CRÉNEAU, jamais la durée de sa prestation. Le centre espace ses
+ * rendez-vous d'un écart fixe — choix de gestion, pas contrainte technique.
+ * C'est pourquoi la prestation de référence ci-dessous dure 240 minutes alors
+ * que l'écart en vaut 60 : si un test se met à dépendre de ces 240 minutes,
+ * c'est que le moteur s'est remis à lire la durée.
  */
 describe('AppointmentsService — disponibilité des créneaux', () => {
   let service: AppointmentsService;
   let prisma: any;
 
+  // 240 minutes face à un écart de 60 : l'écart de valeur est le test.
   const SERVICE = {
     id: 'service-1',
-    name: 'Brushing',
-    durationMin: 60,
+    name: 'Pose complète',
+    durationMin: 240,
     price: new Prisma.Decimal(200),
     active: true,
   };
@@ -30,20 +38,17 @@ describe('AppointmentsService — disponibilité des créneaux', () => {
   // 14:00 heure locale de Casablanca (UTC+1 hors Ramadan) = 13:00 UTC.
   const A_14H_LOCAL = new Date('2099-01-07T13:00:00.000Z');
 
-  const rdvExistant = (startAtUtc: string, durationMin = 60) => ({
+  // Plus de prestation attachée : seule l'heure de début compte désormais.
+  const rdvExistant = (startAtUtc: string) => ({
     id: `rdv-${startAtUtc}`,
     startAt: new Date(startAtUtc),
     status: AppointmentStatus.CONFIRMED,
-    service: { durationMin },
   });
 
   beforeEach(async () => {
     prisma = {
       service: {
         findUnique: jest.fn().mockResolvedValue({ ...SERVICE }),
-        // Borne basse de la recherche de chevauchement : la plus longue
-        // prestation du catalogue (I5). Ici tout dure 60 minutes.
-        aggregate: jest.fn().mockResolvedValue({ _max: { durationMin: 60 } }),
       },
       // Une seule plage 09:00–19:00 par défaut : les tests qui portent sur la
       // pause déjeuner redéfinissent cette liste.
@@ -58,7 +63,7 @@ describe('AppointmentsService — disponibilité des créneaux', () => {
         findUnique: jest.fn().mockResolvedValue({
           id: 1,
           capacity: 2,
-          slotIntervalMin: 30,
+          slotIntervalMin: 60,
         }),
         create: jest.fn(),
       },
@@ -150,56 +155,71 @@ describe('AppointmentsService — disponibilité des créneaux', () => {
   });
 
   // ═══════════════════════════════════════════════════════════
-  //  BORNE BASSE DE LA RECHERCHE DE CHEVAUCHEMENT (I5)
+  //  OCCUPATION : UN CRÉNEAU, JAMAIS LA DURÉE DE LA PRESTATION
   // ═══════════════════════════════════════════════════════════
   //
-  // Sans borne basse, chaque réservation relisait tous les rendez-vous encore
-  // actifs depuis l'ouverture — et cette lecture se fait à l'intérieur du
-  // verrou de réservation, donc elle faisait patienter les autres clientes.
-  describe('borne basse de la recherche de chevauchement', () => {
-    it('ne remonte pas plus loin que la plus longue prestation', async () => {
+  // La règle de gestion du centre, et le cœur de ce fichier. Auparavant une
+  // prestation d'1h25 réservée à 10h occupait jusqu'à 11h25 et interdisait le
+  // créneau de 11h. Le centre veut précisément pouvoir le donner.
+  describe('occupation du créneau', () => {
+    it("n'occupe qu'un écart, même pour une prestation de 4 heures", async () => {
+      // Deux rendez-vous commencés trois heures plus tôt, sur une prestation
+      // qui dure 240 minutes. L'ancien calcul les faisait courir jusqu'à 14h
+      // UTC et refusait donc 13h. Ils libèrent maintenant la salle à 11h.
+      prisma.appointment.findMany.mockResolvedValue([
+        rdvExistant('2099-01-07T10:00:00.000Z'),
+        rdvExistant('2099-01-07T10:00:00.000Z'),
+      ]);
+
+      await expect(reserver()).resolves.toBeDefined();
+    });
+
+    it('propose la même grille à une prestation courte et à une longue', async () => {
+      prisma.service.findUnique.mockResolvedValue({ ...SERVICE, durationMin: 15 });
+      const courte = (
+        await service.getAvailability('service-1', '2099-01-07')
+      ).slots.map((s) => s.time);
+
+      prisma.service.findUnique.mockResolvedValue({ ...SERVICE, durationMin: 240 });
+      const longue = (
+        await service.getAvailability('service-1', '2099-01-07')
+      ).slots.map((s) => s.time);
+
+      // Identiques : la grille ne trahit plus la durée de la prestation, ce
+      // qui est aussi ce qui rend son retrait de l'application complet.
+      expect(longue).toEqual(courte);
+      expect(courte.length).toBeGreaterThan(0);
+    });
+
+    // Sans borne basse, chaque réservation relisait tous les rendez-vous encore
+    // actifs depuis l'ouverture — et cette lecture se fait à l'intérieur du
+    // verrou de réservation, donc elle faisait patienter les autres clientes.
+    it('borne sa recherche à un écart, et non à la plus longue prestation', async () => {
       await reserver();
 
       const where = prisma.appointment.findMany.mock.calls[0][0].where;
-      // 60 minutes avant le créneau : au-delà, aucun rendez-vous ne peut
-      // encore être en cours.
+      // 60 minutes, l'écart réglé — et surtout pas les 240 de la prestation.
       expect(where.startAt.gt).toEqual(
         new Date(A_14H_LOCAL.getTime() - 60 * 60_000),
       );
-      // La borne haute n'a pas bougé : la fin du créneau demandé.
       expect(where.startAt.lt).toEqual(
         new Date(A_14H_LOCAL.getTime() + 60 * 60_000),
       );
     });
 
-    it('suit la plus longue prestation, pas celle qu’on réserve', async () => {
-      // Le jour où Fati crée un soin de 4 heures, la fenêtre doit s'élargir
-      // d'elle-même. Une constante figée dans le code, elle, resterait à 1 h.
-      prisma.service.aggregate.mockResolvedValue({
-        _max: { durationMin: 240 },
+    it('suit la borne de l’écart réglé en base', async () => {
+      prisma.centerSettings.findUnique.mockResolvedValue({
+        id: 1,
+        capacity: 2,
+        slotIntervalMin: 30,
       });
 
       await reserver();
 
       const where = prisma.appointment.findMany.mock.calls[0][0].where;
       expect(where.startAt.gt).toEqual(
-        new Date(A_14H_LOCAL.getTime() - 240 * 60_000),
+        new Date(A_14H_LOCAL.getTime() - 30 * 60_000),
       );
-    });
-
-    it('ne masque pas un long rendez-vous commencé bien avant', async () => {
-      // Le vrai risque d'une borne trop courte : rater une occupation réelle,
-      // donc accepter deux clientes sur la même cabine. Ici deux soins de 4 h
-      // commencés à 10h UTC courent encore à 13h.
-      prisma.service.aggregate.mockResolvedValue({
-        _max: { durationMin: 240 },
-      });
-      prisma.appointment.findMany.mockResolvedValue([
-        rdvExistant('2099-01-07T10:00:00.000Z', 240),
-        rdvExistant('2099-01-07T10:00:00.000Z', 240),
-      ]);
-
-      await expect(reserver()).rejects.toThrow(/complet/);
     });
   });
 
@@ -317,15 +337,24 @@ describe('AppointmentsService — disponibilité des créneaux', () => {
     });
 
     it("suit l'écart entre créneaux réglé en base", async () => {
+      // Par défaut l'écart vaut 60 : aucune demi-heure n'est proposée.
+      const parDefaut = (
+        await service.getAvailability('service-1', '2099-01-07')
+      ).slots.map((s) => s.time);
+      expect(parDefaut).toContain('10:00');
+      expect(parDefaut).not.toContain('09:30');
+
+      // Ramené à 30, les demi-heures reviennent — sans qu'aucune prestation
+      // n'ait changé.
       prisma.centerSettings.findUnique.mockResolvedValue({
         id: 1,
         capacity: 2,
-        slotIntervalMin: 60,
+        slotIntervalMin: 30,
       });
-      const res = await service.getAvailability('service-1', '2099-01-07');
-      const heures = res.slots.map((s) => s.time);
-      expect(heures).toContain('10:00');
-      expect(heures).not.toContain('09:30');
+      const resserre = (
+        await service.getAvailability('service-1', '2099-01-07')
+      ).slots.map((s) => s.time);
+      expect(resserre).toContain('09:30');
     });
   });
 
@@ -399,7 +428,7 @@ describe('AppointmentsService — disponibilité des créneaux', () => {
 
     it('ne propose pas de créneau qui déborderait après la fermeture', async () => {
       const res = await service.getAvailability('service-1', '2099-01-07');
-      // Fermeture 19:00, prestation de 60 min → dernier départ possible 18:00
+      // Fermeture 19:00, écart de 60 min → dernier départ possible 18:00
       const heures = res.slots.map((s) => s.time);
       expect(heures).toContain('18:00');
       expect(heures).not.toContain('18:30');
@@ -430,16 +459,18 @@ describe('AppointmentsService — disponibilité des créneaux', () => {
       expect(heures).not.toContain('13:30');
     });
 
-    // La propriété qui compte : une prestation ne déborde jamais de SA plage.
+    // La propriété qui compte : un rendez-vous ne déborde jamais de SA plage.
     // C'est ce que coûtait, en logique d'exclusion, l'approche « une plage
     // trouée » — ici c'est la condition d'arrêt de la boucle qui l'assure.
-    it('borne chaque plage par la durée de la prestation', async () => {
+    it("borne chaque plage par l'écart, non par la durée de la prestation", async () => {
       prisma.openingHours.findMany.mockResolvedValue(AVEC_PAUSE);
       const heures = (
         await service.getAvailability('service-1', '2099-01-07')
       ).slots.map((s) => s.time);
 
-      // Prestation de 60 min : dernier départ 12:00 le matin, 17:00 l'après-midi.
+      // Écart de 60 min : dernier départ 12:00 le matin, 17:00 l'après-midi.
+      // Avec les 240 minutes de la prestation, la matinée se serait arrêtée
+      // à 09:00 et l'après-midi n'aurait rien proposé du tout.
       expect(heures).toContain('12:00');
       expect(heures).toContain('17:00');
       expect(heures).not.toContain('17:30');

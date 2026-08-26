@@ -8,9 +8,9 @@ interface PaginationProps {
 }
 
 // Contrôles de pagination, communs aux tables du backoffice.
-// Fonctionne indifféremment avec une pagination serveur (Utilisateurs) ou
-// client (Commandes, Rendez-vous, Audit) : le composant ne connaît que
-// la page courante et le nombre de pages.
+// Les quatre tables (Utilisateurs, Commandes, Rendez-vous, Audit) paginent
+// côté SERVEUR depuis le correctif I4 : le composant ne connaît que la page
+// courante et le nombre de pages, et se moque de savoir qui les calcule.
 export default function Pagination({
   page,
   totalPages,

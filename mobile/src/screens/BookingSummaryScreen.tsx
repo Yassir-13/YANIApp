@@ -7,7 +7,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { servicesApi, Service } from '../api/services';
 import { appointmentsApi } from '../api/appointments';
-import { formatPrice, formatDuration } from '../utils/format';
+import { formatPrice } from '../utils/format';
 import Header from '../components/Header';
 import Button from '../components/Button';
 import ServiceMiniCard from '../components/ServiceMiniCard';
@@ -74,8 +74,6 @@ export default function BookingSummaryScreen({ route, navigation }: any) {
           <Row label={t('booking.date')} value={formatDate(date)} theme={theme} />
           <Divider theme={theme} />
           <Row label={t('booking.time')} value={time} theme={theme} />
-          <Divider theme={theme} />
-          <Row label={t('services.duration')} value={service ? formatDuration(service.durationMin) : '—'} theme={theme} />
         </View>
       </ScrollView>
 

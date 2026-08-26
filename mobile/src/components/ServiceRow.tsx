@@ -4,7 +4,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { Service } from '../api/services';
 import { mediaUrl } from '../api/config';
-import { formatPrice, formatDuration } from '../utils/format';
+import { formatPrice } from '../utils/format';
 import { mirroredIcon } from '../i18n';
 
 interface ServiceRowProps {
@@ -42,10 +42,11 @@ export default function ServiceRow({ service, onPress }: ServiceRowProps) {
         <Text numberOfLines={1} style={[typography.subtitle, { color: theme.text }]}>
           {service.name}
         </Text>
-        <Text numberOfLines={1} style={[typography.caption, { color: theme.textSecondary, marginTop: 2 }]}>
-          {formatDuration(service.durationMin)}
-          {subtitle ? ` · ${subtitle}` : ''}
-        </Text>
+        {subtitle ? (
+          <Text numberOfLines={1} style={[typography.caption, { color: theme.textSecondary, marginTop: 2 }]}>
+            {subtitle}
+          </Text>
+        ) : null}
         <Text style={[typography.price, { color: theme.gold, marginTop: spacing.xs }]}>
           {formatPrice(service.price)}
         </Text>

@@ -137,7 +137,20 @@ export class AppointmentsService {
       throw new BadRequestException('Impossible de réserver dans le passé.');
     }
 
-    const endAt = new Date(startAt.getTime() + service.durationMin * 60_000);
+    // Un rendez-vous occupe UN créneau, jamais la durée de sa prestation.
+    //
+    // C'est une règle de gestion du centre, pas une contrainte technique : les
+    // rendez-vous sont espacés d'un écart fixe que Fati règle depuis le
+    // backoffice, et deux clientes ne se gênent que si elles sont sur le même
+    // créneau — le nombre de salles dit combien peuvent l'être.
+    //
+    // ⚠️ Ce calcul lisait auparavant `service.durationMin`. Une prestation
+    // d'1h25 réservée à 10h occupait alors jusqu'à 11h25 et interdisait le
+    // créneau de 11h, alors que le centre veut précisément pouvoir le donner.
+    // C'est aussi pourquoi `durationMin` est devenue facultative : plus rien
+    // ici ne la lit.
+    const { capacity, slotIntervalMin } = await this.settings.get();
+    const endAt = new Date(startAt.getTime() + slotIntervalMin * 60_000);
 
     // ── Fermeture exceptionnelle (congés, jour férié) ──
     if (await this.isExceptionallyClosed(db, this.toLocalDate(startAt))) {
@@ -167,7 +180,7 @@ export class AppointmentsService {
     // déborderait après minuit donne ici plus de 1440 minutes, donc un refus,
     // là où "02:00" se serait comparé comme le matin même.
     const startMinutes = this.hhmmToMinutes(this.toLocalHHMM(startAt));
-    const endMinutes = startMinutes + service.durationMin;
+    const endMinutes = startMinutes + slotIntervalMin;
 
     const tientDansUnePlage = ranges.some(
       (plage) =>
@@ -188,30 +201,21 @@ export class AppointmentsService {
     //
     // La borne basse est ce qui empêche cette requête de relire tout le passé.
     // Un rendez-vous ne peut chevaucher le créneau demandé que s'il se termine
-    // après son début — donc qu'il commence après « début − sa propre durée ».
-    // Sa durée n'est pas connue au moment de la requête : on borne par la plus
-    // longue prestation du catalogue. C'est large, mais exact — et le test de
-    // chevauchement précis reste fait juste en dessous.
+    // après son début — donc qu'il commence après « début − un écart », tous
+    // les rendez-vous occupant désormais la même largeur.
     //
     // Sans cette borne, chaque réservation chargeait tous les rendez-vous
     // encore en attente ou confirmés depuis l'ouverture. Et comme cette
     // lecture se fait DANS le verrou de réservation, elle faisait patienter
     // toutes les autres clientes en train de réserver.
     //
-    // La durée maximale est relue à chaque fois plutôt que figée dans une
-    // constante : le jour où Fati crée une prestation de quatre heures, une
-    // constante périmée ferait manquer des chevauchements — donc accepterait
-    // deux clientes sur le même créneau.
-    const { _max } = await db.service.aggregate({
-      _max: { durationMin: true },
-    });
-    // Volontairement sur TOUTES les prestations, désactivées comprises : un
-    // rendez-vous déjà pris sur une prestation retirée du catalogue occupe
-    // toujours le fauteuil.
-    const borneBasse = new Date(
-      startAt.getTime() - (_max.durationMin ?? 0) * 60_000,
-    );
+    // Elle remplace une agrégation qui cherchait la prestation la plus longue
+    // du catalogue à chaque réservation : une requête de moins, et elle était
+    // prise à l'intérieur du verrou.
+    const borneBasse = new Date(startAt.getTime() - slotIntervalMin * 60_000);
 
+    // `select` et non `include: { service: true }` : seule l'heure de début
+    // compte maintenant, la prestation ne dit plus rien de l'occupation.
     const candidates = await db.appointment.findMany({
       where: {
         status: {
@@ -220,16 +224,19 @@ export class AppointmentsService {
         startAt: { gt: borneBasse, lt: endAt },
         ...(excludeAppointmentId ? { id: { not: excludeAppointmentId } } : {}),
       },
-      include: { service: true },
+      select: { startAt: true },
     });
 
+    // Chevauchement d'intervalles, et non simple égalité d'heure de début : le
+    // comptoir peut caser une cliente à 9h30, hors de la grille proposée par
+    // l'application. Ce rendez-vous-là occupe une partie de 9h ET une partie
+    // de 10h, et les deux doivent le voir.
     const overlapping = candidates.filter((appt) => {
       const apptStart = appt.startAt.getTime();
-      const apptEnd = apptStart + appt.service.durationMin * 60_000;
+      const apptEnd = apptStart + slotIntervalMin * 60_000;
       return startAt.getTime() < apptEnd && apptStart < endAt.getTime();
     });
 
-    const { capacity } = await this.settings.get();
     if (overlapping.length >= capacity) {
       throw new BadRequestException('Ce créneau est complet.');
     }
@@ -556,7 +563,10 @@ export class AppointmentsService {
 
   // Calcule les créneaux disponibles pour un service à une date donnée
   async getAvailability(serviceId: string, dateStr: string) {
-    // 1. Le service (pour connaître sa durée)
+    // 1. Le service — pour refuser une prestation inexistante ou retirée du
+    // catalogue, et pour rien d'autre. La grille produite ci-dessous est
+    // désormais LA MÊME pour toutes les prestations : c'est l'écart réglé par
+    // le centre qui la dessine, pas la durée de la prestation demandée.
     const service = await this.prisma.service.findUnique({
       where: { id: serviceId },
     });
@@ -597,15 +607,15 @@ export class AppointmentsService {
         },
         startAt: { gte: dayStart, lte: dayEnd },
       },
-      include: { service: true },
+      select: { startAt: true },
     });
 
     // 5. Génère les créneaux, plage par plage
     //
-    // Une prestation ne peut pas déborder de sa plage : la condition d'arrêt
-    // porte sur la fin de CHAQUE plage. Un soin d'une heure ne sera donc jamais
-    // proposé à 11h30 si la pause déjeuner commence à midi — c'est ce que
-    // coûtait, en logique d'exclusion, l'approche « une plage trouée ».
+    // Un créneau ne peut pas déborder de sa plage : la condition d'arrêt porte
+    // sur la fin de CHAQUE plage. Rien n'est donc proposé à 12h30 si la pause
+    // déjeuner commence à 13h — c'est ce que coûtait, en logique d'exclusion,
+    // l'approche « une plage trouée ».
     //
     // Chaque créneau porte DEUX valeurs : `time` pour l'affichage (heure locale)
     // et `startAt`, l'instant UTC exact à renvoyer tel quel lors de la réservation.
@@ -620,14 +630,13 @@ export class AppointmentsService {
       const debut = this.hhmmToMinutes(plage.startTime);
       const fin = this.hhmmToMinutes(plage.endTime);
 
-      for (
-        let m = debut;
-        m + service.durationMin <= fin;
-        m += slotIntervalMin
-      ) {
+      // L'écart sert deux fois : il dessine le pas de la grille ET la largeur
+      // occupée par un rendez-vous. Les deux sont volontairement la même
+      // valeur — un rendez-vous occupe exactement un créneau.
+      for (let m = debut; m + slotIntervalMin <= fin; m += slotIntervalMin) {
         // Construit l'instant UTC correspondant à ce créneau local
         const slotStart = this.localTimeToUtc(dateStr, m);
-        const slotEnd = new Date(slotStart.getTime() + service.durationMin * 60_000);
+        const slotEnd = new Date(slotStart.getTime() + slotIntervalMin * 60_000);
 
         // Passé ? indisponible
         if (slotStart.getTime() < Date.now()) {
@@ -639,10 +648,11 @@ export class AppointmentsService {
           continue;
         }
 
-        // Compte les chevauchements
+        // Compte les chevauchements. Même règle qu'à la réservation : chaque
+        // rendez-vous occupe un écart, quelle que soit sa prestation.
         const overlapping = dayAppointments.filter((appt) => {
           const apptStart = appt.startAt.getTime();
-          const apptEnd = apptStart + appt.service.durationMin * 60_000;
+          const apptEnd = apptStart + slotIntervalMin * 60_000;
           return slotStart.getTime() < apptEnd && apptStart < slotEnd.getTime();
         });
 

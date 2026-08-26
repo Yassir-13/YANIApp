@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
-  IsString, IsNotEmpty, IsOptional, IsInt, IsBoolean, Min,
+  IsString, IsNotEmpty, IsOptional, IsInt, IsBoolean, MaxLength, Min,
 } from 'class-validator';
 
 // Mise à jour partielle d'une récompense : tous les champs sont optionnels.
@@ -10,11 +10,13 @@ export class UpdateRewardDto {
   @IsOptional()
   @IsString()
   @IsNotEmpty()
+  @MaxLength(120)
   name?: string;
 
   @ApiPropertyOptional({ example: 'Un soin complet du visage' })
   @IsOptional()
   @IsString()
+  @MaxLength(2000)
   description?: string;
 
   @ApiPropertyOptional({ example: 300, description: 'Coût en points' })

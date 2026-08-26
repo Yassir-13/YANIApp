@@ -17,11 +17,6 @@ export function formatPrice(price: string | number): string {
   );
 }
 
-// Durée service : « 60 min »
-export function formatDuration(min: number): string {
-  return `${min} ${i18n.t('common.minutes')}`;
-}
-
 // Date courte pour l'historique : « 2 mars 2026 »
 export function formatShortDate(iso: string): string {
   const d = new Date(iso);

@@ -143,7 +143,7 @@ export default function CartScreen({ navigation }: any) {
                         onPress={() => decrement(line.product.id)}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         accessibilityRole="button"
-                        accessibilityLabel="Diminuer"
+                        accessibilityLabel={t('common.decrease')}
                       >
                         <Ionicons name="remove" size={18} color={theme.gold} />
                       </TouchableOpacity>
@@ -155,7 +155,7 @@ export default function CartScreen({ navigation }: any) {
                         disabled={auMax}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         accessibilityRole="button"
-                        accessibilityLabel="Augmenter"
+                        accessibilityLabel={t('common.increase')}
                         accessibilityState={{ disabled: auMax }}
                       >
                         <Ionicons name="add" size={18} color={auMax ? theme.textMuted : theme.gold} />

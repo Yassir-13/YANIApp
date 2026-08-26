@@ -25,7 +25,13 @@ export const fr = {
     points: 'points',
     pts: 'pts',
     currency: 'DH',
-    minutes: 'min',
+    // Libellés lus par les lecteurs d'écran, jamais affichés. Ils étaient
+    // restés en français : une cliente arabophone qui navigue à la voix
+    // entendait « Retour » au milieu de son interface arabe. Invisible à
+    // l'œil, donc plus durable qu'un texte affiché.
+    back: 'Retour',
+    decrease: 'Diminuer',
+    increase: 'Augmenter',
   },
 
   // Libellés des onglets. Les NOMS de routes restent « Accueil », « Services »,
@@ -199,7 +205,6 @@ export const fr = {
     notFound: 'Service introuvable.',
     priceFrom: 'À partir de',
     book: 'Réserver',
-    duration: 'Durée',
     fallbackName: 'Service',
   },
 
@@ -362,8 +367,14 @@ export const fr = {
 
     deleteAccount: 'Supprimer mon compte',
     deleteTitle: 'Supprimer le compte',
+    // ⚠️ Cette phrase doit décrire ce que le serveur fait RÉELLEMENT, et il
+    // anonymise — voir `users.service.ts`, méthode deleteAccount. L'ancienne
+    // version promettait la suppression des rendez-vous et des points ; ils
+    // sont conservés, détachés de toute identité, parce que ce sont des
+    // prestations facturées. La cliente cochait « oui » sur une promesse que
+    // le système ne tient pas, et elle le faisait dans les trois langues.
     deleteMessage:
-      'Cette action est définitive. Toutes vos données (rendez-vous, points de fidélité) seront supprimées. Voulez-vous continuer ?',
+      'Cette action est définitive. Votre compte et vos informations personnelles (nom, email, téléphone) seront effacés. L’historique de vos rendez-vous et de vos achats est conservé sans votre nom, comme la comptabilité de l’institut l’exige. Voulez-vous continuer ?',
     deleteConfirmTitle: 'Confirmer',
     deleteConfirmMessage:
       'Confirmez-vous la suppression définitive de votre compte ?',

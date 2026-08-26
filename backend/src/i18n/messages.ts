@@ -307,6 +307,16 @@ export const MESSAGES: Record<string, { ar: string; en: string }> = {
     ar: 'يجب أن يكون endDate بصيغة سنة-شهر-يوم.',
     en: 'endDate must use the YYYY-MM-DD format.',
   },
+  // Le motif de forme laissait passer le 31 février ; ces deux-là sont le
+  // contrôle de réalité qui l'accompagne désormais.
+  'startDate doit être un jour réel.': {
+    ar: 'يجب أن يكون startDate يومًا حقيقيًا.',
+    en: 'startDate must be a real day.',
+  },
+  'endDate doit être un jour réel.': {
+    ar: 'يجب أن يكون endDate يومًا حقيقيًا.',
+    en: 'endDate must be a real day.',
+  },
   'startTime doit être au format HH:MM (ex : 09:00).': {
     ar: 'يجب أن يكون startTime بصيغة ساعة:دقيقة (مثال: 09:00).',
     en: 'startTime must use the HH:MM format (e.g. 09:00).',
@@ -336,6 +346,52 @@ export const MESSAGES: Record<string, { ar: string; en: string }> = {
     ar: 'أدنى قيمة لـ limit هي 1.',
     en: 'limit is at least 1.',
   },
+
+  // ── Exports Excel (administratrice) ────────────────────────────────────
+  //
+  // En pratique, seul le back-office appelle ces routes, et il n'envoie aucun
+  // en-tête Accept-Language : il recevra donc toujours le français. Ces entrées
+  // existent pour que `scripts/i18n-manquants.js` puisse atteindre zéro — un
+  // compteur qu'on ne peut pas ramener à zéro cesse d'être un garde-fou.
+  'La date de début doit être au format AAAA-MM-JJ.': {
+    ar: 'يجب أن يكون تاريخ البداية بصيغة سنة-شهر-يوم.',
+    en: 'The start date must use the YYYY-MM-DD format.',
+  },
+  'La date de début doit être un jour réel.': {
+    ar: 'يجب أن يكون تاريخ البداية يومًا حقيقيًا.',
+    en: 'The start date must be a real day.',
+  },
+  'La date de fin doit être au format AAAA-MM-JJ.': {
+    ar: 'يجب أن يكون تاريخ النهاية بصيغة سنة-شهر-يوم.',
+    en: 'The end date must use the YYYY-MM-DD format.',
+  },
+  'La date de fin doit être un jour réel.': {
+    ar: 'يجب أن يكون تاريخ النهاية يومًا حقيقيًا.',
+    en: 'The end date must be a real day.',
+  },
+  'Rôle inconnu.': {
+    ar: 'دور غير معروف.',
+    en: 'Unknown role.',
+  },
+  'Statut de commande inconnu.': {
+    ar: 'حالة طلب غير معروفة.',
+    en: 'Unknown order status.',
+  },
+  'Statut de rendez-vous inconnu.': {
+    ar: 'حالة موعد غير معروفة.',
+    en: 'Unknown appointment status.',
+  },
+
+  // ── Images du catalogue (administratrice) ──────────────────────────────
+  // Même remarque que ci-dessus : le téléversement est réservé au back-office.
+  'Format non reconnu. Seules les images JPEG, PNG et WebP sont acceptées.': {
+    ar: 'صيغة غير معروفة. تُقبل صور JPEG وPNG وWebP فقط.',
+    en: 'Unrecognised format. Only JPEG, PNG and WebP images are accepted.',
+  },
+  "Aucun fichier reçu (champ attendu : « file »).": {
+    ar: 'لم يتمّ استلام أيّ ملفّ (الحقل المتوقّع: «file»).',
+    en: 'No file received (expected field: “file”).',
+  },
 };
 
 // ── Messages construits à l'exécution ────────────────────────────────────
@@ -364,6 +420,21 @@ export const PATTERNS: {
     re: /^Le code doit contenir (\d+) chiffres\.$/,
     ar: (m) => `يجب أن يتكوّن الرمز من ${m[1]} أرقام.`,
     en: (m) => `The code must contain ${m[1]} digits.`,
+  },
+  // La limite vient de MAX_IMAGE_BYTES, donc d'une constante : le message se
+  // construit à l'exécution et ne peut pas être une entrée fixe.
+  {
+    re: /^Image trop lourde : (\d+) Mo au maximum\.$/,
+    ar: (m) => `الصورة ثقيلة جدًّا: ${m[1]} ميغابايت كحدّ أقصى.`,
+    en: (m) => `Image too large: ${m[1]} MB maximum.`,
+  },
+  // Idem pour le plafond des exports : deux nombres construits à l'exécution.
+  {
+    re: /^Cet export porte sur (\d+) lignes, au-delà de la limite de (\d+)\. Restreignez la période avant de relancer\.$/,
+    ar: (m) =>
+      `يشمل هذا التصدير ${m[1]} سطرًا، أي أكثر من الحدّ الأقصى ${m[2]}. ضيّقي الفترة ثمّ أعيدي المحاولة.`,
+    en: (m) =>
+      `This export covers ${m[1]} rows, beyond the limit of ${m[2]}. Narrow the period and try again.`,
   },
 
   // ── Fidélité ───────────────────────────────────────────────────────────

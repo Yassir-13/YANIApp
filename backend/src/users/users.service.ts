@@ -202,6 +202,15 @@ export class UsersService {
     const { search, role, page, limit } = query;
 
     const where: Prisma.UserWhereInput = {
+      // Les comptes anonymisés n'ont plus rien à faire dans une liste destinée
+      // au comptoir : ni nom, ni téléphone, et une adresse
+      // `supprime-<uuid>@compte-supprime.invalid` que Fati ne peut ni appeler
+      // ni comprendre. Elles remontaient aussi dans la recherche de cliente du
+      // modal de réservation et de l'onglet « Créditer ».
+      //
+      // L'export Excel filtrait déjà `deletedAt: null` et le DISAIT dans son
+      // libellé : les deux comportements se contredisaient sur le même écran.
+      deletedAt: null,
       ...(role ? { role } : {}),
       ...(search
         ? {

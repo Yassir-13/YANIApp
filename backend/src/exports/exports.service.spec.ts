@@ -82,11 +82,23 @@ describe('ExportsService', () => {
   };
 
   beforeEach(async () => {
+    // `count` autant que `findMany` : chaque export compte d'abord ses lignes
+    // et refuse au-delà de MAX_LIGNES, pour ne pas charger tout l'historique de
+    // l'institut dans la mémoire d'un seul processus.
     prisma = {
-      user: { findMany: jest.fn().mockResolvedValue([]) },
-      order: { findMany: jest.fn().mockResolvedValue([]) },
+      user: {
+        findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
+      },
+      order: {
+        findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
+      },
       orderItem: { findMany: jest.fn().mockResolvedValue([]) },
-      appointment: { findMany: jest.fn().mockResolvedValue([]) },
+      appointment: {
+        findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
+      },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -238,6 +250,41 @@ describe('ExportsService', () => {
 
       const { where } = prisma.appointment.findMany.mock.calls[1][0];
       expect(where.status).toBe(AppointmentStatus.COMPLETED);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  //  PLAFOND DE VOLUME
+  // ═══════════════════════════════════════════════════════════
+  //
+  // Sans période, un export porte sur tout l'historique de l'institut : lignes,
+  // relations et classeur ExcelJS dans la mémoire d'un seul processus Node.
+  // Rien ne le bornait. Le refus arrive AVANT le chargement — c'est tout
+  // l'intérêt : refuser après aurait déjà coûté la mémoire qu'on voulait
+  // épargner.
+  describe('plafond de volume', () => {
+    it.each([
+      ['clientes', 'user', (s: ExportsService) => s.users({} as never)],
+      ['commandes', 'order', (s: ExportsService) => s.orders({} as never)],
+      [
+        'rendez-vous',
+        'appointment',
+        (s: ExportsService) => s.appointments({} as never),
+      ],
+    ])('refuse un export de %s trop volumineux', async (_quoi, modele, lancer) => {
+      prisma[modele].count.mockResolvedValue(20_001);
+
+      await expect(lancer(service)).rejects.toThrow(
+        /Restreignez la période/,
+      );
+      // Et surtout : rien n'a été chargé.
+      expect(prisma[modele].findMany).not.toHaveBeenCalled();
+    });
+
+    it('laisse passer un export à la limite exacte', async () => {
+      prisma.user.count.mockResolvedValue(20_000);
+      await expect(service.users({} as never)).resolves.toBeDefined();
+      expect(prisma.user.findMany).toHaveBeenCalled();
     });
   });
 

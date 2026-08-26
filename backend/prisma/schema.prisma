@@ -220,7 +220,15 @@ model Service {
   categoryId  String   @map("category_id")
   name        String
   description String?
-  durationMin Int      @map("duration_min")
+  // Purement documentaire, et facultative : le moteur de créneaux ne la lit
+  // PLUS. Le centre espace ses rendez-vous d'un écart fixe (CenterSettings.
+  // slotIntervalMin), quelle que soit la prestation — un choix de gestion, pas
+  // une contrainte technique. Cette colonne ne sert donc plus qu'à Fati, pour
+  // sa propre organisation, et une case vide vaut « non renseignée ».
+  //
+  // ⚠️ La remettre dans le calcul des créneaux serait un retour en arrière :
+  // une prestation d'1h25 réservée à 10h interdirait alors le créneau de 11h.
+  durationMin Int?     @map("duration_min")
   price       Decimal  @db.Decimal(10, 2)
   imageUrl    String?  @map("image_url")
   active      Boolean  @default(true)
@@ -315,8 +323,11 @@ model Closure {
 // sont les réglages du centre.
 model CenterSettings {
   id              Int      @id @default(1)
-  capacity        Int      @default(2) // cabines réservables par l'app
-  slotIntervalMin Int      @default(30) @map("slot_interval_min") // écart entre créneaux proposés
+  capacity        Int      @default(2) // salles réservables par l'app
+  // Écart entre créneaux proposés — ET durée d'occupation d'un rendez-vous.
+  // Les deux sont la même valeur à dessein : un rendez-vous occupe exactement
+  // un créneau, quelle que soit la prestation.
+  slotIntervalMin Int      @default(60) @map("slot_interval_min")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   @@map("center_settings")

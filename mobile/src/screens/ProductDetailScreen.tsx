@@ -75,7 +75,7 @@ export default function ProductDetailScreen({ route, navigation }: any) {
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           accessibilityRole="button"
-          accessibilityLabel="Retour"
+          accessibilityLabel={t('common.back')}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           style={[styles.round, { backgroundColor: 'rgba(20,16,12,0.55)' }]}
         >

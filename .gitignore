@@ -51,6 +51,17 @@ Thumbs.db
 # Notes de travail — restent en local.
 # Le dépôt est public : ces documents détaillent le fonctionnement interne du
 # projet, y compris ce qui n'est pas encore corrigé. Ils n'ont rien à y faire.
-# (YANIApp_RECAP_2.md a été versionné avant cette règle : déjà suivi, donc
-# non concerné — git n'ignore pas un fichier qu'il suit déjà.)
+#
+# YANIApp_RECAP_2.md faisait exception : versionné AVANT cette règle, donc suivi
+# malgré elle. Il décrivait trois conditions de course avec leurs fichiers, un
+# trou d'authentification du backoffice et la fuite des erreurs Prisma — tout
+# cela corrigé depuis, mais publié en clair pendant des semaines.
+#
+# Il a été retiré du suivi (`git rm --cached`). Le fichier reste sur le disque.
+#
+# ⚠️ Ce retrait ne réécrit PAS l'historique : le contenu demeure accessible sur
+# GitHub dans les commits passés, et le restera. Il ferme la porte pour la
+# suite, il n'efface rien. La seule chose qui l'effacerait serait une réécriture
+# d'historique, qui casse tous les clones — le jeu n'en vaut pas la chandelle
+# pour des faiblesses toutes corrigées.
 YANIApp_RECAP_*.md

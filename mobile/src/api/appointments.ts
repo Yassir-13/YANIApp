@@ -25,7 +25,6 @@ export interface Appointment {
   service?: {
     id: string;
     name: string;
-    durationMin: number;
     price: string;
   };
 }

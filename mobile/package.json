@@ -37,7 +37,10 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "typecheck": "tsc --noEmit",
+    "i18n:restants": "node scripts/i18n-restants.js",
+    "i18n:variables": "node scripts/i18n-variables.js"
   },
   "private": true
 }

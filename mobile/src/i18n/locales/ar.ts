@@ -29,7 +29,9 @@ export const ar: Translations = {
     points: 'نقطة',
     pts: 'نقطة',
     currency: 'درهم',
-    minutes: 'دقيقة',
+    back: 'رجوع',
+    decrease: 'إنقاص',
+    increase: 'زيادة',
   },
 
   nav: {
@@ -192,7 +194,6 @@ export const ar: Translations = {
     notFound: 'الخدمة غير موجودة.',
     priceFrom: 'ابتداءً من',
     book: 'احجزي',
-    duration: 'المدّة',
     fallbackName: 'خدمة',
   },
 
@@ -367,7 +368,7 @@ export const ar: Translations = {
     deleteAccount: 'حذف حسابي',
     deleteTitle: 'حذف الحساب',
     deleteMessage:
-      'هذا الإجراء نهائي. ستُحذف جميع بياناتك (المواعيد، نقاط الولاء). هل تريدين المتابعة؟',
+      'هذا الإجراء نهائي. سيُحذف حسابك ومعلوماتك الشخصية (الاسم، البريد الإلكتروني، الهاتف). أمّا سجلّ مواعيدك ومشترياتك فيُحتفظ به دون اسمك، كما تقتضيه محاسبة المعهد. هل تريدين المتابعة؟',
     deleteConfirmTitle: 'تأكيد',
     deleteConfirmMessage: 'هل تؤكّدين حذف حسابك نهائيًا؟',
     deleteConfirmAction: 'نعم، احذف',

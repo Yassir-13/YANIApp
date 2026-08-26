@@ -252,7 +252,7 @@ export default function AppointmentsPage() {
                     </td>
                     <td>
                       <div>{a.service?.name ?? '—'}</div>
-                      {a.service && (
+                      {a.service?.durationMin != null && (
                         <div className="small muted">{a.service.durationMin} min</div>
                       )}
                     </td>

@@ -407,6 +407,18 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token invalide.');
     }
 
+    // Compte anonymisé : refus, comme `login` et `resetPassword` le font déjà.
+    //
+    // Non exploitable en pratique — `deleteAccount` supprime tous les jetons
+    // dans la même transaction, donc aucun jeton valide ne peut survivre à une
+    // suppression. Mais l'incohérence était dans le raisonnement : les deux
+    // autres portes testent `deletedAt`, celle-ci s'en remettait à une garantie
+    // prise ailleurs. Une défense en profondeur qui manque devient une faille
+    // le jour où la serrure devant elle saute.
+    if (stored.user.deletedAt) {
+      throw new UnauthorizedException('Refresh token invalide.');
+    }
+
     // ⚠ Token déjà révoqué = réutilisation suspecte
     // On tue toute la famille : la session est compromise
     if (stored.revokedAt) {

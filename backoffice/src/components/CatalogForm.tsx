@@ -6,7 +6,8 @@ import { uploadsApi, MAX_IMAGE_BYTES } from '../api/uploads';
 export type CatalogKind = 'product' | 'service';
 
 // Valeurs du formulaire — communes aux produits et aux prestations.
-// `stockQty` ne concerne que les produits, `durationMin` que les prestations.
+// `stockQty` ne concerne que les produits, `durationMin` que les prestations —
+// cette dernière est facultative et n'entre pas dans le calcul des créneaux.
 // `imageUrl` n'est PAS une adresse saisie à la main : c'est le chemin renvoyé
 // par le serveur après téléversement (« /uploads/….webp »).
 export interface CatalogFormValues {
@@ -25,7 +26,7 @@ const EMPTY: CatalogFormValues = {
   description: '',
   price: '',
   stockQty: '0',
-  durationMin: '30',
+  durationMin: '',
   imageUrl: '',
 };
 
@@ -202,11 +203,22 @@ export default function CatalogForm({
                   step="5"
                   value={values.durationMin}
                   onChange={(e) => set('durationMin', e.target.value)}
-                  required
+                  placeholder="Optionnel"
                 />
               </Field>
             )}
           </div>
+
+          {/* Le champ est purement informatif depuis que les rendez-vous sont
+              espacés d'un écart fixe. Le dire ici, sous le champ : sans cette
+              ligne, on croit légitimement que le remplir change les créneaux. */}
+          {kind === 'service' && (
+            <div className="small muted" style={{ marginTop: -6 }}>
+              La durée ne sert qu'à votre organisation : les créneaux proposés
+              aux clientes suivent l'écart réglé dans les paramètres, quelle que
+              soit la prestation.
+            </div>
+          )}
 
           <Field label="Image">
             <div style={styles.image}>

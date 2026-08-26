@@ -114,7 +114,7 @@ export default function CatalogPage() {
       description: editing.description ?? '',
       price: editing.price,
       stockQty: 'stockQty' in editing ? String(editing.stockQty) : '0',
-      durationMin: 'durationMin' in editing ? String(editing.durationMin) : '30',
+      durationMin: 'durationMin' in editing ? String(editing.durationMin ?? '') : '',
       imageUrl: editing.imageUrl ?? '',
     };
   }, [editing]);
@@ -141,7 +141,13 @@ export default function CatalogPage() {
         if (editing) await productsApi.update(editing.id, payload);
         else await productsApi.create(payload);
       } else {
-        const payload = { ...base, durationMin: parseInt(v.durationMin || '30', 10) };
+        // Vide = `null` en modification pour effacer la valeur, absent en
+        // création. Même règle que pour l'image.
+        const duree = v.durationMin.trim();
+        const payload = {
+          ...base,
+          durationMin: duree ? parseInt(duree, 10) : editing ? null : undefined,
+        };
         if (editing) await servicesApi.update(editing.id, payload);
         else await servicesApi.create(payload);
       }
@@ -409,7 +415,11 @@ export default function CatalogPage() {
                           {(it as Product).stockQty}
                         </span>
                       ) : (
-                        <span className="small">{(it as Service).durationMin} min</span>
+                        <span className="small">
+                          {(it as Service).durationMin != null
+                            ? `${(it as Service).durationMin} min`
+                            : '—'}
+                        </span>
                       )}
                     </td>
                     <td>

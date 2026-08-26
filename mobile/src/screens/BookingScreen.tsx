@@ -18,9 +18,29 @@ import ServiceMiniCard from '../components/ServiceMiniCard';
 // l'API disait « ...-08 » : la cliente appuyait sur mardi et voyait les
 // créneaux du lundi. Les composantes locales n'ont pas ce décalage.
 //
-// C'est le même choix que `todayLocal()` du backoffice. L'instant exact du
-// rendez-vous, lui, reste calculé par le serveur : chaque créneau renvoyé
-// porte son propre `startAt`, qu'on transmet tel quel sans jamais le recalculer.
+// L'instant exact du rendez-vous, lui, reste calculé par le serveur : chaque
+// créneau renvoyé porte son propre `startAt`, qu'on transmet tel quel sans
+// jamais le recalculer.
+//
+// ── ÉCART ASSUMÉ AVEC LE BACKOFFICE, ET POURQUOI IL LE RESTE ─────────────
+//
+// Le backoffice, lui, calcule le jour DU CENTRE : `jourDuCentre()` y passe un
+// `timeZone` explicite à `toLocaleDateString`. Ici, c'est le fuseau du
+// TÉLÉPHONE. Une cliente à l'étranger verra donc « son » aujourd'hui, pas
+// celui de Casablanca.
+//
+// Ce n'est pas un oubli, et surtout : la solution du backoffice ne se
+// transpose PAS. Hermes, le moteur JavaScript de l'application, ignore
+// l'option `timeZone` — `toLocaleDateString` y utilise toujours le fuseau de
+// l'appareil (facebook/hermes#431). Recopier l'astuce donnerait du code qui a
+// l'air correct, qui compile, et qui ne changerait strictement rien : le pire
+// des trois états, parce qu'on croirait le problème réglé.
+//
+// La corriger vraiment demanderait une bibliothèque de fuseaux côté mobile
+// (`date-fns-tz`, comme le backend) — le projet n'en a aucune aujourd'hui.
+// Conséquence réelle en attendant : une cliente hors du Maroc peut se voir
+// proposer un jour décalé de un. Elle ne peut pas réserver un créneau qui
+// n'existe pas pour autant — le serveur reste seul juge des instants.
 function jourLocal(d: Date): string {
   const mois = String(d.getMonth() + 1).padStart(2, '0');
   const jour = String(d.getDate()).padStart(2, '0');

@@ -199,7 +199,7 @@ export default function AppointmentBookingModal({
               <option value="">— Choisir une prestation —</option>
               {services.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.name} · {s.durationMin} min
+                  {s.name}{s.durationMin != null ? ` · ${s.durationMin} min` : ''}
                 </option>
               ))}
             </select>

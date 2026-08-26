@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { apiClient } from '../api/client';
+import { usersApi } from '../api/users';
 import { authApi } from '../api/auth';
 import { API_BASE_URL } from '../api/config';
 import axios from 'axios';
@@ -115,7 +116,10 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   deleteAccount: async () => {
     // Supprime le compte côté serveur puis nettoie la session locale.
-    await apiClient.delete('/users/me');
+    // Passe par `usersApi` et non par un appel monté à la main : la fonction
+    // existait déjà et n'était appelée nulle part. Deux chemins vers la même
+    // route, c'est un des deux qu'on oubliera de suivre le jour où elle change.
+    await usersApi.deleteAccount();
     await secureStorage.clearTokens();
     useCartStore.getState().clear();
     set({ user: null });

@@ -10,7 +10,9 @@ export interface Service {
   categoryId: string;
   name: string;
   description: string | null;
-  durationMin: number;
+  // Pas de `durationMin` : l'API la renvoie encore, mais l'application ne
+  // l'affiche plus — le centre ne communique pas ses durées aux clientes. Ne
+  // pas la remettre ici sans que ce choix change.
   price: string; // Decimal renvoyé en string par Prisma
   imageUrl: string | null;
   active: boolean;

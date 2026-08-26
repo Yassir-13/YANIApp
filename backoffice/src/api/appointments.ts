@@ -22,7 +22,7 @@ export interface Appointment {
   // à la cliente, et donc celui à lui facturer — même si le tarif de la
   // prestation a changé depuis. Null pour les RDV antérieurs à ce champ.
   priceAtBooking: string | null;
-  service?: { id: string; name: string; durationMin: number; price: string };
+  service?: { id: string; name: string; durationMin: number | null; price: string };
   user?: {
     id: string;
     email: string;

@@ -8,7 +8,6 @@ import { typography, spacing, radius } from '../theme/typography';
 import { servicesApi, Service } from '../api/services';
 import { mediaUrl } from '../api/config';
 import { useRequireAuth } from '../utils/useRequireAuth';
-import { formatDuration } from '../utils/format';
 import DetailBottomBar from '../components/DetailBottomBar';
 import { mirroredIcon } from '../i18n';
 
@@ -56,7 +55,7 @@ export default function ServiceDetailScreen({ route, navigation }: any) {
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           accessibilityRole="button"
-          accessibilityLabel="Retour"
+          accessibilityLabel={t('common.back')}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           style={[styles.round, { backgroundColor: 'rgba(20,16,12,0.55)' }]}
         >
@@ -85,14 +84,6 @@ export default function ServiceDetailScreen({ route, navigation }: any) {
           <Text style={[typography.heading, { color: theme.text, marginTop: spacing.sm }]}>
             {service.name}
           </Text>
-
-          {/* Durée (donnée réelle) */}
-          <View style={styles.metaRow}>
-            <Ionicons name="time-outline" size={16} color={theme.gold} />
-            <Text style={[typography.caption, { color: theme.textSecondary }]}>
-              {formatDuration(service.durationMin)}
-            </Text>
-          </View>
 
           {service.description ? (
             <Text style={[typography.body, { color: theme.textSecondary, marginTop: spacing.lg }]}>

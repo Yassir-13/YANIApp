@@ -4,7 +4,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
 import { Service } from '../api/services';
 import { mediaUrl } from '../api/config';
-import { formatPrice, formatDuration } from '../utils/format';
+import { formatPrice } from '../utils/format';
 
 interface ServiceMiniCardProps {
   service: Service;
@@ -30,7 +30,7 @@ export default function ServiceMiniCard({ service, subtitle }: ServiceMiniCardPr
           {service.name}
         </Text>
         <Text numberOfLines={1} style={[typography.caption, { color: theme.textSecondary, marginTop: 2 }]}>
-          {subtitle ?? `${formatDuration(service.durationMin)} · ${formatPrice(service.price)}`}
+          {subtitle ?? formatPrice(service.price)}
         </Text>
       </View>
     </View>

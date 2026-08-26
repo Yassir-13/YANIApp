@@ -26,11 +26,16 @@ export class UpdateServiceDto {
   @MaxLength(2000)
   description?: string;
 
-  @ApiPropertyOptional({ example: 45, description: 'Durée en minutes' })
+  @ApiPropertyOptional({
+    example: 45,
+    description:
+      "Durée indicative en minutes. N'intervient PAS dans le calcul des créneaux.",
+  })
   @IsOptional()
   @IsInt()
   @Min(1)
-  durationMin?: number;
+  // `null` accepté pour effacer une durée renseignée, comme pour imageUrl.
+  durationMin?: number | null;
 
   @ApiPropertyOptional({ example: 150.0, description: 'Prix en dirhams' })
   @IsOptional()

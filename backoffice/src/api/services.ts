@@ -6,7 +6,8 @@ export interface Service {
   categoryId: string;
   name: string;
   description: string | null;
-  durationMin: number;
+  // Facultative : purement informative, sans effet sur les créneaux.
+  durationMin: number | null;
   price: string;
   imageUrl: string | null;
   active: boolean;
@@ -17,7 +18,8 @@ export interface ServicePayload {
   categoryId?: string;
   name?: string;
   description?: string;
-  durationMin?: number;
+  // `null` pour effacer la durée ; absent pour ne pas y toucher.
+  durationMin?: number | null;
   price?: number;
   // `null` pour retirer la photo ; absent pour ne pas y toucher.
   imageUrl?: string | null;
@@ -39,7 +41,7 @@ export const servicesApi = {
     return data;
   },
   async create(
-    payload: ServicePayload & { categoryId: string; name: string; price: number; durationMin: number }
+    payload: ServicePayload & { categoryId: string; name: string; price: number }
   ): Promise<Service> {
     const { data } = await apiClient.post('/services', payload);
     return data;

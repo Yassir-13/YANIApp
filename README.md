@@ -121,9 +121,9 @@ sont détaillés dans `mobile/.env.example`.
 
 ## Tests
 
-Le back-end est couvert par **179 tests**. Une partie écrit dans une vraie base
-PostgreSQL — concurrence, transactions, sessions : ce sont des propriétés qu'un
-Prisma simulé ne peut pas démontrer.
+Le back-end est couvert par **231 tests** répartis en 25 suites. Huit d'entre
+elles écrivent dans une vraie base PostgreSQL — concurrence, transactions,
+sessions : ce sont des propriétés qu'un Prisma simulé ne peut pas démontrer.
 
 ```bash
 cd backend
@@ -160,9 +160,29 @@ L'API est publiée sur `127.0.0.1` uniquement. C'est **voulu** : un reverse prox
 (Caddy, nginx) doit se placer devant pour assurer le HTTPS. Publier le port
 directement reviendrait à servir l'API en clair.
 
+#### ⚠️ `TRUST_PROXY=1`, le jour où le proxy arrive
+
 Si un reverse proxy est en place, passer `TRUST_PROXY=1` — c'est ce qui permet
 d'identifier les clientes par leur vraie adresse IP plutôt que par celle du
-proxy, faute de quoi elles partageraient toutes le même compteur de requêtes.
+proxy.
+
+**Ce que ça casse si on l'oublie**, et pourquoi ce n'est pas un détail : la
+limitation de débit compte **par adresse IP**. Derrière un proxy, `req.ip` vaut
+l'adresse du proxy **pour tout le monde** — donc l'institut entier partage un
+seul compteur de **120 requêtes par minute**. Or l'écran Fidélité en lance six
+d'un coup : une vingtaine d'ouvertures dans la minute, toutes clientes
+confondues, et l'API commence à répondre `429` au hasard.
+
+Le symptôme est déroutant : parfait en test avec une seule personne, cassé dès
+qu'il y a du monde, et **rien dans les journaux ne pointe vers ce réglage**.
+
+#### ⚠️ `CORS_ORIGINS`, la même famille de piège
+
+Elle doit contenir l'adresse réelle du backoffice. Non renseignée, elle retombe
+sur `http://localhost:5173` : le backoffice déployé ne pourra pas parler à
+l'API. L'échec se manifeste par un blocage CORS dans la console du navigateur,
+**jamais par un message du serveur** — on cherche donc longtemps du mauvais
+côté.
 
 ### Sauvegardes
 

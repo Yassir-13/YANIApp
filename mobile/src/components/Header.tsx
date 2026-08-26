@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
@@ -18,6 +19,7 @@ interface HeaderProps {
 // les passait, et une option jamais exercée est une option jamais vérifiée.
 export default function Header({ title, onBack }: HeaderProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
   return (
@@ -28,7 +30,7 @@ export default function Header({ title, onBack }: HeaderProps) {
             onPress={onBack}
             activeOpacity={0.7}
             accessibilityRole="button"
-            accessibilityLabel="Retour"
+            accessibilityLabel={t('common.back')}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             style={[styles.round, { backgroundColor: theme.surface, borderColor: theme.border }]}
           >

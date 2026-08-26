@@ -18,7 +18,7 @@ jobs:
 
     # Une VRAIE base PostgreSQL, et ce n'est pas du confort.
     #
-    # 8 des 21 suites de tests instancient PrismaService et écrivent réellement :
+    # 8 des 25 suites de tests instancient PrismaService et écrivent réellement :
     # concurrence des réservations (verrou consultatif Postgres), rollback du
     # crédit fidélité, émission des bons, anonymisation de compte, rotation des
     # jetons. Un Prisma mocké ne sait ni verrouiller, ni annuler une
@@ -86,11 +86,25 @@ jobs:
       - name: Compilation TypeScript
         run: npx tsc --noEmit
 
+      # Le script sort en code 1 s'il manque une traduction. Il a été écrit
+      # pour ça dès le départ, mais n'était appelé nulle part : il a signalé
+      # sept messages sans traduction pendant des semaines, sans témoin. Un
+      # garde-fou qu'aucun workflow n'appelle ne garde rien.
+      - name: Couverture des messages traduits
+        run: node scripts/i18n-manquants.js
+
       # `--runInBand` : les tests de concurrence se disputent la même base et le
       # même verrou consultatif. En parallèle, ils se gêneraient l'un l'autre et
       # échoueraient au hasard — un test instable est pire qu'un test absent.
       - name: Tests
         run: npx jest --runInBand
+
+      # La configuration Jest du package.json a `rootDir: "src"` : le test e2e
+      # vit dans `test/` et n'était donc joué par AUCUNE commande. Il vérifie
+      # que /health répond sans jeton et que la racine ne sert plus le
+      # « Hello World! » de NestJS — deux choses qu'aucun test unitaire ne voit.
+      - name: Test end-to-end
+        run: npm run test:e2e
 
   # ═════════════════════════════════════════════════════════════════════
   #  Backoffice et mobile — compilation seule
@@ -124,3 +138,21 @@ jobs:
       - name: Compilation TypeScript
         run: npx tsc --noEmit
         working-directory: ${{ matrix.projet }}
+
+      # ── Traduction du mobile ──
+      #
+      # Les deux scripts sortent en code 1 et n'étaient appelés nulle part. Le
+      # premier a compté 86 « textes en dur » pendant des semaines sans qu'aucun
+      # ne soit vrai, tout en étant AVEUGLE aux sept qui l'étaient. Le second
+      # attrape le seul défaut de traduction que la compilation ne peut pas
+      # voir : une variable d'interpolation renommée, qui s'affiche en clair,
+      # accolades comprises, dans l'application de la cliente.
+      - name: Textes non traduits
+        if: matrix.projet == 'mobile'
+        run: npm run i18n:restants
+        working-directory: mobile
+
+      - name: Variables d'interpolation cohérentes entre les 3 langues
+        if: matrix.projet == 'mobile'
+        run: npm run i18n:variables
+        working-directory: mobile

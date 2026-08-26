@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Workbook, Worksheet } from 'exceljs';
 import {
@@ -56,6 +56,22 @@ interface Colonne {
 
 type Cellule = string | number | Date | null;
 
+// Plafond de lignes par classeur.
+//
+// Sans période, un export porte sur TOUT l'historique de l'institut : les
+// lignes, leurs relations et le classeur ExcelJS tiennent alors simultanément
+// dans la mémoire d'un seul processus Node. Rien ne le bornait.
+//
+// C'est inoffensif aujourd'hui — quelques centaines de lignes — et c'est
+// précisément ce qui rend la limite utile : personne ne verra venir le jour où
+// ça bascule. L'export répondra de plus en plus lentement, puis plus du tout,
+// et rien ne désignera la cause.
+//
+// 20 000 lignes, c'est très au-delà de plusieurs années d'activité d'un
+// institut, et très en deçà de ce qui met un processus en difficulté. Le refus
+// dit quoi faire — restreindre la période — plutôt que d'échouer sec.
+const MAX_LIGNES = 20_000;
+
 interface Total {
   label: string;
   valeur: string | number;
@@ -68,6 +84,16 @@ export class ExportsService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
   ) {}
+
+  // Compte avant de charger. Une requête de plus, négligeable devant celle
+  // qu'elle protège — et elle ne ramène qu'un entier.
+  private async refuserSiTropVolumineux(total: number) {
+    if (total > MAX_LIGNES) {
+      throw new BadRequestException(
+        `Cet export porte sur ${total} lignes, au-delà de la limite de ${MAX_LIGNES}. Restreignez la période avant de relancer.`,
+      );
+    }
+  }
 
   // ─────────────────────────────────────────
   //  Clientes
@@ -82,6 +108,8 @@ export class ExportsService {
       ...(query.role ? { role: query.role } : {}),
       ...(periode ? { createdAt: periode } : {}),
     };
+
+    await this.refuserSiTropVolumineux(await this.prisma.user.count({ where }));
 
     const users = await this.prisma.user.findMany({
       where,
@@ -144,6 +172,8 @@ export class ExportsService {
       ...(query.status ? { status: query.status } : {}),
       ...(periode ? { createdAt: periode } : {}),
     };
+
+    await this.refuserSiTropVolumineux(await this.prisma.order.count({ where }));
 
     const orders = await this.prisma.order.findMany({
       where,
@@ -285,6 +315,10 @@ export class ExportsService {
       ...(periode ? { startAt: periode } : {}),
     };
 
+    await this.refuserSiTropVolumineux(
+      await this.prisma.appointment.count({ where }),
+    );
+
     const appointments = await this.prisma.appointment.findMany({
       where,
       orderBy: { startAt: 'asc' },
@@ -320,7 +354,8 @@ export class ExportsService {
       a.user?.phone ?? '',
       a.service.name,
       a.service.category.name,
-      a.service.durationMin,
+      // Devenue facultative : une case vide plutôt qu'un zéro trompeur.
+      a.service.durationMin ?? '',
       APPOINTMENT_STATUS_LABEL[a.status],
       prix(a).toNumber(),
     ]);

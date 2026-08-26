@@ -16,7 +16,9 @@ export const en: Translations = {
     points: 'points',
     pts: 'pts',
     currency: 'MAD',
-    minutes: 'min',
+    back: 'Back',
+    decrease: 'Decrease',
+    increase: 'Increase',
   },
 
   nav: {
@@ -176,7 +178,6 @@ export const en: Translations = {
     notFound: 'Service not found.',
     priceFrom: 'From',
     book: 'Book',
-    duration: 'Duration',
     fallbackName: 'Service',
   },
 
@@ -333,7 +334,7 @@ export const en: Translations = {
     deleteAccount: 'Delete my account',
     deleteTitle: 'Delete account',
     deleteMessage:
-      'This action is permanent. All your data (appointments, loyalty points) will be deleted. Do you want to continue?',
+      'This action is permanent. Your account and personal information (name, email, phone) will be erased. Your appointment and purchase history is kept without your name, as the salon’s accounting requires. Do you want to continue?',
     deleteConfirmTitle: 'Confirm',
     deleteConfirmMessage:
       'Do you confirm the permanent deletion of your account?',

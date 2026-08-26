@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsOptional, Matches } from 'class-validator';
+import { IsEnum, IsISO8601, IsOptional, Matches } from 'class-validator';
 import { AppointmentStatus, OrderStatus, Role } from '@prisma/client';
 
 const JOUR = /^\d{4}-\d{2}-\d{2}$/;
@@ -20,6 +20,11 @@ export class ExportRangeDto {
   @Matches(JOUR, {
     message: 'La date de début doit être au format AAAA-MM-JJ.',
   })
+  // Le motif ne vérifie que la FORME : « 2026-02-31 » et « 2026-13-45 » le
+  // passaient, `fromZonedTime` en faisait une date invalide, Prisma refusait la
+  // requête et l'appelante recevait un « Requête invalide. » qui ne disait rien.
+  // Même garde-fou que dans AvailabilityQueryDto, où il existe déjà.
+  @IsISO8601({ strict: true }, { message: 'La date de début doit être un jour réel.' })
   from?: string;
 
   @ApiPropertyOptional({
@@ -28,6 +33,7 @@ export class ExportRangeDto {
   })
   @IsOptional()
   @Matches(JOUR, { message: 'La date de fin doit être au format AAAA-MM-JJ.' })
+  @IsISO8601({ strict: true }, { message: 'La date de fin doit être un jour réel.' })
   to?: string;
 }
 
