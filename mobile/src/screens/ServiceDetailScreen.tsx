@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Image, Dimensions } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Dimensions } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -67,7 +68,13 @@ export default function ServiceDetailScreen({ route, navigation }: any) {
         {/* Grand visuel */}
         <View style={[styles.hero, { backgroundColor: theme.surface }]}>
           {service.imageUrl ? (
-            <Image source={{ uri: mediaUrl(service.imageUrl) }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+            <Image
+            source={{ uri: mediaUrl(service.imageUrl) }}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={150}
+          />
           ) : (
             <Ionicons name="sparkles-outline" size={48} color={theme.textMuted} />
           )}

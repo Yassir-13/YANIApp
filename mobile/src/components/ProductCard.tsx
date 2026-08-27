@@ -1,4 +1,5 @@
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
@@ -28,7 +29,14 @@ export default function ProductCard({ product, onPress, width }: ProductCardProp
     >
       <View style={[styles.image, { backgroundColor: theme.surface }]}>
         {product.imageUrl ? (
-          <Image source={{ uri: mediaUrl(product.imageUrl) }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+          <Image
+            source={{ uri: mediaUrl(product.imageUrl) }}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={150}
+            recyclingKey={product.id}
+          />
         ) : (
           <Ionicons name="image-outline" size={28} color={theme.textMuted} />
         )}

@@ -1,4 +1,5 @@
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
@@ -32,7 +33,14 @@ export default function ServiceRow({ service, onPress }: ServiceRowProps) {
     >
       <View style={[styles.thumb, { backgroundColor: theme.surfaceAlt }]}>
         {service.imageUrl ? (
-          <Image source={{ uri: mediaUrl(service.imageUrl) }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+          <Image
+            source={{ uri: mediaUrl(service.imageUrl) }}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={150}
+            recyclingKey={service.id}
+          />
         ) : (
           <Ionicons name="sparkles-outline" size={22} color={theme.textMuted} />
         )}

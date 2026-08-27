@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import {
-  View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAlert } from '../components/AlertProvider';
@@ -127,7 +128,14 @@ export default function CartScreen({ navigation }: any) {
                 <View key={line.product.id} style={[styles.line, { borderBottomColor: theme.border }]}>
                   <View style={[styles.thumb, { backgroundColor: theme.surface }]}>
                     {line.product.imageUrl ? (
-                      <Image source={{ uri: mediaUrl(line.product.imageUrl) }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                      <Image
+            source={{ uri: mediaUrl(line.product.imageUrl) }}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={150}
+            recyclingKey={line.product.id}
+          />
                     ) : (
                       <Ionicons name="image-outline" size={22} color={theme.textMuted} />
                     )}

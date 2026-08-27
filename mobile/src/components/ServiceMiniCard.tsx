@@ -1,4 +1,5 @@
-import { View, Text, Image, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { typography, spacing, radius } from '../theme/typography';
@@ -20,7 +21,14 @@ export default function ServiceMiniCard({ service, subtitle }: ServiceMiniCardPr
     <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
       <View style={[styles.thumb, { backgroundColor: theme.surfaceAlt }]}>
         {service.imageUrl ? (
-          <Image source={{ uri: mediaUrl(service.imageUrl) }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+          <Image
+            source={{ uri: mediaUrl(service.imageUrl) }}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={150}
+            recyclingKey={service.id}
+          />
         ) : (
           <Ionicons name="sparkles-outline" size={20} color={theme.textMuted} />
         )}
