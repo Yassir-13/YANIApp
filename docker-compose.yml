@@ -80,7 +80,22 @@ services:
       # Les images de prestations et de produits, téléversées depuis le
       # backoffice. Hors de l'image Docker, sinon `docker compose up --build`
       # les effacerait toutes — et elles ne sont PAS dans le dump SQL.
-      - yani_uploads:/app/uploads
+      #
+      # ── POURQUOI UN DOSSIER DU DÉPÔT, ET NON UN VOLUME NOMMÉ ──
+      #
+      # En développement, DEUX backends tournent en même temps : celui-ci, et
+      # un `npm run start:dev` sur le port 3000 — le seul que le téléphone
+      # puisse joindre, puisque le conteneur n'est publié que sur 127.0.0.1.
+      # Ils partagent la base, donc les mêmes `imageUrl`.
+      #
+      # Avec un volume nommé, ils ne partageaient PAS les fichiers : une image
+      # téléversée dans l'un renvoyait 404 depuis l'autre. Constaté — les
+      # quinze photos produits étaient en base et invisibles dans l'app.
+      #
+      # Un montage sur le vrai dossier leur donne le même. Il survit aux
+      # reconstructions comme un volume, s'ouvre dans l'explorateur de fichiers,
+      # et `scripts/backup.sh` continue de l'archiver sans un mot de changé.
+      - ./backend/uploads:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -93,4 +108,6 @@ services:
 
 volumes:
   yani_pgdata:                       # volume nommé, survit aux redémarrages
-  yani_uploads:                      # images du catalogue, idem
+  # `yani_uploads` a disparu d'ici : les images vivent désormais dans
+  # ./backend/uploads, monté directement (voir le commentaire du service
+  # backend). L'ancien volume peut être supprimé — `docker volume rm`.
