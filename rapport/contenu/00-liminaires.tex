@@ -95,7 +95,7 @@ Merci à toutes et à tous.
 
 Ce rapport de projet de fin d'études présente la conception et la réalisation
 d'une solution logicielle complète pour \yani, un centre de beauté situé à
-Casablanca. Le projet répond à une situation courante dans les petites
+Marrakech. Le projet répond à une situation courante dans les petites
 structures de services : une activité entièrement pilotée à la main --- carnet
 de rendez-vous papier, prises de rendez-vous par téléphone et par messagerie
 instantanée, vente de produits sans suivi de stock, fidélité gérée par une
@@ -122,14 +122,33 @@ l'existant, expression des besoins, modélisation UML, choix techniques,
 architecture en couches, implémentation et validation. Une méthode agile
 inspirée de SCRUM, organisée en six sprints, a permis de livrer par
 incréments et de confronter chaque version au fonctionnement réel de
-l'institut. Une attention particulière a été portée aux propriétés que les
-tests unitaires classiques ne savent pas démontrer : la sérialisation des
-réservations concurrentes par verrou consultatif PostgreSQL, l'atomicité du
-crédit de fidélité, l'idempotence de l'émission des bons de récompense et
-l'anonymisation des comptes supprimés, exigée par la loi 09-08 sur la
-protection des données personnelles. Vingt-cinq suites de tests, dont huit
-écrivent dans une véritable base PostgreSQL, sont rejouées à chaque
-modification par une chaîne d'intégration continue.
+l'institut.
+
+\vspace{0.3cm}
+
+Un chapitre entier est consacré à la \textbf{sécurité} de la plate-forme.
+Partant d'une délimitation de la surface d'attaque et d'un modèle de menaces
+STRIDE, il expose les contre-mesures effectivement implémentées :
+authentification par Argon2id et jetons courts, rotation des jetons de
+rafraîchissement avec révocation de famille en cas de réutilisation détectée,
+défense contre l'énumération de comptes par uniformisation du temps de réponse,
+contrôle d'accès par rôles doublé d'une vérification de propriété des
+ressources, validation stricte des entrées, reconnaissance des fichiers
+téléversés par leur signature binaire, limitation du débit et plafonnement des
+volumes, et anonymisation transactionnelle des comptes supprimés --- réponse au
+droit à l'effacement de la loi 09-08 sans sacrifier l'historique comptable de
+l'institut. Les limites subsistantes y sont inventoriées.
+
+\vspace{0.3cm}
+
+Une attention particulière a par ailleurs été portée aux propriétés que les
+tests unitaires classiques ne savent pas démontrer : sérialisation des
+réservations concurrentes par verrou consultatif PostgreSQL, atomicité du
+crédit de fidélité, idempotence de l'émission des bons de récompense. Ces
+propriétés relèvent autant de la correction que de la sécurité, une condition
+de course déclenchable à volonté étant une vulnérabilité. Vingt-cinq suites de
+tests, dont huit écrivent dans une véritable base PostgreSQL, sont rejouées à
+chaque modification par une chaîne d'intégration continue.
 
 \vspace{0.3cm}
 
@@ -140,9 +159,10 @@ qu'il n'avait pas sur son activité.
 
 \vspace{0.6cm}
 
-\textbf{Mots clés :} application mobile, API REST, NestJS, Prisma, PostgreSQL,
-React Native, Expo, React, TypeScript, réservation en ligne, programme de
-fidélité, back-office, concurrence, sécurité applicative, internationalisation,
+\textbf{Mots clés :} sécurité applicative, modèle de menaces, STRIDE, Argon2id,
+JWT, rotation de jetons, contrôle d'accès par rôles, loi 09-08, anonymisation,
+application mobile, API REST, NestJS, Prisma, PostgreSQL, React Native, Expo,
+React, TypeScript, réservation en ligne, programme de fidélité, concurrence,
 intégration continue.
 
 % ── Abstract ─────────────────────────────────────────────────────
@@ -152,7 +172,7 @@ intégration continue.
 
 This final year project report presents the design and implementation of a
 complete software solution for \textit{Yani Concept by Fati}, a beauty centre
-located in Casablanca. The project addresses a situation common to small
+located in Marrakech. The project addresses a situation common to small
 service businesses: an activity managed entirely by hand --- a paper
 appointment book, bookings taken over the phone and through instant messaging,
 product sales with no stock tracking, and a loyalty programme run on a stamped
@@ -176,13 +196,30 @@ The report covers the full development cycle: study of the existing process,
 requirements elicitation, UML modelling, technical choices, layered
 architecture, implementation and validation. An agile method inspired by SCRUM,
 organised into six sprints, made it possible to deliver in increments and to
-confront each version with the real workings of the salon. Particular care was
-given to properties that ordinary unit tests cannot demonstrate: serialisation
-of concurrent bookings through a PostgreSQL advisory lock, atomicity of loyalty
-crediting, idempotent issuance of reward vouchers, and anonymisation of deleted
-accounts as required by Moroccan law 09-08 on personal data protection.
-Twenty-five test suites, eight of which write to a real PostgreSQL database,
-are replayed on every change by a continuous integration pipeline.
+confront each version with the real workings of the salon.
+
+\vspace{0.3cm}
+
+A full chapter is devoted to the \textbf{security} of the platform. Starting
+from an attack-surface analysis and a STRIDE threat model, it sets out the
+countermeasures actually implemented: Argon2id password hashing and short-lived
+access tokens, refresh-token rotation with family-wide revocation on detected
+reuse, defence against account enumeration by equalising response times,
+role-based access control backed by per-resource ownership checks, strict input
+validation, magic-byte recognition of uploaded files, rate limiting and volume
+caps, and transactional anonymisation of deleted accounts --- the answer to the
+right to erasure under Moroccan law 09-08 without sacrificing the salon's
+accounting history. Remaining limitations are inventoried.
+
+\vspace{0.3cm}
+
+Particular care was also given to properties that ordinary unit tests cannot
+demonstrate: serialisation of concurrent bookings through a PostgreSQL advisory
+lock, atomicity of loyalty crediting, and idempotent issuance of reward
+vouchers. These belong as much to security as to correctness, since a race
+condition that can be triggered at will is a vulnerability. Twenty-five test
+suites, eight of which write to a real PostgreSQL database, are replayed on
+every change by a continuous integration pipeline.
 
 \vspace{0.3cm}
 
@@ -193,10 +230,11 @@ that it previously lacked.
 
 \vspace{0.6cm}
 
-\textbf{Keywords:} mobile application, REST API, NestJS, Prisma, PostgreSQL,
-React Native, Expo, React, TypeScript, online booking, loyalty programme,
-back-office, concurrency, application security, internationalisation,
-continuous integration.
+\textbf{Keywords:} application security, threat modelling, STRIDE, Argon2id,
+JWT, token rotation, role-based access control, law 09-08, anonymisation,
+mobile application, REST API, NestJS, Prisma, PostgreSQL, React Native, Expo,
+React, TypeScript, online booking, loyalty programme, concurrency, continuous
+integration.
 
 \selectlanguage{french}
 
@@ -208,37 +246,47 @@ continuous integration.
 \toprule
 \entete{Sigle} & \entete{Signification} \\
 \midrule
-API      & \textit{Application Programming Interface} --- interface de programmation applicative \\
-Argon2   & Fonction de dérivation de clé, lauréate du \textit{Password Hashing Competition} \\
-CI       & \textit{Continuous Integration} --- intégration continue \\
-CNDP     & Commission Nationale de contrôle de la protection des Données à caractère Personnel \\
-COD      & \textit{Cash On Delivery} --- paiement à la remise ou à la livraison \\
-CORS     & \textit{Cross-Origin Resource Sharing} --- partage de ressources entre origines \\
-CSP      & \textit{Content Security Policy} --- politique de sécurité du contenu \\
-DTO      & \textit{Data Transfer Object} --- objet de transfert de données \\
-EAS      & \textit{Expo Application Services} --- chaîne de compilation native d'Expo \\
-HSTS     & \textit{HTTP Strict Transport Security} \\
-HTTP(S)  & \textit{HyperText Transfer Protocol (Secure)} \\
-IHM      & Interface Homme--Machine \\
-i18n     & \textit{Internationalization} --- internationalisation \\
-IANA     & \textit{Internet Assigned Numbers Authority} --- source de la base des fuseaux horaires \\
-JSON     & \textit{JavaScript Object Notation} \\
-JWT      & \textit{JSON Web Token} --- jeton d'authentification signé \\
-ORM      & \textit{Object-Relational Mapping} --- correspondance objet-relationnel \\
-PFE      & Projet de Fin d'Études \\
-REST     & \textit{REpresentational State Transfer} --- style d'architecture d'API \\
-RGPD     & Règlement Général sur la Protection des Données \\
-SGBD     & Système de Gestion de Bases de Données \\
-SMTP     & \textit{Simple Mail Transfer Protocol} \\
-SPA      & \textit{Single Page Application} --- application web mono-page \\
-SQL      & \textit{Structured Query Language} \\
-TDD      & \textit{Test-Driven Development} --- développement piloté par les tests \\
-TTL      & \textit{Time To Live} --- durée de validité \\
-UI / UX  & \textit{User Interface} / \textit{User eXperience} \\
-UML      & \textit{Unified Modeling Language} --- langage de modélisation unifié \\
-UTC      & \textit{Coordinated Universal Time} --- temps universel coordonné \\
-UUID     & \textit{Universally Unique Identifier} \\
-XSS      & \textit{Cross-Site Scripting} \\
+API     & \textit{Application Programming Interface} --- interface de programmation applicative\\
+Argon2  & Fonction de dérivation de clé, lauréate du \textit{Password Hashing Competition}\\
+CI      & \textit{Continuous Integration} --- intégration continue\\
+CNDP    & Commission Nationale de contrôle de la protection des Données à caractère Personnel\\
+COD     & \textit{Cash On Delivery} --- paiement à la remise ou à la livraison\\
+CORS    & \textit{Cross-Origin Resource Sharing} --- partage de ressources entre origines\\
+CSP     & \textit{Content Security Policy} --- politique de sécurité du contenu\\
+CSPRNG  & \textit{Cryptographically Secure Pseudo-Random Number Generator}\\
+CSRF    & \textit{Cross-Site Request Forgery} --- falsification de requête intersite\\
+CVE     & \textit{Common Vulnerabilities and Exposures} --- référencement public des vulnérabilités\\
+DTO     & \textit{Data Transfer Object} --- objet de transfert de données\\
+EAS     & \textit{Expo Application Services} --- chaîne de compilation native d'Expo\\
+HSTS    & \textit{HTTP Strict Transport Security}\\
+HTTP(S) & \textit{HyperText Transfer Protocol (Secure)}\\
+i18n    & \textit{Internationalization} --- internationalisation\\
+IANA    & \textit{Internet Assigned Numbers Authority} --- source de la base des fuseaux horaires\\
+IDOR    & \textit{Insecure Direct Object Reference} --- accès direct non contrôlé à une ressource\\
+IHM     & Interface Homme--Machine\\
+JSON    & \textit{JavaScript Object Notation}\\
+JWT     & \textit{JSON Web Token} --- jeton d'authentification signé\\
+MFA     & \textit{Multi-Factor Authentication} --- authentification à plusieurs facteurs\\
+ORM     & \textit{Object-Relational Mapping} --- correspondance objet-relationnel\\
+OWASP   & \textit{Open Worldwide Application Security Project}\\
+PFE     & Projet de Fin d'Études\\
+RBAC    & \textit{Role-Based Access Control} --- contrôle d'accès fondé sur les rôles\\
+REST    & \textit{REpresentational State Transfer} --- style d'architecture d'API\\
+RFC     & \textit{Request For Comments} --- document normatif de l'IETF\\
+RGPD    & Règlement Général sur la Protection des Données\\
+SGBD    & Système de Gestion de Bases de Données\\
+SHA-256 & \textit{Secure Hash Algorithm}, variante à 256 bits\\
+SMTP    & \textit{Simple Mail Transfer Protocol}\\
+SPA     & \textit{Single Page Application} --- application web mono-page\\
+SQL     & \textit{Structured Query Language}\\
+STRIDE  & Modèle de menaces : \textit{Spoofing, Tampering, Repudiation, Information disclosure, Denial of service, Elevation of privilege}\\
+TDD     & \textit{Test-Driven Development} --- développement piloté par les tests\\
+TTL     & \textit{Time To Live} --- durée de validité\\
+UI / UX & \textit{User Interface} / \textit{User eXperience}\\
+UML     & \textit{Unified Modeling Language} --- langage de modélisation unifié\\
+UTC     & \textit{Coordinated Universal Time} --- temps universel coordonné\\
+UUID    & \textit{Universally Unique Identifier}\\
+XSS     & \textit{Cross-Site Scripting}\\
 \bottomrule
 \end{tabularx}
 \end{center}

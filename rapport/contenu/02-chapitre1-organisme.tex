@@ -20,7 +20,7 @@ qui en découle.
 
 \subsection{Le centre \yani}
 
-\yani\ est un centre de beauté et de bien-être installé à Casablanca. C'est une
+\yani\ est un centre de beauté et de bien-être installé à Marrakech. C'est une
 structure de proximité : une clientèle essentiellement féminine, largement
 fidélisée, qui revient à intervalles réguliers et qui connaît personnellement
 la gérante. Cette proximité est le principal atout commercial de l'institut ;
@@ -98,7 +98,7 @@ Cette hiérarchie de rôles n'est pas une simple convention documentaire : elle
 est appliquée par le serveur sur chaque route de l'API, indépendamment de ce
 que l'interface propose ou masque. Une cliente qui obtiendrait par un moyen
 quelconque l'adresse d'une route d'administration se verrait refuser l'accès
-par le serveur lui-même. Ce point est développé au chapitre~3.
+par le serveur lui-même. Ce point est développé au chapitre~4.
 
 % ─────────────────────────────────────────────────────────────────
 \section{Présentation du contexte du projet}
@@ -297,11 +297,16 @@ rendez-vous portent sur un \emph{ensemble} de lignes, ce qu'aucune écriture
 conditionnelle sur une ligne unique ne sait rendre atomique.
 
 \paragraph{Contrainte de fuseau horaire.} L'institut vit à l'heure de
-Casablanca, dont le décalage varie dans l'année. Les instants sont stockés en
+Marrakech, dont le décalage varie dans l'année. Les instants sont stockés en
 UTC, les horaires d'ouverture exprimés en heure locale. Toute confusion entre
 les deux se traduit par une grille de créneaux décalée d'une heure --- une
 erreur silencieuse, qui ne lève aucune exception et qui ne se voit qu'en
 comparant l'écran au carnet.
+
+À noter, car cela surprend à la lecture du code : le fuseau est déclaré sous le
+nom \texttt{Africa/Casablanca}. Ce n'est pas une erreur ni un reliquat. La base
+IANA nomme chaque zone d'après sa ville la plus peuplée, et cette zone couvre
+l'ensemble du Maroc, Marrakech comprise. La renommer serait la casser.
 
 \paragraph{Contrainte de conservation de l'historique.} Une cliente peut
 demander la suppression de son compte. Ses commandes et ses rendez-vous

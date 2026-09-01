@@ -40,10 +40,14 @@ voient pas à l'écran :
   disparaisse avec elle ; les modes de suppression déclarés dans le schéma
   rendent cette garantie structurelle plutôt que déclarative ;
 
-  \item \textbf{la sécurité} --- hachage Argon2, jetons courts, rotation avec
-  détection de réutilisation, autorisation vérifiée par le serveur sur chaque
-  route, validation stricte des entrées, contrôle des fichiers téléversés par
-  leur signature binaire.
+  \item \textbf{la sécurité} --- traitée à partir d'un modèle de menaces
+  explicite et non comme une couche ajoutée en fin de parcours : hachage
+  Argon2id, jetons courts, rotation avec révocation de famille en cas de
+  réutilisation détectée, uniformisation du temps de réponse contre
+  l'énumération de comptes, autorisation vérifiée par le serveur sur chaque
+  route et doublée d'un contrôle de propriété des ressources, validation
+  stricte des entrées, reconnaissance des fichiers téléversés par leur
+  signature binaire.
 \end{itemize}
 
 \section*{Apports personnels}
@@ -54,6 +58,16 @@ application mobile. Il m'a permis d'approfondir des sujets que le cursus
 aborde nécessairement de façon théorique --- la concurrence en base de données,
 la gestion des fuseaux horaires, la sécurité applicative --- et de découvrir
 qu'ils ne se comprennent réellement qu'au moment où un test les met en échec.
+
+L'apport le plus net concerne la sécurité, et il tient moins à des techniques
+qu'à un changement de regard. Appliquer une grille de menaces à un système que
+l'on a soi-même écrit oblige à l'examiner du point de vue de quelqu'un qui
+cherche à en abuser, et non de celui qui l'utilise comme prévu. C'est cet
+exercice qui a fait apparaître ce qu'aucune relecture fonctionnelle ne
+signalait : que masquer un bouton n'a jamais protégé la route correspondante,
+qu'un temps de réponse suffit à trahir l'existence d'un compte, et qu'une
+condition de course déclenchable à volonté n'est pas un défaut de correction
+mais une vulnérabilité.
 
 Le test de concurrence sur les réservations en est l'illustration la plus
 nette. L'implémentation initiale --- compter puis insérer --- paraissait
@@ -130,6 +144,16 @@ identifiées, classées ici par horizon.
   les esthéticiennes permettrait de proposer des créneaux différenciés selon la
   prestation.
 \end{itemize}
+
+\paragraph{À moyen terme --- durcir.} Les limites de sécurité inventoriées au
+chapitre~4 appellent quatre chantiers, par ordre de priorité décroissante : un
+\textbf{second facteur d'authentification} sur le compte de direction, qui donne
+accès à l'ensemble du fichier clientes ; un \textbf{test d'intrusion externe},
+seule façon de découvrir ce que la personne qui a écrit le code ne pense pas à
+chercher ; une \textbf{supervision} qui alerte sur les séries d'échecs de
+connexion plutôt que de se contenter de les journaliser ; et le report du
+compteur de débit dans un magasin partagé, préalable à toute mise à l'échelle
+horizontale.
 
 \paragraph{À plus long terme.}
 \begin{itemize}[leftmargin=1.2cm,nosep]

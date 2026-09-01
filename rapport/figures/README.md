@@ -68,9 +68,18 @@ ci-dessous, puis recompiler.** Aucune modification du texte n'est nécessaire.
 |---|---|
 | `couches.png` | Les quatre couches : présentation (mobile + back-office), métier (NestJS), accès aux données (Prisma), persistance (PostgreSQL). |
 | `architecture.png` | Architecture de déploiement : reverse proxy HTTPS → API conteneurisée → PostgreSQL, avec le service de migration à usage unique et les volumes persistants. |
+
+## Chapitre 4 — Sécurité
+
+| Fichier | Contenu attendu |
+|---|---|
+| `securite-surface.png` | Surface d'attaque et **frontières de confiance**. Placer la frontière à l'entrée de l'API : côté non fiable, l'application mobile, le back-office et tout ce qui vient d'un client ; côté fiable, l'API, la base (port non publié) et le dossier des images. C'est le schéma qui porte l'idée directrice du chapitre. |
 | `securite.png` | Chaîne de traitement d'une requête : Helmet → limitation de débit → CORS → authentification JWT → autorisation par rôle → validation des entrées → service métier, avec le filtre d'exceptions en sortie. |
 
-## Chapitre 4 — Mise en œuvre
+Le chapitre réutilise par ailleurs `seq-refresh.png` (chapitre 2) pour la
+rotation des jetons : il n'y a pas de second fichier à produire.
+
+## Chapitre 5 — Mise en œuvre
 
 ### Structure du code
 
@@ -129,8 +138,9 @@ deux fichiers d'une ligne pour que la paire s'affiche complètement.
 
 ## Récapitulatif
 
-**53 fichiers** au total : 1 logo, 4 pour le chapitre 1, 11 pour le chapitre 2,
-3 pour le chapitre 3, et 34 pour le chapitre 4 (dont 20 captures mobile).
+**54 fichiers** au total : 1 logo, 4 pour le chapitre 1, 11 pour le chapitre 2,
+2 pour le chapitre 3, 2 pour le chapitre 4 (sécurité), et 34 pour le chapitre 5
+(dont 20 captures mobile).
 
 Pour vérifier ce qui manque encore, compiler et parcourir le PDF : chaque cadre
 d'attente restant porte le nom du fichier à fournir.

@@ -22,7 +22,7 @@ tient ouvert devant soi. Toute réservation prise ailleurs qu'à côté du carne
 est une réservation à risque.
 
 C'est dans ce contexte que s'inscrit ce projet de fin d'études. \yani\ est un
-centre de beauté installé à Casablanca, qui propose des prestations de soin et
+centre de beauté installé à Marrakech, qui propose des prestations de soin et
 vend des produits cosmétiques. Sa gérante y assure à la fois les soins, la
 prise des rendez-vous, le suivi du stock et la fidélisation de sa clientèle.
 L'objectif du projet est de porter l'ensemble de ces activités sur une
@@ -34,14 +34,23 @@ Le travail présenté ici ne s'est pas limité à traduire un carnet papier en
 formulaires. Une réservation en ligne pose des questions qu'un carnet ne pose
 pas : que se passe-t-il lorsque deux clientes valident le même créneau à la
 même seconde ? Comment un institut ouvert de 9\,h à 13\,h puis de 14\,h à
-18\,h, à l'heure de Casablanca, expose-t-il ses disponibilités à une
+18\,h, à l'heure de Marrakech, expose-t-il ses disponibilités à une
 application qui raisonne en temps universel ? Que devient l'historique
 d'achat d'une cliente qui exerce son droit à l'effacement, alors même que cet
 historique porte le chiffre d'affaires de l'institut ? Ces questions ont
 structuré la conception autant que les fonctionnalités elles-mêmes, et elles
 occupent une place proportionnée dans ce rapport.
 
-Le présent document rend compte de ce travail. Il s'articule autour de quatre
+Ces questions expliquent aussi la place qu'occupe la sécurité dans ce rapport.
+Une application accessible depuis les téléphones de clientes, sur des réseaux
+quelconques, n'a pas seulement des utilisatrices : elle a des visiteurs. Elle
+détient par ailleurs des données personnelles et porte des opérations à valeur
+économique --- des points de fidélité convertibles en prestations gratuites. La
+sécurité n'a donc pas été traitée comme une couche ajoutée en fin de projet,
+mais comme une dimension de chaque décision de conception ; elle fait l'objet
+d'un chapitre entier.
+
+Le présent document rend compte de ce travail. Il s'articule autour de cinq
 chapitres.
 
 Le \textbf{premier chapitre} présente l'organisme d'accueil, l'étude de
@@ -58,7 +67,14 @@ cadriciels et le système de gestion de base de données retenus, les
 environnements de travail, et l'architecture technique de la solution, y
 compris la chaîne de sécurité appliquée à chaque requête.
 
-Le \textbf{quatrième chapitre} traite de la mise en \oe uvre : la structure
+Le \textbf{quatrième chapitre} est consacré à la sécurité de la plate-forme :
+la surface d'attaque et le modèle de menaces retenu, puis les contre-mesures
+mises en \oe uvre --- authentification, contrôle d'accès, validation des
+entrées et des fichiers, sécurité du transport, résistance à l'abus,
+traçabilité et protection des données personnelles au regard de la loi 09-08.
+Il se termine par une synthèse et par l'inventaire des limites qui subsistent.
+
+Le \textbf{cinquième chapitre} traite de la mise en \oe uvre : la structure
 effective du code des trois applications, la stratégie de tests et
 l'intégration continue, la présentation des interfaces réalisées, et enfin le
 déploiement et l'exploitation de la plate-forme.

@@ -412,15 +412,11 @@ documentation interactive de l'API est automatiquement coupée en production.
 \subsection{Sauvegardes}
 
 Un script produit un cliché horodaté de la base et supprime ceux de plus de
-quatorze jours. Deux règles d'exploitation l'accompagnent, et elles comptent
-autant que le script lui-même :
-
-\begin{itemize}[leftmargin=1.2cm]
-  \item \textbf{le cliché doit être recopié hors de la machine} --- une
-  sauvegarde qui vit sur le serveur qu'elle sauvegarde ne protège de rien ;
-  \item \textbf{les images du catalogue vivent hors de la base} et ne sont pas
-  couvertes par ce script : leur dossier doit être copié séparément.
-\end{itemize}
+quatorze jours, à automatiser par une tâche planifiée. Les deux règles
+d'exploitation qui l'accompagnent --- recopier le cliché hors de la machine, et
+copier séparément le dossier des images, qui vit hors de la base --- ont été
+exposées au chapitre~4 : elles relèvent de la disponibilité des données autant
+que de l'exploitation courante.
 
 La procédure de restauration, et la vérification qui doit la suivre, sont
 documentées dans le script lui-même --- à l'endroit où on la cherchera le jour

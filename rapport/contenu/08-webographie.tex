@@ -41,17 +41,54 @@ Les dates indiquées correspondent à la dernière consultation.
   back-office.
   \\ \url{https://vite.dev/guide/}
 
-  \item \textbf{OWASP} --- \textit{Password Storage Cheat Sheet} et
-  \textit{Authentication Cheat Sheet} : recommandations sur le hachage des mots
-  de passe et la défense contre l'énumération de comptes.
+  \item \textbf{OWASP Top 10} --- classement des dix risques de sécurité
+  applicative les plus critiques ; grille de référence du chapitre 4.
+  \\ \url{https://owasp.org/www-project-top-ten/}
+
+  \item \textbf{OWASP Cheat Sheet Series} --- \textit{Password Storage},
+  \textit{Authentication}, \textit{Session Management}, \textit{File Upload} et
+  \textit{Mass Assignment} : recommandations suivies pour le hachage des mots de
+  passe, la défense contre l'énumération de comptes, la rotation des jetons et
+  le contrôle des fichiers téléversés.
   \\ \url{https://cheatsheetseries.owasp.org/}
+
+  \item \textbf{OWASP ASVS} --- \textit{Application Security Verification
+  Standard} : référentiel de vérification employé pour établir la synthèse des
+  contre-mesures.
+  \\ \url{https://owasp.org/www-project-application-security-verification-standard/}
+
+  \item \textbf{Microsoft --- Threat Modeling (STRIDE)} --- description du
+  modèle de menaces appliqué au chapitre 4.
+  \\ \url{https://learn.microsoft.com/en-us/azure/security/develop/threat-modeling-tool-threats}
+
+  \item \textbf{MITRE CWE} --- \textit{Common Weakness Enumeration} :
+  nomenclature des faiblesses logicielles citées (IDOR, injection, condition de
+  course, exposition d'informations).
+  \\ \url{https://cwe.mitre.org/}
 
   \item \textbf{JSON Web Tokens} --- introduction au format et à ses usages.
   \\ \url{https://jwt.io/introduction}
 
+  \item \textbf{RFC 6819} --- \textit{OAuth 2.0 Threat Model and Security
+  Considerations} : source de la stratégie de rotation des jetons de
+  rafraîchissement et de la détection de réutilisation.
+  \\ \url{https://datatracker.ietf.org/doc/html/rfc6819}
+
   \item \textbf{Argon2} --- spécification de la fonction de hachage retenue
   (RFC 9106).
   \\ \url{https://datatracker.ietf.org/doc/html/rfc9106}
+
+  \item \textbf{RFC 2606} --- noms de domaine réservés, dont le domaine
+  \texttt{.invalid} employé lors de l'anonymisation des comptes.
+  \\ \url{https://datatracker.ietf.org/doc/html/rfc2606}
+
+  \item \textbf{Helmet} --- documentation des en-têtes de sécurité HTTP posés
+  par l'API.
+  \\ \url{https://helmetjs.github.io/}
+
+  \item \textbf{MDN --- HTTP security headers} --- référence sur HSTS, CSP,
+  \texttt{X-Content-\allowbreak Type-Options}, CORS et CORP.
+  \\ \url{https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers}
 
   \item \textbf{IANA Time Zone Database} --- base des fuseaux horaires,
   référence de la zone \texttt{Africa/Casablanca}.
@@ -88,7 +125,9 @@ Les dates indiquées correspondent à la dernière consultation.
   \\ \url{https://www.lucidchart.com/}
 
   \item \textbf{CNDP} --- Commission Nationale de contrôle de la protection des
-  Données à caractère Personnel : loi 09-08 et droits des personnes concernées.
+  Données à caractère Personnel : loi 09-08, obligations du responsable de
+  traitement et droits des personnes concernées (accès, rectification,
+  opposition, effacement).
   \\ \url{https://www.cndp.ma/}
 
   \item \textbf{i18next} --- documentation de la bibliothèque

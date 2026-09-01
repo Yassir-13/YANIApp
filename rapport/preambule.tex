@@ -58,6 +58,11 @@
 % hyperref en dernier (il redéfinit beaucoup de commandes)
 \usepackage[hidelinks,breaklinks=true]{hyperref}
 
+% Les adresses de la webographie sont longues et ne contiennent aucun point de
+% coupure naturel : sans xurl, elles débordent dans la marge. Il autorise la
+% coupure à n'importe quel caractère de l'URL.
+\usepackage{xurl}
+
 % ═══════════════════════════════════════════════════════════════════
 %  Charte graphique — reprise de la palette réelle de l'application
 %  (or #D8A848 sur crème #F9F6F0, cf. mobile/src/theme/colors.ts)

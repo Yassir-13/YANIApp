@@ -3,7 +3,9 @@
 Source LaTeX du rapport de PFE sur le projet Yani Concept by Fati.
 
 Le rapport suit la structure du modèle académique fourni : pages liminaires,
-introduction générale, quatre chapitres, conclusion et webographie.
+introduction générale, cinq chapitres, conclusion et webographie. Le
+chapitre 4 est entièrement consacré à la sécurité de la plate-forme, en
+cohérence avec la filière Cybersécurité et Infrastructures Réseau.
 
 ---
 
@@ -70,10 +72,11 @@ rapport/
 │   ├── 01-introduction-generale.tex
 │   ├── 02-chapitre1-organisme.tex   # organisme d'accueil, contexte, conduite du projet
 │   ├── 03-chapitre2-analyse.tex     # besoins, cas d'utilisation, séquences, classes
-│   ├── 04-chapitre3-technique.tex   # technologies, architecture, sécurité
-│   ├── 05-chapitre4-mise-en-oeuvre.tex  # structure du code, tests, interfaces, déploiement
-│   ├── 06-conclusion-generale.tex
-│   └── 07-webographie.tex
+│   ├── 04-chapitre3-technique.tex   # technologies, architecture, déploiement
+│   ├── 05-chapitre4-securite.tex    # menaces, authentification, contrôle d'accès, données personnelles
+│   ├── 06-chapitre5-mise-en-oeuvre.tex  # structure du code, tests, interfaces, exploitation
+│   ├── 07-conclusion-generale.tex
+│   └── 08-webographie.tex
 └── figures/
     ├── README.md            # liste des visuels attendus
     └── logo.png

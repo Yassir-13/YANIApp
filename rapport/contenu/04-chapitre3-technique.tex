@@ -323,75 +323,20 @@ déroutant, parfait en test avec une seule personne, et que rien dans les
 journaux ne rattache à sa cause.
 \end{attention}
 
-\subsection{La chaîne de sécurité d'une requête}
+\subsection{Place de la sécurité dans l'architecture}
 
-La sécurité n'est pas traitée comme une fonctionnalité, mais comme une chaîne
-de filtres que toute requête traverse avant d'atteindre la moindre ligne de
-logique métier.
+L'architecture ci-dessus porte une décision qui relève autant de la sécurité
+que de la conception : \emph{toute requête traverse une chaîne de filtres
+avant d'atteindre la moindre ligne de logique métier}. En-têtes de sécurité,
+limitation de débit, contrôle d'origine, authentification, autorisation par
+rôle et validation stricte des entrées s'appliquent successivement, et un
+filtre d'exceptions global intercepte tout ce qui remonte en sens inverse.
 
-\figProjet[0.85]{securite.png}{Chaîne de traitement de sécurité d'une requête}{securite}
-
-\begin{enumerate}[leftmargin=1.2cm]
-  \item \textbf{En-têtes de sécurité.} Helmet retire l'en-tête annonçant la
-  technologie du serveur et ajoute une douzaine d'en-têtes appliqués par le
-  navigateur : transport strict, anti-\textit{sniffing}, anti-\textit{clickjacking},
-  politique de sécurité du contenu.
-
-  \item \textbf{Limitation du débit.} Un compteur par adresse IP plafonne
-  l'ensemble de l'API à 120 requêtes par minute. Les routes coûteuses portent
-  en plus une limite stricte : dix tentatives par minute pour la connexion et
-  l'inscription, cinq pour le renvoi de code, et cinq par tranche de cinq
-  minutes pour le mot de passe oublié.
-
-  \item \textbf{Contrôle d'origine.} La politique CORS n'autorise que les
-  adresses déclarées du back-office.
-
-  \item \textbf{Authentification.} Un garde vérifie la signature et la validité
-  du jeton d'accès, sauf sur les routes explicitement publiques.
-
-  \item \textbf{Autorisation.} Un second garde compare le rôle porté par le
-  jeton aux rôles exigés par la route. Ce contrôle est \emph{indépendant} de ce
-  que l'interface affiche ou masque : une route d'administration atteinte par
-  un autre moyen est refusée par le serveur.
-
-  \item \textbf{Validation des entrées.} Un tube de validation global rejette
-  toute propriété non déclarée dans le contrat de la route, plutôt que de
-  l'ignorer silencieusement, et convertit les valeurs dans leur type attendu.
-
-  \item \textbf{Traitement uniforme des erreurs.} Un filtre global intercepte
-  toute exception avant qu'elle n'atteigne le client. Sans lui, les erreurs de
-  base de données partaient brutes, avec les noms de tables et de contraintes.
-\end{enumerate}
-
-\paragraph{Le stockage des secrets.} Les mots de passe sont hachés avec Argon2,
-lauréat de la compétition internationale de hachage de mots de passe. Les
-jetons de rafraîchissement et les codes de vérification ne sont jamais stockés
-en clair : seule leur empreinte l'est. Une lecture de la base ne livrerait donc
-ni mot de passe, ni session utilisable, ni code de réinitialisation.
-
-\paragraph{La défense contre l'énumération par mesure du temps.} Une
-vérification de mot de passe avec Argon2 prend un temps mesurable. Si le
-serveur répondait immédiatement pour une adresse inconnue et après le calcul
-pour une adresse connue, la seule mesure du délai de réponse permettrait de
-déterminer quelles adresses possèdent un compte. La connexion exécute donc une
-vérification factice sur une valeur aléatoire lorsque l'adresse est inconnue :
-les deux cas répondent au même rythme.
-
-\paragraph{Le contrôle des fichiers téléversés.} Les images du catalogue sont
-identifiées par leur \emph{signature binaire}, et non par le type déclaré par
-le navigateur ni par l'extension du nom de fichier --- deux valeurs qui
-viennent du client et se falsifient en une ligne. Trois formats sont acceptés :
-JPEG, PNG et WebP. Le SVG en est délibérément absent : c'est du XML susceptible
-de contenir du JavaScript, qui s'exécuterait avec les droits du domaine servant
-le fichier --- une faille de type XSS ouverte par un simple téléversement.
-
-\paragraph{La validation de la configuration au démarrage.} L'API refuse de
-démarrer si sa configuration est incohérente. Le secret de signature des jetons
-doit compter au moins trente-deux caractères ; un secret plus court se casse
-hors ligne et permet de forger un jeton d'administration sans jamais toucher à
-l'API. De même, l'envoi réel d'e-mails est exigé en production : un
-environnement de production configuré en mode console n'enverrait aucun code de
-vérification, sans qu'aucune erreur ne le signale.
+Ces mécanismes ne sont pas des ajouts posés sur l'architecture : ils en font
+partie, au même titre que le découpage en couches. C'est la raison pour
+laquelle ils ne sont pas détaillés ici mais font l'objet du chapitre~4, qui
+leur est entièrement consacré --- du modèle de menaces retenu jusqu'aux limites
+qui subsistent.
 
 \section*{Conclusion}
 \addcontentsline{toc}{section}{Conclusion}
@@ -399,7 +344,7 @@ vérification, sans qu'aucune erreur ne le signale.
 Ce chapitre a présenté les choix techniques du projet et leur justification :
 un langage unique pour les trois applications, un cadriciel structurant pour
 l'API, un ORM typé adossé à PostgreSQL, et une architecture en quatre niveaux
-où la couche métier est seule dépositaire des règles. La chaîne de sécurité
-appliquée à chaque requête a été détaillée, ainsi que l'architecture de
-déploiement. Le chapitre suivant présente la mise en \oe uvre effective de ces
-choix, les tests qui la valident et les interfaces réalisées.
+où la couche métier est seule dépositaire des règles. L'architecture de déploiement a été
+exposée, ainsi que la place qu'y tient la chaîne de traitement de sécurité.
+Le chapitre suivant est consacré à cette dernière : il présente le modèle de
+menaces retenu et les contre-mesures qui en découlent.

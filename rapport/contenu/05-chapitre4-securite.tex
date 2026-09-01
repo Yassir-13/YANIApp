@@ -1,0 +1,957 @@
+% ═══════════════════════════════════════════════════════════════════
+%  Chapitre 4 — Sécurité de la plate-forme
+% ═══════════════════════════════════════════════════════════════════
+\chapter{Sécurité de la plate-forme}
+
+\section*{Introduction}
+\addcontentsline{toc}{section}{Introduction}
+
+Ce chapitre est consacré à la sécurité de la solution. Il occupe une place
+particulière dans ce rapport, et pour deux raisons.
+
+La première tient à la nature du système. La plate-forme traite des données
+personnelles --- identité, coordonnées, historique de fréquentation d'un
+institut de beauté --- et porte des opérations à valeur économique :
+réservations, commandes, points de fidélité convertibles en prestations
+gratuites. Chacune de ces trois catégories appelle des garanties différentes,
+et aucune n'est satisfaite par défaut.
+
+La seconde tient au fait qu'un système exposé sur Internet n'a pas seulement
+des utilisatrices : il a des visiteurs. L'API est publique par construction ---
+l'application mobile l'appelle depuis les téléphones de clientes, sur des
+réseaux quelconques. Tout ce qui n'est pas explicitement refusé côté serveur
+est, en pratique, autorisé.
+
+La démarche suivie n'a donc pas consisté à ajouter de la sécurité à un système
+achevé, mais à traiter chaque décision de conception comme portant une part de
+sécurité. Ce chapitre restitue cette démarche : le modèle de menaces retenu,
+les principes directeurs, puis les contre-mesures effectivement implémentées,
+domaine par domaine. Il se termine par une synthèse et par un inventaire
+honnête des limites qui subsistent.
+
+% ─────────────────────────────────────────────────────────────────
+\section{Démarche et modèle de menaces}
+
+\subsection{Surface d'attaque}
+
+La première étape a consisté à délimiter la surface exposée et à situer les
+frontières de confiance du système.
+
+\figProjet[0.9]{securite-surface.png}{Surface d'attaque et frontières de confiance}{securite-surface}
+
+Cinq points d'entrée existent, et un seul est réellement de confiance :
+
+\begin{itemize}[leftmargin=1.2cm]
+  \item \textbf{L'API HTTP}, atteignable par quiconque connaît son adresse. Sa
+  documentation OpenAPI décrit d'ailleurs chacune de ses routes --- raison pour
+  laquelle elle est coupée en production.
+
+  \item \textbf{L'application mobile}, qui s'exécute sur le téléphone de la
+  cliente. Elle échappe totalement à notre contrôle : son code est lisible, son
+  trafic interceptable, ses contrôles contournables. \emph{Aucune règle de
+  sécurité ne peut y résider.}
+
+  \item \textbf{Le back-office web}, dans le même cas : c'est du JavaScript
+  servi au navigateur. Masquer un bouton d'administration n'a jamais protégé la
+  route correspondante.
+
+  \item \textbf{Les images téléversées}, seuls fichiers que l'application écrit
+  sur le disque du serveur --- et qu'elle republie ensuite en HTTP.
+
+  \item \textbf{La base de données}, qui n'est pas exposée : son port n'est
+  publié que sur l'interface locale du serveur.
+\end{itemize}
+
+Il en découle un principe qui structure tout ce chapitre :
+\emph{la frontière de confiance passe à l'entrée de l'API, et nulle part
+ailleurs}. Tout ce qui arrive d'un client --- corps de requête, en-têtes, type
+MIME déclaré, extension de fichier, rôle affiché dans l'interface --- est une
+donnée hostile jusqu'à vérification par le serveur.
+
+\subsection{Modèle de menaces}
+
+Les menaces ont été recensées selon les six catégories du modèle STRIDE, en
+retenant pour chacune les scénarios réalistes pour ce système.
+
+\begin{table}[H]
+\centering
+\caption{Modèle de menaces STRIDE appliqué à la plate-forme}
+\label{tab:stride}
+\begin{tabularx}{\textwidth}{L{2.9cm} X}
+\toprule
+\entete{Catégorie} & \entete{Scénarios retenus} \\
+\midrule
+\textbf{Usurpation}\newline\small(\textit{Spoofing}) &
+Force brute sur le formulaire de connexion ; vol d'un jeton de session ;
+devinette d'un code de réinitialisation à six chiffres ; forge d'un jeton
+d'administration si le secret de signature est faible. \\
+
+\textbf{Altération}\newline\small(\textit{Tampering}) &
+Injection SQL ; modification du rôle porté dans la requête ; téléversement
+d'un fichier exécutable déguisé en image ; falsification de l'en-tête
+d'adresse IP réelle. \\
+
+\textbf{Répudiation} &
+Ajout manuel de points de fidélité sans trace ; remise d'un bon de récompense
+sans enregistrement de qui l'a honoré. \\
+
+\textbf{Divulgation}\newline\small(\textit{Information disclosure}) &
+Lecture des commandes ou des rendez-vous d'une autre cliente ; fuite du schéma
+de base par les messages d'erreur ; énumération des comptes existants ; export
+massif de la base clientes. \\
+
+\textbf{Déni de service} &
+Saturation de l'API par un client unique ; épuisement du processeur par le
+hachage de mots de passe ; export d'un volume de lignes qui bloque le
+serveur ; réservation en masse de créneaux. \\
+
+\textbf{Élévation de privilège} &
+Accès direct à une route d'administration depuis un compte cliente ;
+promotion de son propre rôle ; usage d'un jeton émis avant la suppression du
+compte. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Principes directeurs}
+
+Quatre principes ont guidé les décisions.
+
+\paragraph{Le serveur fait autorité.} Toute règle de sécurité est appliquée par
+l'API. Les interfaces peuvent masquer, désactiver ou pré-valider : ce n'est
+jamais qu'un confort d'usage, jamais une protection.
+
+\paragraph{Défense en profondeur.} Aucune contre-mesure unique n'est réputée
+suffisante. Un compte supprimé est ainsi protégé par trois verrous
+indépendants : le refus de connexion sur son marqueur de suppression, le
+remplacement de son mot de passe par le haché d'un secret que personne ne
+connaît, et le rejet, à chaque requête, des jetons déjà émis.
+
+\paragraph{Sécurité par défaut, et échec fermé.} Toute route est authentifiée
+et comptée sauf déclaration contraire explicite. Toute propriété non déclarée
+dans le contrat d'une route fait rejeter la requête, au lieu d'être ignorée en
+silence. Et lorsqu'une configuration est incohérente, l'API \emph{refuse de
+démarrer} plutôt que de fonctionner dans un état dégradé que rien ne
+signalerait.
+
+\paragraph{Moindre privilège.} Trois rôles seulement, chacun strictement borné.
+L'image de production ne contient aucun compilateur et le processus n'y tourne
+pas en tant que \texttt{root}. Le port de la base de données n'est pas publié.
+
+% ─────────────────────────────────────────────────────────────────
+\section{Authentification}
+
+\subsection{Stockage des mots de passe}
+
+Les mots de passe sont hachés avec \textbf{Argon2id}, lauréat du
+\textit{Password Hashing Competition} et normalisé par la RFC 9106. Le choix
+s'est porté sur lui plutôt que sur bcrypt pour sa résistance aux attaques
+matérielles : Argon2 est conçu pour être coûteux en \emph{mémoire} autant qu'en
+temps de calcul, ce qui ôte aux cartes graphiques et aux circuits dédiés
+l'avantage massif dont ils disposent face aux fonctions purement calculatoires.
+
+Aucun mot de passe n'est stocké, journalisé ou renvoyé en clair, à aucun
+moment. La politique appliquée impose au minimum huit caractères, dont une
+majuscule et une minuscule, et elle est \emph{la même} à l'inscription, au
+changement de mot de passe et à la réinitialisation --- une exigence relâchée
+sur l'un de ces trois chemins annulerait les deux autres.
+
+\subsection{Jetons d'accès}
+
+L'authentification des requêtes repose sur des jetons JWT signés, de durée
+volontairement courte : \textbf{quinze minutes}. Cette brièveté est la réponse
+au fait qu'un JWT est, par nature, invérifiable auprès d'une liste de
+révocation sans requête supplémentaire : elle borne la fenêtre pendant laquelle
+un jeton dérobé reste exploitable.
+
+Le secret de signature est lu par une méthode qui \emph{lève une exception s'il
+est absent}, aussi bien à la signature qu'à la vérification. C'est délibéré :
+une valeur de repli en dur --- le réflexe habituel pour « que ça démarre en
+développement » --- rendrait tous les jetons forgeables par quiconque a lu le
+dépôt.
+
+Le jeton n'est cependant pas cru sur parole. À chaque requête, la stratégie de
+vérification recharge le compte en base et refuse le jeton si le compte
+n'existe plus ou a été anonymisé.
+
+\begin{lstlisting}[caption={Vérification du jeton d'accès : la signature ne suffit pas},captionpos=b]
+async validate(payload: { sub: string; email: string; role: string }) {
+  const user = await this.usersService.findById(payload.sub);
+  // Un compte anonymise est traite comme inexistant. Sans ce test, l'access
+  // token emis juste avant la suppression continuerait d'ouvrir le compte
+  // jusqu'a son expiration.
+  if (!user || user.deletedAt) {
+    throw new UnauthorizedException();
+  }
+  return { id: user.id, email: user.email, role: user.role };
+}
+\end{lstlisting}
+
+Ce rechargement a un second effet, moins évident et tout aussi important : le
+rôle appliqué est celui \emph{de la base}, et non celui inscrit dans le jeton.
+Une rétrogradation prend donc effet immédiatement, sans attendre l'expiration
+des jetons en circulation.
+
+\subsection{Jetons de rafraîchissement, rotation et détection de vol}
+
+Des jetons d'accès de quinze minutes obligeraient la cliente à se reconnecter
+plusieurs fois par jour. Un jeton de rafraîchissement de longue durée résout ce
+problème --- et en crée un autre : c'est désormais lui qui vaut la session, et
+sa durée de vie le rend d'autant plus intéressant à dérober.
+
+Trois mesures répondent à ce risque.
+
+\begin{itemize}[leftmargin=1.2cm]
+  \item \textbf{Il n'est pas stocké en clair.} La base ne contient que son
+  empreinte SHA-256. Une lecture de la base ne livre donc aucune session
+  utilisable. Le hachage rapide suffit ici, contrairement au cas des mots de
+  passe : le jeton est une valeur aléatoire de 48 octets, et non un secret
+  choisi par un être humain --- il n'existe pas de dictionnaire de jetons.
+
+  \item \textbf{Il tourne.} Chaque rafraîchissement révoque le jeton présenté
+  et en émet un nouveau, rattaché à la même \emph{famille}.
+
+  \item \textbf{Sa réutilisation est détectée.} Présenter deux fois le même
+  jeton est impossible en usage normal. C'est en revanche exactement ce qui se
+  produit lorsqu'un jeton a été dérobé : l'attaquant et la cliente légitime
+  l'utilisent chacun de leur côté. Impossible de savoir lequel des deux se
+  présente --- le système révoque donc \emph{toute la famille}. Les deux sont
+  déconnectés, et l'accès frauduleux prend fin. Le coût pour la cliente est une
+  reconnexion ; le bénéfice est la fin d'une session volée qui, sans cela, se
+  prolongerait indéfiniment par rotations successives.
+\end{itemize}
+
+Côté mobile, le jeton n'est pas rangé dans le stockage ordinaire de
+l'application mais dans le \textbf{coffre sécurisé du système
+d'exploitation} --- trousseau iOS, \textit{Keystore} Android --- adossé au
+matériel du téléphone.
+
+Le déroulement complet, rotation et détection de réutilisation comprises, est
+donné par la \figref{seq-refresh} du chapitre~2.
+
+\subsection{Codes à usage unique}
+
+La vérification d'adresse et la réinitialisation de mot de passe reposent sur
+un code à six chiffres envoyé par courriel. Un tel code est court par
+nécessité --- il doit être recopié à la main --- donc faible par construction :
+un million de possibilités se parcourent en quelques minutes. Cinq mesures le
+rendent néanmoins sûr.
+
+\begin{table}[H]
+\centering
+\caption{Protection des codes à usage unique}
+\label{tab:codes}
+\begin{tabularx}{\textwidth}{L{4.0cm} X}
+\toprule
+\entete{Mesure} & \entete{Ce qu'elle empêche} \\
+\midrule
+Génération par \texttt{randomInt} &
+Générateur cryptographique, et non \texttt{Math.random} dont la suite est
+prédictible : un code observé ne permet pas de deviner le suivant. \\
+
+Stockage haché &
+Une lecture de la base ne livre aucun code exploitable. \\
+
+Plafond de cinq tentatives &
+Ferme la porte à l'énumération : sans lui, six chiffres se devinent. \\
+
+Validité de quinze minutes &
+Borne la fenêtre d'exploitation d'un code intercepté. \\
+
+Comparaison en temps constant &
+\texttt{timingSafeEqual} : le temps de réponse ne trahit pas le nombre de
+chiffres corrects, ce qui interdit de reconstituer le code position par
+position. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+À quoi s'ajoute une propriété structurelle : la recherche s'effectue par
+\emph{couple (compte, usage)} et jamais par le code seul. Un code deviné ne
+vaut donc que pour le compte auquel il a été émis --- alors qu'une recherche
+par code seul aurait fait qu'un code trouvé au hasard ouvre n'importe quel
+compte l'ayant reçu, ce qui multiplie les chances de l'attaquant par le nombre
+de codes en circulation. Enfin, émettre un nouveau code efface le précédent du
+même usage : au plus un code actif par cliente et par usage.
+
+\subsection{Défense contre l'énumération de comptes}
+
+Savoir quelles adresses possèdent un compte est une information exploitable :
+elle alimente le harponnage ciblé et, s'agissant d'un institut de beauté, elle
+révèle une information personnelle en soi.
+
+Deux canaux la trahissent, et tous deux ont été fermés.
+
+\paragraph{Le canal des messages.} La demande de réinitialisation répond la
+même chose que l'adresse existe ou non.
+
+\paragraph{Le canal du temps.} Ce canal est plus subtil, et c'est précisément
+ce qui le rend dangereux : il subsiste alors même que les messages sont
+identiques. Vérifier un mot de passe avec Argon2 coûte plusieurs centaines de
+millisecondes. Si le serveur répondait immédiatement pour une adresse inconnue
+--- puisqu'il n'a alors aucun haché à comparer --- et après ce calcul pour une
+adresse connue, la seule mesure du délai de réponse suffirait à trier les
+adresses.
+
+La connexion exécute donc, lorsque l'adresse est inconnue, une vérification
+\emph{factice} contre le haché d'une valeur aléatoire. Elle échoue toujours :
+seul le temps consommé compte.
+
+\begin{lstlisting}[caption={Uniformisation du temps de réponse à la connexion},captionpos=b]
+// Hash de reference, calcule une seule fois, sur une valeur aleatoire que
+// personne ne connait. Il ne protege rien : il sert uniquement a faire
+// travailler argon2 aussi longtemps qu'une vraie verification, pour qu'un
+// email inconnu reponde au meme rythme.
+private async burnPasswordComparison(candidate: string): Promise<void> {
+  this.dummyHashPromise ??= argon2.hash(randomBytes(32).toString('hex'));
+  const dummyHash = await this.dummyHashPromise;
+  await argon2.verify(dummyHash, candidate).catch(() => false);
+}
+\end{lstlisting}
+
+% ─────────────────────────────────────────────────────────────────
+\section{Autorisation et contrôle d'accès}
+
+\subsection{Modèle de contrôle d'accès}
+
+Le contrôle d'accès repose sur un modèle par rôles (RBAC) à trois niveaux
+strictement ordonnés. Le tableau ci-dessous donne la matrice des droits
+effectivement appliquée par le serveur.
+
+\begin{table}[H]
+\centering
+\caption{Matrice des droits par rôle}
+\label{tab:matrice-droits}
+\begin{tabularx}{\textwidth}{X C{1.6cm} C{1.7cm} C{2.1cm} C{1.8cm}}
+\toprule
+\entete{Opération} & \entete{Public} & \entete{Cliente} & \entete{Personnel} & \entete{Gérante} \\
+\midrule
+Consulter les catalogues actifs   & \checkmark & \checkmark & \checkmark & \checkmark \\
+Réserver, commander pour soi      &            & \checkmark & \checkmark & \checkmark \\
+Consulter \emph{ses} rendez-vous et commandes & & \checkmark & \checkmark & \checkmark \\
+Consulter ceux de \emph{toutes}   &            &            & \checkmark & \checkmark \\
+Réserver pour le compte d'une cliente &        &            & \checkmark & \checkmark \\
+Changer un statut, honorer un bon &            &            & \checkmark & \checkmark \\
+Créditer des points à la main     &            &            & \checkmark & \checkmark \\
+Gérer le catalogue et les stocks  &            &            &            & \checkmark \\
+Régler horaires, capacité, fermetures &        &            &            & \checkmark \\
+Définir récompenses et paliers    &            &            &            & \checkmark \\
+Gérer les comptes et les rôles    &            &            &            & \checkmark \\
+Consulter le journal d'audit      &            &            &            & \checkmark \\
+Exporter les données (Excel)      &            &            &            & \checkmark \\
+Téléverser une image              &            &            &            & \checkmark \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Application par gardes successifs}
+
+Cette matrice n'est pas une convention documentaire : elle est appliquée par
+deux gardes que toute requête traverse, au sein d'une chaîne de filtres qu'elle
+parcourt \emph{avant} d'atteindre la moindre ligne de logique métier.
+
+\figProjet[0.85]{securite.png}{Chaîne de traitement de sécurité d'une requête}{securite}
+
+Le premier vérifie la signature et la validité du jeton. Il est actif par
+défaut : une route n'échappe à l'authentification que si elle est
+\emph{explicitement} déclarée publique. Ce sens du défaut est essentiel ---
+avec la convention inverse, une route ajoutée un jour de fatigue serait
+ouverte, et rien ne le signalerait.
+
+Le second compare le rôle du compte aux rôles exigés par la route. Il est
+indépendant de tout ce que l'interface affiche ou masque : une route
+d'administration atteinte par un autre moyen --- l'outil de développement du
+navigateur, un client HTTP en ligne de commande, la documentation OpenAPI ---
+est refusée par le serveur lui-même.
+
+\subsection{Contrôle de propriété des ressources}
+
+Le rôle ne suffit pas. Deux clientes portent le même rôle, et rien dans ce rôle
+n'empêche l'une de demander la commande de l'autre : c'est la faille de type
+\textit{Insecure Direct Object Reference}, l'une des plus répandues et des plus
+faciles à exploiter --- il suffit de changer un identifiant dans une adresse.
+
+Chaque route qui expose une ressource nominative vérifie donc, en plus du rôle,
+que la ressource appartient bien au demandeur. La vérification est faite
+\emph{à la lecture en base}, en filtrant sur le propriétaire, et non après
+coup : une commande qui n'appartient pas à la cliente est traitée comme
+introuvable, ce qui évite au passage de confirmer son existence.
+
+Les identifiants sont par ailleurs des UUID et non des entiers séquentiels. Ce
+n'est pas une protection en soi --- la vérification de propriété reste la seule
+qui compte --- mais cela ôte à un attaquant la possibilité d'énumérer les
+ressources en incrémentant un nombre, et empêche de déduire le volume
+d'activité de l'institut d'un identifiant observé.
+
+\subsection{Invariants d'administration}
+
+Deux invariants protègent le compte de direction, et ils sont appliqués par le
+serveur :
+
+\begin{itemize}[leftmargin=1.2cm]
+  \item \textbf{une seule administratrice à la fois} --- promouvoir un compte
+  exige de vérifier qu'aucun autre ne porte déjà ce rôle ;
+  \item \textbf{jamais zéro administratrice} --- rétrograder la dernière est
+  refusé. Sans ce garde-fou, une fausse manipulation rendrait la gestion du
+  centre définitivement inaccessible, sans autre recours qu'une intervention
+  directe en base.
+\end{itemize}
+
+% ─────────────────────────────────────────────────────────────────
+\section{Sécurité des entrées et des sorties}
+
+\subsection{Validation stricte des entrées}
+
+Un tube de validation global s'applique à toutes les routes, avec trois
+réglages qui comptent :
+
+\begin{itemize}[leftmargin=1.2cm]
+  \item \textbf{liste blanche} --- seules les propriétés déclarées dans le
+  contrat de la route sont conservées ;
+  \item \textbf{rejet des propriétés inconnues} --- une propriété non déclarée
+  fait \emph{échouer} la requête au lieu d'être silencieusement ignorée. C'est
+  ce réglage qui ferme la porte à l'affectation en masse : soumettre un champ
+  \texttt{role} ou \texttt{pointsBalance} dans une mise à jour de profil est
+  rejeté, et non toléré ;
+  \item \textbf{conversion typée} --- les valeurs sont converties dans le type
+  attendu avant d'atteindre la logique métier, qui ne reçoit donc jamais une
+  chaîne là où elle attend un nombre ou une date.
+\end{itemize}
+
+Les règles de validation sont déclarées au plus près des données, dans les
+objets de transfert, et sont partagées : la politique de mot de passe, le
+format des codes à six chiffres et celui des numéros de téléphone marocains
+sont des validateurs uniques, réutilisés partout où la donnée apparaît.
+
+\subsection{Injection SQL}
+
+Toutes les requêtes passent par l'ORM, qui les émet sous forme paramétrée :
+les valeurs ne sont jamais concaténées dans le texte de la requête.
+
+Le projet compte \emph{une} requête SQL écrite à la main --- la prise du verrou
+de réservation. Elle est écrite avec un gabarit étiqueté (\textit{tagged
+template}), lui aussi paramétré, et sa seule valeur variable est une constante
+du code, jamais une entrée utilisateur.
+
+\subsection{Contrôle des fichiers téléversés}
+
+Le téléversement d'images est le seul chemin par lequel un utilisateur écrit un
+fichier sur le serveur --- fichier ensuite republié en HTTP. C'est donc le
+point le plus sensible du système, et il est traité comme tel.
+
+\begin{itemize}[leftmargin=1.2cm]
+  \item \textbf{Réservé à la gérante.} Aucune cliente ne peut téléverser quoi
+  que ce soit.
+
+  \item \textbf{Reconnaissance par signature binaire.} Le type déclaré par le
+  navigateur et l'extension du nom de fichier viennent tous deux du client et
+  se falsifient en une ligne. Seuls les premiers octets du fichier disent ce
+  qu'il \emph{est} : trois signatures sont acceptées --- JPEG, PNG, WebP ---
+  et c'est la signature reconnue, jamais l'extension fournie, qui détermine
+  l'extension enregistrée.
+
+  \item \textbf{Le SVG est refusé.} C'est un refus délibéré, et non un oubli :
+  le SVG est du XML susceptible de contenir du JavaScript. Servi depuis le
+  domaine de l'application, il s'exécuterait avec les droits de celle-ci ---
+  une faille XSS stockée, ouverte par un simple téléversement d'image.
+
+  \item \textbf{Nom de fichier tiré au sort.} Le nom fourni par le client est
+  jeté ; le fichier est enregistré sous un identifiant aléatoire. Cela ferme la
+  traversée de répertoire (un nom du type \texttt{../../etc/passwd}) et
+  l'écrasement d'un fichier existant.
+
+  \item \textbf{Taille plafonnée à 5 Mo}, et un seul fichier par requête.
+
+  \item \textbf{Cinq minutes de recul.} Les images sont servies avec un cache
+  d'un an, marqué immuable --- ce qui est sûr précisément parce que le nom est
+  tiré au sort : remplacer une photo crée un nouveau nom, jamais une nouvelle
+  version du même. Il n'y a donc rien à invalider.
+\end{itemize}
+
+\subsection{Fuite d'information par les messages d'erreur}
+
+Un message d'erreur technique renseigne un attaquant : noms de tables, noms de
+colonnes, noms de contraintes, parfois valeurs. Un filtre global intercepte
+donc toute exception avant qu'elle n'atteigne le client et applique trois
+traitements :
+
+\begin{enumerate}[leftmargin=1.2cm]
+  \item les exceptions métier levées volontairement passent intactes --- leur
+  message est destiné à l'utilisatrice ;
+  \item les erreurs de base de données identifiées sont traduites en langage
+  métier ;
+  \item \textbf{tout le reste devient un message neutre}, le détail et la pile
+  d'appels ne vivant que dans les journaux du serveur.
+\end{enumerate}
+
+Les journaux eux-mêmes ont été traités comme un risque : une erreur serveur y
+consigne l'\emph{identifiant} de l'utilisateur, jamais son adresse
+électronique --- assez pour rejouer l'incident, pas assez pour reconstituer un
+fichier d'adresses à partir des journaux.
+
+\subsection{Injection d'en-tête de courriel}
+
+Le nom de l'expéditeur est inséré entre guillemets dans un en-tête
+\texttt{From}. Un retour à la ligne y couperait l'en-tête en deux et
+permettrait d'en injecter d'autres --- un \texttt{Bcc} vers une adresse
+tierce, par exemple. Les caractères de rupture sont donc retirés avant
+insertion. La valeur vient certes de la configuration et non d'un client, mais
+un fichier d'environnement recopié de travers suffirait à produire l'effet, et
+l'échec serait silencieux.
+
+% ─────────────────────────────────────────────────────────────────
+\section{Sécurité du transport et des en-têtes}
+
+\subsection{Chiffrement du transport}
+
+L'API n'est publiée que sur l'interface locale du serveur. Ce choix est une
+mesure de sécurité et non une limitation : il rend \emph{impossible} de la
+joindre sans passer par le reverse proxy placé devant, à qui revient la
+terminaison HTTPS. Publier le port directement reviendrait à servir en clair
+les jetons d'authentification, sur des réseaux Wi-Fi publics compris.
+
+Côté mobile, un garde-fou interdit de configurer une adresse d'API non
+chiffrée en dehors du développement local.
+
+\subsection{En-têtes de sécurité HTTP}
+
+Helmet retire l'en-tête qui annonçait la technologie du serveur --- une
+information sans usage légitime, qui oriente le choix des exploits --- et pose
+une douzaine d'en-têtes que le navigateur applique.
+
+\begin{table}[H]
+\centering
+\caption{Principaux en-têtes de sécurité posés}
+\label{tab:entetes}
+\begin{tabularx}{\textwidth}{L{6.3cm} X}
+\toprule
+\entete{En-tête} & \entete{Rôle} \\
+\midrule
+\texttt{Strict-Transport-Security} & Impose HTTPS pour les visites suivantes,
+et ferme la fenêtre de rétrogradation vers HTTP. \\
+\texttt{Content-Security-Policy} & Restreint les sources de scripts : première
+barrière contre le XSS. \\
+\texttt{X-Content-Type-Options} & Interdit au navigateur de deviner le type
+d'une ressource, donc d'exécuter comme script un fichier qui n'en est pas un. \\
+\texttt{X-Frame-Options} & Interdit l'inclusion dans un cadre : protection
+contre le détournement de clic. \\
+\texttt{Cross-Origin-Resource-Policy} & Contrôle quelles origines peuvent
+charger une ressource. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{attention}[Un arbitrage assumé]
+La politique de sécurité du contenu interdit par défaut les scripts en ligne.
+Or l'interface de documentation OpenAPI s'initialise justement par un script en
+ligne : l'activer telle quelle afficherait une page blanche. Elle est donc
+désactivée \emph{uniquement là où cette documentation tourne}, c'est-à-dire en
+développement. En production, la documentation est coupée et la politique
+s'applique pleinement. L'arbitrage porte ainsi sur un environnement qui n'est
+pas exposé, et non sur le serveur en ligne.
+\end{attention}
+
+\subsection{Contrôle des origines}
+
+La politique CORS n'autorise que les adresses déclarées du back-office. Un site
+tiers ne peut donc pas faire émettre à un navigateur des requêtes authentifiées
+vers l'API.
+
+\begin{attention}[Un piège de déploiement]
+Cette liste doit contenir l'adresse réelle du back-office déployé. Non
+renseignée, elle retombe sur l'adresse de développement : le back-office ne
+peut plus joindre l'API, et l'échec ne se manifeste que par un blocage dans la
+console du navigateur --- \emph{jamais} par un message du serveur. On cherche
+donc longtemps du mauvais côté.
+\end{attention}
+
+% ─────────────────────────────────────────────────────────────────
+\section{Disponibilité et résistance à l'abus}
+
+\subsection{Limitation du débit}
+
+Un compteur par adresse IP plafonne l'ensemble de l'API à 120 requêtes par
+minute. Les routes coûteuses --- celles qui déclenchent un hachage Argon2 ou un
+envoi de courriel --- portent en plus une limite stricte.
+
+\begin{table}[H]
+\centering
+\caption{Limites de débit par catégorie de route}
+\label{tab:rate-limit}
+\begin{tabularx}{\textwidth}{L{5.4cm} C{3.0cm} X}
+\toprule
+\entete{Route} & \entete{Limite} & \entete{Ce qu'elle protège} \\
+\midrule
+Ensemble de l'API & 120 / min &
+Saturation générale du service \\
+Connexion, inscription & 10 / min &
+Force brute sur les mots de passe ; épuisement du processeur par Argon2 \\
+Changement de mot de passe & 10 / min & Force brute sur le mot de passe actuel \\
+Vérification d'adresse & 10 / min & Énumération du code à six chiffres \\
+Renvoi de code & 5 / min & Usage de l'API comme relais d'envoi de courriels \\
+Mot de passe oublié & 5 / 5 min & Harcèlement par courriel d'une adresse tierce \\
+Téléversement d'image & 30 / min & Saturation du disque du serveur \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{attention}[Le réglage qui décide de tout]
+Le compteur s'appuie sur l'adresse IP du demandeur. Derrière un reverse proxy,
+cette adresse est celle \emph{du proxy}, identique pour tout le monde : sans le
+réglage correspondant, l'institut entier partage un unique compteur de 120
+requêtes par minute, et l'API se met à répondre 429 au hasard dès qu'il y a du
+monde. Le symptôme est déroutant --- parfait en test avec une seule personne,
+cassé en production --- et rien dans les journaux ne le rattache à sa cause.
+
+Le réglage inverse est tout aussi dangereux, et c'est ce qui en fait un vrai
+arbitrage : activé sans proxy devant, l'en-tête d'adresse réelle devient
+falsifiable par n'importe qui, et il suffit alors d'en changer la valeur à
+chaque requête pour contourner entièrement la limitation. Ce réglage n'est donc
+à activer \emph{que} si un proxy de confiance est réellement en place.
+\end{attention}
+
+\subsection{Plafonnement des volumes}
+
+Deux mesures évitent qu'une requête légitime ne dégénère en déni de service.
+
+\paragraph{La pagination obligatoire.} Toute liste susceptible de croître ---
+historique de fidélité, commandes, rendez-vous, utilisateurs --- est paginée
+côté serveur. Sans cela, une cliente fidèle depuis trois ans rechargeait la
+totalité de son historique à chaque ouverture de l'écran.
+
+\paragraph{Le plafond d'export.} Les exports Excel comptent les lignes
+\emph{avant} de charger quoi que ce soit et refusent au-delà de 20 000 lignes,
+en invitant à restreindre la période. Un export non borné aurait constitué
+l'opération la plus lourde de l'API, accessible d'une seule requête. Le
+comptage préalable importe autant que le plafond : c'est lui qui garantit que
+le refus ne coûte rien.
+
+\subsection{Correction sous concurrence}
+
+Les mécanismes décrits au chapitre~2 --- verrou consultatif sur les
+réservations, écritures conditionnelles atomiques sur le stock et sur le solde
+de points --- relèvent aussi de la sécurité, et pas seulement de la
+correction fonctionnelle.
+
+Une condition de course est en effet exploitable dès lors qu'elle est
+déclenchable à volonté. Le débit conditionnel du solde de points en est
+l'illustration : lire le solde puis le décrémenter permettrait, en lançant
+plusieurs échanges simultanés, de dépenser plusieurs fois les mêmes points et
+d'obtenir des récompenses non acquises. Le débit est donc exprimé comme une
+\emph{écriture conditionnelle} --- retirer $n$ points à condition qu'il y en ait
+au moins $n$ --- évaluée par la base au moment de l'écriture. Si la condition
+n'est pas satisfaite, aucune ligne n'est modifiée et rien n'est émis.
+
+% ─────────────────────────────────────────────────────────────────
+\section{Traçabilité et non-répudiation}
+
+Certaines opérations ont une valeur économique et doivent laisser une trace
+opposable.
+
+\begin{itemize}[leftmargin=1.2cm]
+  \item \textbf{L'ajout manuel de points} exige un motif et enregistre
+  l'employée qui l'a saisi. Un journal d'audit, consultable par la seule
+  gérante, liste ces écritures.
+
+  \item \textbf{La remise d'un bon} enregistre la date et l'identité de la
+  personne qui l'a honoré.
+
+  \item \textbf{Le lien vers l'employée n'est jamais supprimé en cascade.} Le
+  départ d'une employée ne doit ni effacer les points des clientes qu'elle a
+  servies, ni la trace de ce qui leur a été remis : l'écriture demeure, elle ne
+  désigne simplement plus personne.
+
+  \item \textbf{Les montants sont figés} au moment de l'acte. Une révision de
+  tarif ne réécrit pas rétroactivement ce qui a été facturé, ni les points
+  gagnés.
+\end{itemize}
+
+% ─────────────────────────────────────────────────────────────────
+\section{Protection des données personnelles}
+
+\subsection{Cadre applicable}
+
+Le traitement de données personnelles au Maroc est régi par la \textbf{loi
+09-08}, dont la Commission Nationale de contrôle de la protection des Données à
+caractère Personnel (CNDP) assure le contrôle. Trois obligations ont eu un
+effet direct sur la conception.
+
+\paragraph{La minimisation.} Seules sont collectées les données nécessaires :
+identité, adresse électronique, téléphone --- ce dernier parce qu'un institut
+doit pouvoir rappeler une cliente pour confirmer une commande. Aucune donnée de
+paiement n'est traitée : le règlement s'effectue à la remise, en espèces, et
+l'application n'en voit rien. C'est une réduction considérable du risque, et
+elle découle d'un choix fonctionnel plutôt que technique.
+
+\paragraph{Le droit d'accès.} La cliente consulte à tout moment son profil, ses
+rendez-vous, ses commandes et l'intégralité de son historique de fidélité.
+
+\paragraph{Le droit à l'effacement.} C'est celui qui a demandé le plus de
+travail, et il fait l'objet de la section suivante.
+
+\subsection{L'effacement par anonymisation}
+
+Le droit à l'effacement se heurte ici à une exigence contradictoire : les
+commandes et les rendez-vous d'une cliente portent le chiffre d'affaires de
+l'institut, qui doit lui survivre. Une suppression en cascade détruirait la
+comptabilité ; un refus de supprimer méconnaîtrait la loi.
+
+La solution retenue est l'\textbf{anonymisation} : la ligne survit, vidée de
+tout ce qui identifie la personne.
+
+\begin{lstlisting}[caption={Anonymisation d'un compte : ce qui est effacé, ce qui survit},captionpos=b]
+await this.prisma.$transaction([
+  this.prisma.user.update({
+    where: { id: userId },
+    data: {
+      // L'adresse d'origine est LIBEREE : si la cliente revient un jour, elle
+      // pourra se reinscrire avec le meme email — sur un compte neuf. Le
+      // domaine `.invalid` est reserve par la RFC 2606 et n'est routable nulle
+      // part : aucun email ne partira jamais vers cette coquille.
+      email: `supprime-${userId}@compte-supprime.invalid`,
+      firstName: null, lastName: null, phone: null,
+      passwordHash,          // hache d'un secret aleatoire que nul ne connait
+      emailVerifiedAt: null,
+      deletedAt: new Date(),
+    },
+  }),
+  // Les sessions ouvertes tombent tout de suite.
+  this.prisma.refreshToken.deleteMany({ where: { userId } }),
+  // Et un code de reinitialisation en cours ne doit pas servir de porte
+  // derobee sur une coquille anonyme.
+  this.prisma.verificationCode.deleteMany({ where: { userId } }),
+]);
+\end{lstlisting}
+
+Plusieurs points de ce traitement méritent d'être relevés.
+
+\begin{itemize}[leftmargin=1.2cm]
+  \item \textbf{L'opération est transactionnelle.} L'anonymisation, la
+  destruction des sessions et celle des codes en cours réussissent ou échouent
+  ensemble. Un échec partiel laisserait une coquille anonyme accessible par une
+  session encore ouverte.
+
+  \item \textbf{Le domaine \texttt{.invalid} est réservé par la RFC 2606} et
+  n'est routable nulle part. Aucun courriel ne peut partir vers cette coquille,
+  même par erreur de code --- ce qu'un domaine inventé ne garantirait pas.
+
+  \item \textbf{L'adresse d'origine est libérée}, ce qui permet une
+  réinscription ultérieure sur un compte neuf.
+
+  \item \textbf{Trois verrous indépendants} ferment le compte : le refus de
+  connexion sur le marqueur de suppression, le mot de passe devenu inconnu de
+  tous, et le rejet à chaque requête des jetons d'accès déjà émis.
+
+  \item \textbf{La garantie est structurelle.} Les rendez-vous et les commandes
+  sont rattachés à la cliente en mode \texttt{Restrict} : si du code tentait un
+  jour une suppression, la contrainte le ferait échouer bruyamment au lieu de
+  détruire l'historique en silence.
+\end{itemize}
+
+L'opération est enfin \textbf{idempotente} : rejouée sur un compte déjà
+anonymisé, elle répond succès sans rien réécrire --- ce qui préserve la date
+d'origine, seule trace de la date à laquelle le droit a été exercé.
+
+\subsection{Gestion des secrets}
+
+Aucun secret ne figure dans le dépôt. Les fichiers d'environnement ne sont pas
+versionnés ; seuls leurs modèles le sont, documentés valeur par valeur.
+
+La configuration est \textbf{validée au démarrage}, et l'API refuse de démarrer
+si elle est incohérente. Ce choix mérite d'être souligné : la solution
+alternative --- démarrer et se débrouiller --- produit des états dégradés que
+rien ne signale.
+
+\begin{itemize}[leftmargin=1.2cm]
+  \item \textbf{Le secret de signature doit compter au moins 32 caractères.} Un
+  secret plus court se casse hors ligne, et permet ensuite de forger un jeton
+  d'administration sans jamais toucher à l'API.
+
+  \item \textbf{L'envoi réel de courriels est exigé en production.} Un serveur
+  de production laissé en mode console n'enverrait aucun code de vérification
+  ni de réinitialisation, et rien ne le signalerait : les clientes se
+  retrouveraient simplement incapables de valider leur compte.
+
+  \item \textbf{Les valeurs de repli sont bannies} là où elles seraient
+  dangereuses. Le secret de signature est lu par une méthode qui lève une
+  exception s'il manque, à la signature comme à la vérification.
+\end{itemize}
+
+\subsection{Sauvegardes}
+
+Un script produit un cliché horodaté de la base et supprime ceux de plus de
+quatorze jours. Deux règles d'exploitation l'accompagnent, et elles comptent
+autant que le script : le cliché doit être recopié \emph{hors de la machine}
+--- une sauvegarde qui vit sur le serveur qu'elle sauvegarde ne protège de rien
+--- et le dossier des images, qui vit hors de la base, doit être copié
+séparément. La procédure de restauration et sa vérification sont documentées
+dans le script lui-même.
+
+% ─────────────────────────────────────────────────────────────────
+\section{Sécurité de la chaîne de développement}
+
+La sécurité d'une application ne s'arrête pas à son code : elle englobe ses
+dépendances, sa construction et son déploiement.
+
+\paragraph{Les dépendances.} Les versions sont figées par un fichier de
+verrouillage, et deux dépendances \emph{transitives} sont forcées à des
+versions corrigées : une bibliothèque d'analyse YAML tirée par la couche de
+documentation, et une bibliothèque d'identifiants tirée par le générateur de
+classeurs Excel. Ces dépendances-là sont les plus faciles à négliger --- on ne
+les a pas choisies, et elles n'apparaissent pas dans la liste des dépendances
+directes.
+
+\paragraph{L'image de production.} Elle est construite en trois étapes, si bien
+que l'image livrée ne contient ni compilateur, ni cadriciel de test, ni
+outillage de développement --- une réduction de surface d'attaque autant qu'un
+gain de taille. Le processus y tourne sous un utilisateur non privilégié, et
+non en tant que \texttt{root}.
+
+\paragraph{L'intégration continue.} Chaque modification rejoue l'intégralité des
+tests contre une véritable base PostgreSQL. Plusieurs de ces tests portent
+directement sur des propriétés de sécurité : rotation et détection de
+réutilisation des jetons, anonymisation des comptes, capacité des créneaux sous
+concurrence, restriction des exports.
+
+\paragraph{L'hygiène du dépôt.} Les notes de travail internes, qui décrivaient
+des faiblesses avant leur correction, ont été retirées du suivi. Le retrait est
+documenté avec sa limite --- il ne réécrit pas l'historique, et le contenu
+demeure accessible dans les commits passés. Cette honnêteté a une valeur
+opérationnelle : elle évite de tenir pour effacé ce qui ne l'est pas.
+
+% ─────────────────────────────────────────────────────────────────
+\section{Synthèse}
+
+Le tableau ci-dessous récapitule, pour chaque menace du modèle, la
+contre-mesure retenue et l'endroit où elle est appliquée.
+
+\begin{table}[H]
+\centering
+\caption{Synthèse menaces $\rightarrow$ contre-mesures}
+\label{tab:synthese-securite}
+\begin{tabularx}{\textwidth}{L{4.2cm} X}
+\toprule
+\entete{Menace} & \entete{Contre-mesure} \\
+\midrule
+Force brute sur les mots de passe &
+Argon2id ; 10 tentatives par minute et par IP ; politique de complexité
+identique sur les trois chemins de saisie \\
+
+Vol d'un jeton de session &
+Jeton d'accès de 15 minutes ; rafraîchissement haché, tourné, avec révocation
+de toute la famille en cas de réutilisation ; coffre sécurisé du téléphone \\
+
+Devinette d'un code à 6 chiffres &
+Générateur cryptographique ; stockage haché ; 5 tentatives ; 15 minutes de
+validité ; comparaison en temps constant ; recherche par (compte, usage) \\
+
+Énumération de comptes &
+Réponses identiques et \emph{temps de réponse} identiques, par vérification
+factice sur adresse inconnue \\
+
+Élévation de privilège &
+Garde de rôle côté serveur sur chaque route ; rôle relu en base à chaque
+requête ; rejet des propriétés non déclarées \\
+
+Lecture des données d'autrui &
+Contrôle de propriété au niveau de la requête en base ; identifiants UUID \\
+
+Jeton émis avant suppression &
+Compte rechargé et marqueur de suppression vérifié à chaque requête \\
+
+Injection SQL &
+Requêtes paramétrées par l'ORM ; unique requête manuelle sans entrée
+utilisateur \\
+
+XSS par téléversement &
+Reconnaissance par signature binaire ; SVG refusé ; nom aléatoire ; en-têtes
+\texttt{nosniff} et CSP \\
+
+Fuite du schéma de base &
+Filtre d'exceptions global ; documentation OpenAPI coupée en production \\
+
+Déni de service &
+Limitation de débit globale et par route ; pagination obligatoire ; plafond
+d'export à 20 000 lignes \\
+
+Condition de course exploitable &
+Verrou consultatif sur les réservations ; écritures conditionnelles atomiques
+sur le stock et le solde \\
+
+Interception du trafic &
+API sur interface locale ; HTTPS imposé par le reverse proxy ; HSTS ;
+garde-fou HTTPS côté mobile \\
+
+Répudiation d'une opération &
+Motif obligatoire et auteur enregistré ; journal d'audit ; liens vers
+l'employée jamais supprimés en cascade \\
+
+Atteinte aux données personnelles &
+Minimisation ; aucune donnée de paiement ; anonymisation transactionnelle ;
+sauvegardes horodatées \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ─────────────────────────────────────────────────────────────────
+\section{Limites connues et durcissement à venir}
+
+Aucun système n'est sûr dans l'absolu, et un rapport qui prétendrait le
+contraire manquerait son objet. Les limites suivantes sont assumées et
+identifiées.
+
+\paragraph{L'absence de second facteur.} L'authentification repose sur un seul
+facteur. Pour un compte cliente, l'enjeu reste mesuré ; pour le compte de
+direction, qui donne accès à l'ensemble du fichier clientes, un second facteur
+serait la première amélioration à apporter.
+
+\paragraph{Les données au repos ne sont pas chiffrées.} La base repose sur le
+chiffrement du disque du serveur hôte. Un chiffrement au niveau des colonnes
+les plus sensibles constituerait une couche supplémentaire.
+
+\paragraph{Le compteur de débit vit en mémoire.} Il est donc propre à chaque
+instance et remis à zéro au redémarrage. Tant que l'API tourne en un seul
+exemplaire, la protection est effective ; une mise à l'échelle horizontale
+imposerait de déporter ce compteur dans un magasin partagé.
+
+\paragraph{Aucun audit externe n'a été mené.} Les propriétés de sécurité sont
+établies par les tests automatisés et par la revue du code. Un test
+d'intrusion mené par un tiers reste la seule façon de découvrir ce que la
+personne qui a écrit le code ne pense pas à chercher.
+
+\paragraph{La supervision est minimale.} Les événements sont journalisés, mais
+rien ne les agrège ni ne déclenche d'alerte. Une série d'échecs de connexion
+sur un même compte devrait alerter, et ne le fait pas aujourd'hui.
+
+\paragraph{Les points restant à faire avant l'ouverture publique.} Le
+certificat HTTPS et le reverse proxy conditionnent plusieurs des mesures
+décrites ici : tant qu'ils ne sont pas en place, la protection du transport
+repose sur le fait que le service n'est pas encore exposé.
+
+\section*{Conclusion}
+\addcontentsline{toc}{section}{Conclusion}
+
+Ce chapitre a présenté la sécurité de la plate-forme comme une chaîne
+continue, du modèle de menaces jusqu'aux limites qui subsistent. Trois idées
+en résument la démarche.
+
+D'abord, \textbf{la frontière de confiance passe à l'entrée de l'API}. Ni
+l'application mobile, ni le back-office, ni aucune valeur venue d'un client
+n'est cru sur parole ; ce qui est masqué dans une interface n'est jamais
+protégé pour autant.
+
+Ensuite, \textbf{les défauts sont fermés}. Une route est authentifiée et
+comptée sauf déclaration contraire, une propriété inconnue fait échouer la
+requête, et une configuration incohérente empêche le démarrage plutôt que de
+produire un état dégradé silencieux.
+
+Enfin, \textbf{la sécurité n'a pas été ajoutée après coup}. Les mécanismes qui
+garantissent qu'un créneau n'est pas vendu deux fois sont les mêmes qui
+empêchent de dépenser deux fois les mêmes points ; le figement des montants
+sert à la fois l'exactitude comptable et la non-répudiation ; l'anonymisation
+concilie un droit légal et la survie de l'historique. Correction fonctionnelle
+et sécurité se sont révélées être, le plus souvent, deux vues du même
+problème.
+
+Le chapitre suivant présente la mise en \oe uvre effective de la solution et
+les tests qui en établissent les propriétés.
