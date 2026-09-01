@@ -1,0 +1,484 @@
+% ═══════════════════════════════════════════════════════════════════
+%  Chapitre 1 — Présentation de l'organisme d'accueil et du projet
+% ═══════════════════════════════════════════════════════════════════
+\chapter{Présentation de l'organisme d'accueil et du contexte du projet}
+
+\section*{Introduction}
+\addcontentsline{toc}{section}{Introduction}
+
+Ce chapitre présente le cadre dans lequel ce projet de fin d'études a été
+réalisé. Il décrit d'abord l'organisme d'accueil --- son activité, son
+organisation et les personnes qui y travaillent --- puis le contexte du projet
+proprement dit : la façon dont l'institut fonctionnait avant l'intervention,
+les difficultés que ce fonctionnement engendrait, la solution retenue pour y
+répondre, ainsi que les enjeux et les contraintes qui l'ont encadrée. Il se
+termine par la méthode de conduite de projet adoptée et par la planification
+qui en découle.
+
+% ─────────────────────────────────────────────────────────────────
+\section{Présentation de l'organisme d'accueil}
+
+\subsection{Le centre \yani}
+
+\yani\ est un centre de beauté et de bien-être installé à Casablanca. C'est une
+structure de proximité : une clientèle essentiellement féminine, largement
+fidélisée, qui revient à intervalles réguliers et qui connaît personnellement
+la gérante. Cette proximité est le principal atout commercial de l'institut ;
+c'est aussi ce qui rend la question de l'outil informatique délicate, car toute
+solution qui interposerait une machine froide entre la cliente et l'institut
+détruirait précisément ce qui fait sa valeur.
+
+\figProjet[0.32]{logo.png}{Identité visuelle de \yani}{logo}
+
+L'identité visuelle du centre --- un or lumineux sur fond crème ou noir profond
+--- a été reprise à l'identique dans les trois applications développées. Ce
+n'est pas un détail cosmétique : pour une cliente, l'application doit
+manifestement être celle de l'institut qu'elle connaît, et non un outil
+générique de réservation dans lequel l'institut ne serait qu'une entrée parmi
+d'autres.
+
+\subsection{Activités et offre de services}
+
+L'activité du centre se répartit en deux volets, qui ont chacun leur logique
+propre et qui sont tous deux couverts par la solution développée.
+
+\begin{itemize}[leftmargin=1.2cm]
+  \item \textbf{Les prestations de soin.} Elles constituent le c\oe ur de
+  métier. Chaque prestation appartient à une catégorie (soins du visage, soins
+  du corps, épilation, coiffure, onglerie\ldots), porte un tarif et
+  s'effectue en cabine, sur rendez-vous. La ressource limitante est le nombre
+  de cabines réservables simultanément.
+
+  \item \textbf{La vente de produits cosmétiques.} L'institut revend des
+  produits de soin. Cette activité obéit à une logique différente : elle porte
+  sur un stock physique, se règle à la remise ou à la livraison, et n'occupe
+  aucune cabine.
+\end{itemize}
+
+À ces deux volets s'ajoute un \textbf{programme de fidélité}, transversal, qui
+récompense à la fois les prestations réalisées et les produits achetés.
+
+\subsection{Organisation et acteurs}
+
+L'institut est une structure de petite taille, ce qui a une conséquence directe
+sur la conception : les rôles ne sont pas cloisonnés comme ils le seraient dans
+une entreprise plus grande, et une même personne assure souvent plusieurs
+fonctions dans la même journée. Trois profils ont néanmoins été distingués,
+parce qu'ils correspondent à trois niveaux de responsabilité réellement
+différents.
+
+\begin{table}[H]
+\centering
+\caption{Les acteurs de l'institut et leurs responsabilités}
+\label{tab:acteurs-institut}
+\begin{tabularx}{\textwidth}{L{3.1cm} L{2.4cm} X}
+\toprule
+\entete{Acteur} & \entete{Rôle système} & \entete{Responsabilités} \\
+\midrule
+La gérante & \texttt{ADMIN} &
+Direction du centre. Fixe les tarifs et le catalogue, règle les horaires
+d'ouverture et la capacité, définit le programme de fidélité, gère les comptes
+du personnel et consulte les exports comptables. \\
+
+Le personnel & \texttt{STAFF} &
+Réalise les soins et tient le comptoir. Traite les commandes, confirme et
+clôture les rendez-vous, honore les bons de récompense, crédite
+exceptionnellement des points à la main. \\
+
+Les clientes & \texttt{CLIENT} &
+Consultent les catalogues, réservent leurs rendez-vous, commandent des
+produits et suivent leur compte de fidélité. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\figProjet[0.75]{organisation-centre.png}{Organisation du centre et acteurs du système}{organisation}
+
+Cette hiérarchie de rôles n'est pas une simple convention documentaire : elle
+est appliquée par le serveur sur chaque route de l'API, indépendamment de ce
+que l'interface propose ou masque. Une cliente qui obtiendrait par un moyen
+quelconque l'adresse d'une route d'administration se verrait refuser l'accès
+par le serveur lui-même. Ce point est développé au chapitre~3.
+
+% ─────────────────────────────────────────────────────────────────
+\section{Présentation du contexte du projet}
+
+\subsection{Vue d'ensemble du projet}
+
+Le projet consiste à concevoir et à réaliser une solution logicielle complète
+couvrant l'ensemble de l'activité de l'institut. Elle prend la forme d'un
+mono-dépôt réunissant trois applications qui partagent une seule base de
+données :
+
+\begin{itemize}[leftmargin=1.2cm]
+  \item une \textbf{API REST} qui porte les données et la totalité des règles
+  métier ;
+  \item une \textbf{application mobile} destinée aux clientes ;
+  \item un \textbf{back-office web} destiné à la gérante et à son personnel.
+\end{itemize}
+
+Le choix de faire porter toutes les règles métier par l'API, et par elle seule,
+est structurant. Les deux interfaces --- mobile et web --- n'implémentent
+aucune règle : elles affichent ce que le serveur leur donne et lui soumettent
+ce que l'utilisatrice saisit. Une règle telle que « on ne peut pas réserver
+dans le passé » ou « un rendez-vous annulé ne peut plus être marqué terminé »
+n'existe qu'à un seul endroit. Ce principe évite la divergence classique où
+l'application mobile et le back-office finissent par appliquer des règles
+subtilement différentes à la même donnée.
+
+\subsection{Étude de l'existant}
+
+Avant tout développement, une observation du fonctionnement réel de l'institut
+a été menée. Elle a mis en évidence quatre processus manuels, tous fonctionnels
+au quotidien, et tous porteurs des mêmes limites.
+
+\paragraph{La prise de rendez-vous.} Elle s'effectue par trois canaux
+concurrents : le téléphone, la messagerie instantanée et la présentation
+directe au comptoir. La réservation est inscrite au crayon dans un carnet
+papier, unique et physiquement situé à l'accueil. La cliente ne dispose
+d'aucune confirmation écrite autre que la mémoire de l'échange.
+
+\paragraph{La vente de produits.} Elle se fait exclusivement sur place. Le
+stock n'est suivi par aucun outil : la gérante l'estime de visu. Un produit
+épuisé ne se découvre qu'au moment où une cliente le demande.
+
+\paragraph{La fidélité.} Elle repose sur une carte cartonnée tamponnée à chaque
+visite. La carte perdue emporte l'historique avec elle ; la carte oubliée à la
+maison prive la cliente de son tampon ; et l'institut n'a aucune vision
+consolidée de ce que le programme lui coûte ni de ce qu'il lui rapporte.
+
+\paragraph{Le suivi de l'activité.} Il n'existe pas de manière systématique. Il
+n'est pas possible de répondre, sans reconstitution manuelle, à des questions
+aussi élémentaires que « combien de rendez-vous ce mois-ci ? », « quelles sont
+les prestations les plus demandées ? » ou « quelles clientes ne sont pas
+revenues depuis six mois ? ».
+
+\subsection{Problématique}
+
+Ce fonctionnement, viable tant que l'activité reste modeste, engendre des
+difficultés qui se renforcent mutuellement à mesure qu'elle croît.
+
+\begin{itemize}[leftmargin=1.2cm]
+  \item \textbf{Le risque de double réservation.} Trois canaux alimentent un
+  carnet unique. Une réservation prise par téléphone pendant qu'une cliente
+  écrit sur la messagerie peut viser le même créneau. Le conflit ne se découvre
+  qu'au moment où les deux clientes se présentent, et sa résolution se fait
+  toujours au détriment de l'une d'elles.
+
+  \item \textbf{L'indisponibilité hors des heures d'ouverture.} Une cliente qui
+  souhaite réserver le soir ou le dimanche doit attendre. Une partie de ces
+  demandes ne se transforme jamais en rendez-vous.
+
+  \item \textbf{Le temps consacré au téléphone.} Chaque appel interrompt un
+  soin en cours. Ce coût est invisible dans les comptes, mais il est réel : il
+  se paie en qualité de service pour la cliente présente en cabine.
+
+  \item \textbf{L'absence de mémoire exploitable.} Le carnet et la carte de
+  fidélité ne conservent qu'une trace éphémère et non consolidée. L'institut ne
+  peut donc ni mesurer son activité, ni identifier ses prestations phares, ni
+  détecter l'érosion de sa clientèle.
+
+  \item \textbf{La fragilité du support physique.} Un carnet se perd, s'abîme,
+  et n'existe qu'en un seul exemplaire, à un seul endroit.
+
+  \item \textbf{La rupture de stock invisible.} Sans suivi, un produit épuisé
+  n'est découvert qu'au comptoir, devant la cliente.
+\end{itemize}
+
+Ces difficultés ont un dénominateur commun : \emph{l'information de l'institut
+n'existe qu'en un seul exemplaire, dans un seul lieu, et pendant les seules
+heures d'ouverture}. C'est cette contrainte que le projet lève.
+
+\subsection{Solution proposée}
+
+La solution retenue est une plate-forme composée de trois applications adossées
+à une base de données unique. Ce choix mérite d'être justifié : il aurait été
+possible de se contenter d'un back-office web, ou de recourir à une plate-forme
+de réservation existante. Ni l'une ni l'autre de ces options n'a été retenue.
+
+Un back-office seul aurait déplacé le carnet papier vers un écran, sans rien
+changer pour la cliente : elle aurait continué d'appeler. Une plate-forme de
+réservation généraliste, quant à elle, aurait réglé la question des créneaux
+mais placé l'institut au milieu d'un annuaire de concurrents, sans couvrir ni
+la vente de produits ni un programme de fidélité propre --- et en faisant
+dépendre l'activité d'un tiers sur lequel l'institut n'a aucune prise.
+
+La plate-forme développée comprend donc :
+
+\begin{itemize}[leftmargin=1.2cm]
+  \item \textbf{Une API REST (NestJS, Prisma, PostgreSQL).} Elle expose plus de
+  quatre-vingts routes et porte l'ensemble des règles métier : catalogue,
+  moteur de créneaux, machine à états des rendez-vous et des commandes,
+  programme de fidélité, authentification, exports.
+
+  \item \textbf{Une application mobile (React Native, Expo).} Vingt-quatre
+  écrans permettent à la cliente de parcourir les catalogues, de réserver, de
+  commander, de suivre ses points et de gérer son compte. Elle est disponible
+  en français, en arabe et en anglais.
+
+  \item \textbf{Un back-office web (React, Vite).} Huit pages donnent à
+  l'institut la maîtrise complète de son activité : tableau de bord,
+  commandes, rendez-vous, catalogue, fidélité, horaires, utilisateurs, avec
+  export Excel des tableaux réservé à la gérante.
+\end{itemize}
+
+\begin{table}[H]
+\centering
+\caption{Réponse apportée à chaque difficulté identifiée}
+\label{tab:probleme-solution}
+\begin{tabularx}{\textwidth}{L{5.2cm} X}
+\toprule
+\entete{Difficulté} & \entete{Réponse apportée} \\
+\midrule
+Double réservation d'un créneau &
+Canal de réservation unique, et sérialisation des réservations concurrentes par
+verrou consultatif PostgreSQL : deux demandes simultanées sur le même créneau
+sont traitées l'une après l'autre, jamais en parallèle. \\
+
+Indisponibilité hors ouverture &
+Réservation possible à toute heure depuis l'application, sur la grille de
+créneaux calculée par le serveur à partir des horaires réels du centre. \\
+
+Temps passé au téléphone &
+La réservation en autonomie décharge l'accueil ; le rendez-vous pris par
+téléphone reste possible, le personnel le saisissant pour la cliente. \\
+
+Absence de mémoire &
+Historique complet en base, tableau de bord, et exports Excel horodatés des
+clientes, des commandes et des rendez-vous. \\
+
+Fragilité du support papier &
+Base PostgreSQL, script de sauvegarde horodatée avec rotation à quatorze jours
+et procédure de restauration documentée. \\
+
+Rupture de stock invisible &
+Stock suivi par produit, contrôlé à la commande, décrémenté de façon atomique à
+la confirmation, et alerte de stock faible sur le tableau de bord. \\
+
+Carte de fidélité perdue &
+Compte de fidélité attaché au compte de la cliente : solde, historique, paliers
+de visites et bons de récompense, consultables depuis l'application. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Enjeux du projet}
+
+\begin{itemize}[leftmargin=1.2cm]
+  \item \textbf{Enjeu commercial.} Rendre la réservation possible en dehors des
+  heures d'ouverture, et transformer en rendez-vous des demandes aujourd'hui
+  perdues faute d'interlocuteur disponible.
+
+  \item \textbf{Enjeu de fidélisation.} Remplacer une carte cartonnée fragile
+  par un compte consultable, doté de paliers de visites et de bons de
+  récompense traçables --- un programme que l'institut peut enfin piloter et
+  chiffrer.
+
+  \item \textbf{Enjeu de pilotage.} Donner à la gérante une visibilité qu'elle
+  n'a jamais eue sur son activité : commandes en attente, rendez-vous du jour,
+  stocks faibles, historique exportable.
+
+  \item \textbf{Enjeu d'image.} Une application aux couleurs de l'institut,
+  soignée et trilingue, participe directement à la perception de la marque
+  auprès d'une clientèle jeune et connectée.
+
+  \item \textbf{Enjeu de conformité.} Traiter des données personnelles impose
+  des obligations, notamment le droit à l'effacement prévu par la loi 09-08 et
+  contrôlé par la CNDP. Ce droit devait être réellement exerçable, et non
+  simplement annoncé.
+\end{itemize}
+
+\subsection{Contraintes}
+
+\paragraph{Contrainte d'exactitude sur les créneaux.} Un créneau de cabine ne
+peut pas être vendu deux fois. Cette contrainte, banale à énoncer, est la plus
+difficile du projet : la vérification de disponibilité et l'insertion du
+rendez-vous portent sur un \emph{ensemble} de lignes, ce qu'aucune écriture
+conditionnelle sur une ligne unique ne sait rendre atomique.
+
+\paragraph{Contrainte de fuseau horaire.} L'institut vit à l'heure de
+Casablanca, dont le décalage varie dans l'année. Les instants sont stockés en
+UTC, les horaires d'ouverture exprimés en heure locale. Toute confusion entre
+les deux se traduit par une grille de créneaux décalée d'une heure --- une
+erreur silencieuse, qui ne lève aucune exception et qui ne se voit qu'en
+comparant l'écran au carnet.
+
+\paragraph{Contrainte de conservation de l'historique.} Une cliente peut
+demander la suppression de son compte. Ses commandes et ses rendez-vous
+portent pourtant le chiffre d'affaires de l'institut, qui doit lui survivre.
+Concilier les deux exige une anonymisation, et non une suppression en cascade.
+
+\paragraph{Contrainte d'usage.} L'utilisatrice principale du back-office n'est
+pas informaticienne. L'outil devait être immédiatement compréhensible, sans
+formation ni documentation à consulter --- ce qui a proscrit toute exposition
+de valeurs techniques brutes dans l'interface comme dans les exports.
+
+\paragraph{Contrainte de coût.} L'institut est une petite structure.
+L'ensemble de la solution repose donc sur des technologies libres et sur une
+infrastructure minimale, déployable sur un seul serveur.
+
+\paragraph{Contrainte de délai.} Le projet devait aboutir à une plate-forme
+fonctionnelle et déployable dans la durée impartie au stage de fin d'études,
+soit environ huit semaines de développement effectif.
+
+% ─────────────────────────────────────────────────────────────────
+\section{Conduite du projet}
+
+\subsection{La méthode agile SCRUM}
+
+Le choix d'une méthode de développement conditionne l'organisation de tout le
+projet. La méthode agile SCRUM a été retenue, pour une raison qui tient au
+contexte plus qu'à la mode : les besoins de l'institut n'étaient pas
+formalisables à l'avance. Ils se sont précisés à mesure que des versions
+concrètes étaient montrées à la gérante.
+
+L'exemple le plus net concerne le moteur de créneaux. La première version
+calculait les disponibilités à partir de la durée de chaque prestation : une
+prestation d'une heure vingt-cinq occupait le temps correspondant. Le
+comportement était techniquement juste, et fonctionnellement inutilisable ---
+il produisait des heures de rendez-vous irrégulières, impossibles à annoncer au
+téléphone. La gérante espace en réalité ses rendez-vous d'un écart fixe, quelle
+que soit la prestation. Le moteur a donc été refait : un rendez-vous occupe
+exactement un créneau, et la durée de la prestation n'est plus qu'une
+information de gestion. Aucune spécification écrite à l'avance n'aurait produit
+cette règle ; seule la confrontation d'une version fonctionnelle au métier réel
+l'a fait apparaître.
+
+\figProjet[0.72]{scrum.png}{Le cycle de la méthode agile SCRUM}{scrum}
+
+\subsection{Répartition des rôles}
+
+Le projet ayant été mené par un seul développeur, la répartition canonique des
+rôles SCRUM a été adaptée sans être abandonnée --- car ce sont bien trois
+responsabilités distinctes, même lorsque deux d'entre elles sont portées par la
+même personne.
+
+\begin{table}[H]
+\centering
+\caption{Répartition des rôles SCRUM sur le projet}
+\label{tab:roles-scrum}
+\begin{tabularx}{\textwidth}{L{3.4cm} L{3.4cm} X}
+\toprule
+\entete{Rôle} & \entete{Tenu par} & \entete{Responsabilité} \\
+\midrule
+\textit{Product Owner} & Madame Fati, gérante &
+Exprime le besoin, arbitre les priorités, valide chaque incrément à l'aune du
+fonctionnement réel de l'institut. \\
+
+\textit{SCRUM Master} & \nouvelleEncadrantPedagogique &
+Cadence les revues, lève les obstacles et veille au respect de la méthode. \\
+
+\textit{Équipe de développement} & \nouvelleAuteur &
+Conception, développement des trois applications, tests, documentation et
+déploiement. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Réunions}
+
+Trois rendez-vous ont rythmé chaque sprint.
+
+\begin{itemize}[leftmargin=1.2cm]
+  \item \textbf{La planification de sprint.} En début de sprint, les éléments
+  les plus prioritaires du \textit{product backlog} sont sélectionnés pour
+  constituer le \textit{sprint backlog}.
+
+  \item \textbf{La revue de sprint.} En fin de sprint, l'incrément est
+  démontré : l'application est installée sur le téléphone de la gérante et le
+  back-office ouvert devant elle. C'est là que les écarts entre le besoin
+  exprimé et le besoin réel se révèlent.
+
+  \item \textbf{La rétrospective.} Immédiatement après la revue, elle porte sur
+  la façon de travailler et non sur le produit. C'est de l'une d'elles qu'est
+  née la règle appliquée dans tout le projet : \emph{tout comportement non
+  évident doit être expliqué dans le code, à l'endroit où il s'applique}. Cette
+  règle explique la densité inhabituelle de commentaires du dépôt, et elle a
+  été décisive lors des reprises après interruption.
+\end{itemize}
+
+\subsection{Le développement piloté par les tests}
+
+Une approche inspirée du TDD a été appliquée, non pas uniformément, mais là où
+elle apporte le plus : les règles métier délicates, et tout particulièrement
+les comportements en situation de concurrence.
+
+Écrire d'abord le test qui prouve que trois réservations simultanées ne peuvent
+pas occuper deux cabines oblige à formuler la propriété avant de choisir la
+technique. C'est ce test, écrit contre une véritable base PostgreSQL, qui a
+imposé le recours à un verrou consultatif : la solution intuitive --- compter
+puis insérer --- le faisait échouer de façon reproductible.
+
+\figProjet[0.62]{tdd.png}{Le cycle du développement piloté par les tests}{tdd}
+
+Le même cycle a été appliqué au crédit de fidélité, à l'émission des bons de
+récompense, à la rotation des jetons de session et à l'anonymisation des
+comptes. Ces cinq domaines concentrent l'essentiel des huit suites de tests
+qui écrivent réellement en base.
+
+\subsection{Les sprints}
+
+Le projet s'est déroulé sur six sprints, du 6 juillet au 27 août 2026.
+
+\begin{table}[H]
+\centering
+\caption{Découpage du projet en sprints}
+\label{tab:sprints}
+\begin{tabularx}{\textwidth}{L{1.5cm} L{2.9cm} X}
+\toprule
+\entete{Sprint} & \entete{Période} & \entete{Contenu livré} \\
+\midrule
+1 & 6 -- 9 juillet &
+Socle de l'API : authentification JWT, catalogues de prestations et de
+produits, module de rendez-vous, horaires d'ouverture, fidélité, récompenses,
+gestion des utilisateurs, jetons de rafraîchissement, gestion du fuseau du
+centre, documentation Swagger. \\
+
+2 & 12 -- 14 juillet &
+Application mobile cliente : catalogues, réservation, fidélité, profil,
+rendez-vous. Extraction des composants réutilisables et refonte graphique
+complète aux couleurs de l'institut. \\
+
+3 & 16 -- 23 juillet &
+Commandes de produits avec paiement à la remise, et back-office complet :
+tableau de bord, commandes, rendez-vous, catalogue, fidélité, utilisateurs. \\
+
+4 & 7 -- 11 août &
+Durcissement : vérification de l'adresse e-mail, réinitialisation du mot de
+passe, récompenses de palier, écritures atomiques sur le solde, le stock et
+les créneaux, anonymisation des comptes supprimés, identité native de
+l'application mobile. \\
+
+5 & 12 -- 18 août &
+Réglages du centre et fermetures exceptionnelles, contrôle du stock,
+pagination des listes, finitions d'expérience utilisateur, exports Excel
+réservés à la gérante, internationalisation en français, arabe et anglais. \\
+
+6 & 21 -- 27 août &
+Hébergement local des images du catalogue, optimisation du décodage des
+images, mise à jour du script de sauvegarde, conteneurisation et finalisation
+de la documentation d'exploitation. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Planification du projet}
+
+La planification a été établie avant le démarrage puis ajustée à chaque revue.
+Le diagramme de Gantt ci-dessous en donne la vue d'ensemble : les phases
+d'analyse et de conception y précèdent le développement, mais elles ne s'y
+substituent pas --- conformément à la démarche agile, une part de conception a
+été refaite à chaque sprint, au vu de ce que la revue précédente avait révélé.
+
+\figProjet[0.95]{gantt.png}{Diagramme de Gantt du projet}{gantt}
+
+\section*{Conclusion}
+\addcontentsline{toc}{section}{Conclusion}
+
+Ce chapitre a permis de cerner le contexte du projet : un institut de beauté
+dont l'activité, entièrement pilotée à la main, souffrait d'une information
+unique, localisée et périssable. La solution retenue --- une API portant les
+règles métier, une application mobile pour les clientes et un back-office pour
+l'institut --- a été justifiée, ses enjeux et ses contraintes énoncés, et la
+méthode de conduite du projet exposée. Le chapitre suivant traduit ces besoins
+en une analyse et une conception détaillées.

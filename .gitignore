@@ -65,3 +65,16 @@ Thumbs.db
 # d'historique, qui casse tous les clones — le jeu n'en vaut pas la chandelle
 # pour des faiblesses toutes corrigées.
 YANIApp_RECAP_*.md
+# ── Rapport LaTeX ────────────────────────────────────────────────
+# Fichiers auxiliaires régénérés à chaque compilation. Le PDF, lui, est
+# versionné : c'est le livrable, et il permet de relire le rapport sans avoir
+# à installer une distribution TeX.
+rapport/*.aux
+rapport/*.log
+rapport/*.out
+rapport/*.toc
+rapport/*.lof
+rapport/*.lot
+rapport/*.fls
+rapport/*.fdb_latexmk
+rapport/*.synctex.gz

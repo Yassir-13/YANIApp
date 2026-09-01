@@ -1,0 +1,67 @@
+% ═══════════════════════════════════════════════════════════════════
+%  Introduction générale
+% ═══════════════════════════════════════════════════════════════════
+\pageLiminaire{Introduction Générale}
+
+La transformation numérique n'est plus l'apanage des grandes entreprises. Elle
+touche aujourd'hui les commerces de proximité, les cabinets, les artisans et
+les instituts, dont l'activité repose encore très souvent sur des outils
+manuels : un carnet, un téléphone, une carte cartonnée. Ces outils ont une
+qualité que l'on sous-estime --- ils sont immédiats, personne n'a besoin de les
+apprendre --- et un défaut qui devient handicapant dès que l'activité croît :
+ils ne conservent rien d'exploitable, ne se consultent qu'à un seul endroit, et
+n'existent que pendant les heures d'ouverture.
+
+Le secteur de la beauté et du bien-être illustre ce constat de façon
+particulièrement nette. L'activité d'un institut s'organise autour d'une
+ressource rare et non stockable --- un créneau de cabine --- que plusieurs
+canaux se disputent en même temps : la cliente qui appelle, celle qui écrit sur
+une messagerie instantanée, et celle qui se présente au comptoir. Le carnet
+papier arbitre entre ces canaux, mais il ne peut le faire que si quelqu'un le
+tient ouvert devant soi. Toute réservation prise ailleurs qu'à côté du carnet
+est une réservation à risque.
+
+C'est dans ce contexte que s'inscrit ce projet de fin d'études. \yani\ est un
+centre de beauté installé à Casablanca, qui propose des prestations de soin et
+vend des produits cosmétiques. Sa gérante y assure à la fois les soins, la
+prise des rendez-vous, le suivi du stock et la fidélisation de sa clientèle.
+L'objectif du projet est de porter l'ensemble de ces activités sur une
+plate-forme numérique : une application mobile pour les clientes, un
+back-office web pour l'institut, et une API qui porte les règles métier
+communes aux deux.
+
+Le travail présenté ici ne s'est pas limité à traduire un carnet papier en
+formulaires. Une réservation en ligne pose des questions qu'un carnet ne pose
+pas : que se passe-t-il lorsque deux clientes valident le même créneau à la
+même seconde ? Comment un institut ouvert de 9\,h à 13\,h puis de 14\,h à
+18\,h, à l'heure de Casablanca, expose-t-il ses disponibilités à une
+application qui raisonne en temps universel ? Que devient l'historique
+d'achat d'une cliente qui exerce son droit à l'effacement, alors même que cet
+historique porte le chiffre d'affaires de l'institut ? Ces questions ont
+structuré la conception autant que les fonctionnalités elles-mêmes, et elles
+occupent une place proportionnée dans ce rapport.
+
+Le présent document rend compte de ce travail. Il s'articule autour de quatre
+chapitres.
+
+Le \textbf{premier chapitre} présente l'organisme d'accueil, l'étude de
+l'existant, la problématique qui en découle et la solution retenue, puis la
+méthode de conduite de projet et sa planification.
+
+Le \textbf{deuxième chapitre} est consacré à l'analyse et à la conception : la
+spécification des besoins fonctionnels et non fonctionnels, les acteurs du
+système, puis la modélisation UML --- diagrammes de cas d'utilisation,
+diagrammes de séquence et diagramme de classes.
+
+Le \textbf{troisième chapitre} expose l'étude technique : les langages, les
+cadriciels et le système de gestion de base de données retenus, les
+environnements de travail, et l'architecture technique de la solution, y
+compris la chaîne de sécurité appliquée à chaque requête.
+
+Le \textbf{quatrième chapitre} traite de la mise en \oe uvre : la structure
+effective du code des trois applications, la stratégie de tests et
+l'intégration continue, la présentation des interfaces réalisées, et enfin le
+déploiement et l'exploitation de la plate-forme.
+
+Une conclusion générale dresse le bilan du travail accompli, ses limites
+assumées et les perspectives d'évolution de la solution.

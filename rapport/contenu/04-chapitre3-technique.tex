@@ -1,0 +1,405 @@
+% ═══════════════════════════════════════════════════════════════════
+%  Chapitre 3 — Étude technique
+% ═══════════════════════════════════════════════════════════════════
+\chapter{Étude technique}
+
+\section*{Introduction}
+\addcontentsline{toc}{section}{Introduction}
+
+Ce chapitre expose les choix techniques du projet. Il présente les langages,
+les cadriciels et le système de gestion de base de données retenus, ainsi que
+les environnements matériel et logiciel de travail. Il décrit ensuite
+l'architecture technique de la solution : son découpage en couches, son
+architecture de déploiement, et la chaîne de sécurité appliquée à chaque
+requête.
+
+Les choix sont ici justifiés plutôt qu'énumérés. Une technologie ne vaut que
+par le problème qu'elle résout dans un contexte donné, et plusieurs des options
+retenues n'auraient pas été les mêmes pour un projet d'une autre nature.
+
+% ─────────────────────────────────────────────────────────────────
+\section{Technologies de développement}
+
+\subsection{Langages}
+
+\paragraph{TypeScript.} L'ensemble du code applicatif --- API, back-office et
+application mobile --- est écrit en TypeScript, sur-ensemble typé de
+JavaScript développé par Microsoft. Ce choix unique pour les trois applications
+a une conséquence directe et précieuse : les types décrivant les données
+métier sont écrits une fois et compris partout. Le type d'un rendez-vous
+retourné par l'API est le même côté serveur, côté back-office et côté
+application mobile.
+
+Le typage statique joue par ailleurs un rôle de filet de sécurité dans un
+projet qui n'a pas de tests d'interface : le back-office et l'application
+mobile n'ont pas de suite de tests automatisés, et leur garantie principale est
+la compilation. Un champ renommé côté serveur produit une erreur de compilation
+côté client, avant tout déploiement.
+
+\paragraph{SQL.} Le langage SQL n'est presque jamais écrit à la main dans le
+projet --- Prisma le génère --- à une exception près, précisément là où il est
+irremplaçable : la prise du verrou consultatif qui sérialise les réservations
+concurrentes, exprimée par un appel direct à \texttt{pg\_advisory\_xact\_lock}.
+Aucune abstraction ne fournit cette primitive, et c'est elle qui garantit
+qu'un créneau n'est jamais vendu deux fois.
+
+\subsection{Cadriciels et bibliothèques}
+
+\paragraph{NestJS.} L'API repose sur NestJS, cadriciel Node.js structuré autour
+de modules, de contrôleurs et de services, et bâti sur l'injection de
+dépendances. Sa structure imposée est un atout dans un projet mené seul : elle
+évite les choix d'organisation arbitraires et rend chaque module immédiatement
+localisable. Ses gardes, filtres, intercepteurs et tubes de validation
+permettent en outre de traiter les préoccupations transversales --- droits
+d'accès, validation, traduction, gestion des erreurs --- à un seul endroit,
+plutôt que répétées dans chaque contrôleur.
+
+\paragraph{Prisma.} Prisma assure la correspondance objet-relationnel. Le
+schéma y est déclaré dans un fichier unique, à partir duquel sont générés à la
+fois le client typé et les fichiers de migration. Deux propriétés ont pesé dans
+ce choix : le client est \emph{typé d'après le schéma}, si bien qu'une colonne
+renommée fait échouer la compilation partout où elle était lue ; et les
+migrations sont des fichiers SQL versionnés, relus avant application, ce qui
+rend le passage en production vérifiable.
+
+\paragraph{React et Vite.} Le back-office est une application web mono-page
+écrite en React et servie par Vite. React a été retenu pour la richesse de son
+écosystème et sa maîtrise préalable ; Vite pour la rapidité de son serveur de
+développement et la simplicité de sa production statique. L'état global ---
+réduit à la session authentifiée --- est géré par Zustand, bibliothèque
+volontairement minimale, dimensionnée pour ce besoin.
+
+\paragraph{React Native et Expo.} L'application mobile est développée avec
+React Native, sous la chaîne d'outils Expo. Ce choix permet de produire une
+application Android et iOS à partir d'une base de code unique, tout en
+partageant le langage et une partie des conventions avec le back-office. Expo
+apporte en outre les briques natives nécessaires --- stockage sécurisé des
+jetons, polices, images, dégradés, localisation --- sans avoir à écrire de code
+natif.
+
+\paragraph{Bibliothèques notables.} Argon2 pour le hachage des mots de passe,
+choisi pour sa résistance aux attaques matérielles ; \texttt{date-fns-tz} pour
+les conversions entre heure locale du centre et temps universel ; ExcelJS pour
+la génération des exports ; Nodemailer pour l'acheminement des e-mails ; Helmet
+pour les en-têtes de sécurité HTTP ; \texttt{class-validator} pour la
+validation déclarative des entrées ; i18next pour l'internationalisation de
+l'application mobile.
+
+\subsection{Services web}
+
+L'API suit le style d'architecture REST, avec JSON pour format d'échange. Ce
+choix s'imposait pour plusieurs raisons convergentes :
+
+\begin{itemize}[leftmargin=1.2cm]
+  \item \textbf{L'universalité de HTTP.} Deux clients de natures très
+  différentes --- une application native et une application web --- consomment
+  la même API sans adaptation.
+
+  \item \textbf{L'absence d'état du protocole.} Chaque requête porte son jeton
+  d'authentification ; aucun état de session n'est conservé côté serveur, ce
+  qui simplifie considérablement le déploiement et la montée en charge.
+
+  \item \textbf{La légèreté du format.} JSON convient particulièrement à un
+  client mobile, dont la bande passante et l'autonomie sont des ressources
+  comptées.
+
+  \item \textbf{L'outillage.} La documentation OpenAPI est générée directement
+  depuis les décorateurs du code, ce qui garantit qu'elle ne diverge pas de
+  l'implémentation.
+\end{itemize}
+
+L'API compte plus de quatre-vingts routes réparties en douze contrôleurs. Le
+tableau ci-dessous en donne la répartition.
+
+\begin{table}[H]
+\centering
+\caption{Répartition des routes de l'API par domaine}
+\label{tab:routes-api}
+\begin{tabularx}{\textwidth}{L{3.1cm} C{1.7cm} X}
+\toprule
+\entete{Domaine} & \entete{Routes} & \entete{Principales opérations} \\
+\midrule
+\texttt{/auth} & 9 &
+Inscription, connexion, profil courant, vérification d'adresse, renvoi de code,
+mot de passe oublié, réinitialisation, rafraîchissement, déconnexion \\
+
+\texttt{/users} & 6 &
+Profil, modification, changement de mot de passe, suppression de compte, liste
+des utilisateurs, attribution de rôle \\
+
+\texttt{/services} & 10 &
+Catalogue public, catégories, détail, gestion complète (administration) \\
+
+\texttt{/products} & 10 &
+Catalogue public, catégories, détail, gestion complète (administration) \\
+
+\texttt{/appointments} & 7 &
+Disponibilités, réservation, mes rendez-vous, annulation, réservation pour une
+cliente, changement de statut, report \\
+
+\texttt{/orders} & 6 &
+Commande, mes commandes, détail, annulation, liste (personnel), changement de
+statut \\
+
+\texttt{/loyalty} & 23 &
+Solde, historique, récompenses, échange, paliers, déblocages, réclamation,
+bons, gestion (administration), ajout manuel, journal d'audit \\
+
+\texttt{/opening-\allowbreak hours} & 5 &
+Consultation, remplacement des plages, fermetures exceptionnelles \\
+
+\texttt{/settings} & 2 & Consultation et modification des réglages du centre \\
+\texttt{/exports} & 3 & Exports Excel des clientes, commandes et rendez-vous \\
+\texttt{/uploads} & 1 & Téléversement d'une image de catalogue \\
+\texttt{/health} & 1 & Sonde de santé pour la supervision et le déploiement \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Système de gestion de base de données}
+
+\textbf{PostgreSQL 16} a été retenu comme système de gestion de base de
+données. Le choix d'un SGBD relationnel ne faisait pas débat --- les données du
+projet sont fortement structurées et fortement liées --- mais celui de
+PostgreSQL plutôt que d'une autre base relationnelle mérite d'être justifié.
+
+Trois de ses propriétés sont directement exploitées :
+
+\begin{itemize}[leftmargin=1.2cm]
+  \item \textbf{Les verrous consultatifs.} C'est la primitive qui rend correcte
+  la réservation concurrente. Elle n'a pas d'équivalent direct et portable
+  ailleurs, et elle est utilisée au c\oe ur même du moteur de réservation.
+
+  \item \textbf{Les transactions et l'intégrité référentielle.} Le crédit de
+  fidélité, la clôture d'un rendez-vous et le déblocage d'un palier
+  s'exécutent dans une transaction unique. Les modes de suppression
+  différenciés --- \texttt{Cascade}, \texttt{Restrict}, \texttt{SetNull} selon
+  la relation --- portent une partie des règles de conservation de
+  l'historique dans le schéma lui-même, où aucun oubli applicatif ne peut les
+  contourner.
+
+  \item \textbf{Le type décimal exact.} Les montants sont stockés en
+  \texttt{Decimal(10,2)}, et non en nombre flottant. Un montant en virgule
+  flottante accumule des erreurs d'arrondi qui finissent par se voir sur un
+  total.
+\end{itemize}
+
+Le schéma comporte dix-neuf tables et a connu vingt migrations versionnées
+depuis l'initialisation du projet.
+
+\subsection{Outils de développement}
+
+\subsubsection{Environnement matériel}
+
+\begin{table}[H]
+\centering
+\caption{Environnement matériel de développement}
+\label{tab:env-materiel}
+\begin{tabularx}{\textwidth}{L{4.2cm} X}
+\toprule
+\entete{Élément} & \entete{Caractéristiques} \\
+\midrule
+Poste de développement & Ordinateur portable, processeur multic\oe ur, 16 Go
+de mémoire vive, disque SSD \\
+Système d'exploitation & Windows avec sous-système Linux, et Linux \\
+Terminal de test mobile & Téléphone Android physique et émulateur Android \\
+Serveur de base de données & Conteneur Docker PostgreSQL 16, exécuté localement \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{attention}[Un piège rencontré]
+Sous Windows, la plage de ports 2933--3032 est réservée par Hyper-V et par le
+sous-système Linux. Le port 3000, choisi par défaut par la plupart des projets
+Node.js, y produit une erreur d'accès refusé qui ne désigne pas sa cause. Le
+port d'écoute de l'API a donc été rendu configurable par variable
+d'environnement --- ce qui s'est révélé nécessaire également au déploiement,
+la plupart des hébergeurs imposant le leur.
+\end{attention}
+
+\subsubsection{Environnement logiciel}
+
+\begin{table}[H]
+\centering
+\caption{Environnement logiciel de développement}
+\label{tab:env-logiciel}
+\begin{tabularx}{\textwidth}{L{4.2cm} X}
+\toprule
+\entete{Outil} & \entete{Usage} \\
+\midrule
+Visual Studio Code & Éditeur de code des trois applications \\
+Node.js 22 & Environnement d'exécution JavaScript côté serveur et outillage \\
+Docker et Docker Compose & Base de données locale, puis conteneurisation de
+l'API pour le déploiement \\
+Git et GitHub & Gestion de versions et hébergement du dépôt \\
+GitHub Actions & Intégration continue : compilation et tests à chaque
+modification \\
+Prisma Studio & Inspection et correction ponctuelle des données en
+développement \\
+Swagger UI & Documentation interactive de l'API, générée depuis le code \\
+Jest et Supertest & Tests unitaires, tests d'intégration et tests de
+concurrence \\
+ESLint et Prettier & Analyse statique et mise en forme homogène du code \\
+Expo Go & Exécution de l'application mobile sur un téléphone réel sans
+compilation native \\
+Lucidchart & Réalisation des diagrammes UML \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ─────────────────────────────────────────────────────────────────
+\section{Architecture technique}
+
+\subsection{Architecture en couches}
+
+Une vue d'ensemble permet de dégager les couches du système. L'application
+étant à la fois web et mobile, l'architecture retenue est une architecture en
+quatre niveaux : deux clients distincts, un serveur d'application et un serveur
+de données.
+
+\figProjet[0.8]{couches.png}{Les couches de l'application}{couches}
+
+\begin{itemize}[leftmargin=1.2cm]
+  \item \textbf{La couche de présentation.} Elle encapsule l'interface
+  utilisateur. Elle est double : l'application mobile pour les clientes, le
+  back-office web pour l'institut. Elle n'implémente \emph{aucune} règle
+  métier : elle affiche ce que le serveur lui transmet et lui soumet ce que
+  l'utilisatrice saisit. Les contrôles qu'elle effectue --- un champ
+  obligatoire, un format d'adresse --- servent uniquement le confort de saisie
+  et sont systématiquement rejoués côté serveur.
+
+  \item \textbf{La couche métier.} C'est le serveur d'application NestJS. Elle
+  porte l'intégralité des règles : moteur de créneaux, machines à états,
+  calcul des points, contrôle des droits, validation des entrées. Elle expose
+  ses services sous forme d'API REST.
+
+  \item \textbf{La couche d'accès aux données.} Assurée par Prisma, elle
+  traduit les opérations métier en requêtes SQL, gère les transactions et
+  garantit le typage des résultats.
+
+  \item \textbf{La couche de persistance.} La base PostgreSQL. Elle ne se
+  contente pas de stocker : elle porte des règles d'intégrité --- unicité,
+  clés étrangères, modes de suppression --- et fournit les primitives de
+  verrouillage qui rendent la concurrence correcte.
+\end{itemize}
+
+\subsection{Architecture de déploiement}
+
+\figProjet[0.9]{architecture.png}{Architecture technique et déploiement de la solution}{architecture}
+
+Le déploiement repose sur Docker Compose et enchaîne trois services dans un
+ordre imposé :
+
+\begin{enumerate}[leftmargin=1.2cm]
+  \item \textbf{PostgreSQL}, doté d'un contrôle de santé et d'un volume
+  persistant. Son port n'est publié que sur l'interface locale.
+
+  \item \textbf{Un service de migration}, à usage unique : il applique les
+  migrations en attente, puis s'arrête. Il est délibérément séparé de l'API,
+  afin qu'une migration en échec se présente comme une étape ratée assortie de
+  son message, et non comme une application qui redémarre en boucle sans
+  raison apparente. Il utilise la commande \texttt{migrate deploy}, qui
+  applique ce qui manque et refuse de toucher à l'existant --- et jamais
+  \texttt{migrate dev}, qui peut réinitialiser la base.
+
+  \item \textbf{L'API}, qui ne démarre qu'une fois les migrations appliquées
+  avec succès.
+\end{enumerate}
+
+L'image de l'API est construite en trois étapes, afin que l'image livrée ne
+contienne que ce qui sert à servir --- ni compilateur, ni cadriciel de test,
+ni outillage de développement. Le résultat mesuré est de 178 Mo.
+
+\begin{attention}[Une décision de déploiement]
+L'API est publiée sur l'interface locale uniquement. C'est délibéré : un
+reverse proxy (Caddy ou nginx) doit se placer devant elle pour assurer le
+chiffrement HTTPS. Publier le port directement reviendrait à servir l'API en
+clair, jetons d'authentification compris. Le jour où ce proxy est mis en place,
+un réglage devient indispensable : la limitation de débit compte par adresse
+IP, et derrière un proxy toutes les clientes partagent la sienne. Sans ce
+réglage, l'institut entier se retrouve sur un compteur unique et l'API commence
+à refuser des requêtes au hasard dès qu'il y a du monde --- un symptôme
+déroutant, parfait en test avec une seule personne, et que rien dans les
+journaux ne rattache à sa cause.
+\end{attention}
+
+\subsection{La chaîne de sécurité d'une requête}
+
+La sécurité n'est pas traitée comme une fonctionnalité, mais comme une chaîne
+de filtres que toute requête traverse avant d'atteindre la moindre ligne de
+logique métier.
+
+\figProjet[0.85]{securite.png}{Chaîne de traitement de sécurité d'une requête}{securite}
+
+\begin{enumerate}[leftmargin=1.2cm]
+  \item \textbf{En-têtes de sécurité.} Helmet retire l'en-tête annonçant la
+  technologie du serveur et ajoute une douzaine d'en-têtes appliqués par le
+  navigateur : transport strict, anti-\textit{sniffing}, anti-\textit{clickjacking},
+  politique de sécurité du contenu.
+
+  \item \textbf{Limitation du débit.} Un compteur par adresse IP plafonne
+  l'ensemble de l'API à 120 requêtes par minute. Les routes coûteuses portent
+  en plus une limite stricte : dix tentatives par minute pour la connexion et
+  l'inscription, cinq pour le renvoi de code, et cinq par tranche de cinq
+  minutes pour le mot de passe oublié.
+
+  \item \textbf{Contrôle d'origine.} La politique CORS n'autorise que les
+  adresses déclarées du back-office.
+
+  \item \textbf{Authentification.} Un garde vérifie la signature et la validité
+  du jeton d'accès, sauf sur les routes explicitement publiques.
+
+  \item \textbf{Autorisation.} Un second garde compare le rôle porté par le
+  jeton aux rôles exigés par la route. Ce contrôle est \emph{indépendant} de ce
+  que l'interface affiche ou masque : une route d'administration atteinte par
+  un autre moyen est refusée par le serveur.
+
+  \item \textbf{Validation des entrées.} Un tube de validation global rejette
+  toute propriété non déclarée dans le contrat de la route, plutôt que de
+  l'ignorer silencieusement, et convertit les valeurs dans leur type attendu.
+
+  \item \textbf{Traitement uniforme des erreurs.} Un filtre global intercepte
+  toute exception avant qu'elle n'atteigne le client. Sans lui, les erreurs de
+  base de données partaient brutes, avec les noms de tables et de contraintes.
+\end{enumerate}
+
+\paragraph{Le stockage des secrets.} Les mots de passe sont hachés avec Argon2,
+lauréat de la compétition internationale de hachage de mots de passe. Les
+jetons de rafraîchissement et les codes de vérification ne sont jamais stockés
+en clair : seule leur empreinte l'est. Une lecture de la base ne livrerait donc
+ni mot de passe, ni session utilisable, ni code de réinitialisation.
+
+\paragraph{La défense contre l'énumération par mesure du temps.} Une
+vérification de mot de passe avec Argon2 prend un temps mesurable. Si le
+serveur répondait immédiatement pour une adresse inconnue et après le calcul
+pour une adresse connue, la seule mesure du délai de réponse permettrait de
+déterminer quelles adresses possèdent un compte. La connexion exécute donc une
+vérification factice sur une valeur aléatoire lorsque l'adresse est inconnue :
+les deux cas répondent au même rythme.
+
+\paragraph{Le contrôle des fichiers téléversés.} Les images du catalogue sont
+identifiées par leur \emph{signature binaire}, et non par le type déclaré par
+le navigateur ni par l'extension du nom de fichier --- deux valeurs qui
+viennent du client et se falsifient en une ligne. Trois formats sont acceptés :
+JPEG, PNG et WebP. Le SVG en est délibérément absent : c'est du XML susceptible
+de contenir du JavaScript, qui s'exécuterait avec les droits du domaine servant
+le fichier --- une faille de type XSS ouverte par un simple téléversement.
+
+\paragraph{La validation de la configuration au démarrage.} L'API refuse de
+démarrer si sa configuration est incohérente. Le secret de signature des jetons
+doit compter au moins trente-deux caractères ; un secret plus court se casse
+hors ligne et permet de forger un jeton d'administration sans jamais toucher à
+l'API. De même, l'envoi réel d'e-mails est exigé en production : un
+environnement de production configuré en mode console n'enverrait aucun code de
+vérification, sans qu'aucune erreur ne le signale.
+
+\section*{Conclusion}
+\addcontentsline{toc}{section}{Conclusion}
+
+Ce chapitre a présenté les choix techniques du projet et leur justification :
+un langage unique pour les trois applications, un cadriciel structurant pour
+l'API, un ORM typé adossé à PostgreSQL, et une architecture en quatre niveaux
+où la couche métier est seule dépositaire des règles. La chaîne de sécurité
+appliquée à chaque requête a été détaillée, ainsi que l'architecture de
+déploiement. Le chapitre suivant présente la mise en \oe uvre effective de ces
+choix, les tests qui la valident et les interfaces réalisées.

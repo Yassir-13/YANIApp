@@ -1,0 +1,449 @@
+% ═══════════════════════════════════════════════════════════════════
+%  Chapitre 4 — Mise en œuvre
+% ═══════════════════════════════════════════════════════════════════
+\chapter{Mise en \oe uvre}
+
+\section*{Introduction}
+\addcontentsline{toc}{section}{Introduction}
+
+Ce chapitre présente la réalisation effective de la solution. Il décrit d'abord
+la structure du code des trois applications, puis la stratégie de tests mise en
+place et son automatisation par intégration continue. Il présente ensuite les
+interfaces développées, illustrées par des captures d'écran, et se termine par
+les modalités de déploiement et d'exploitation de la plate-forme.
+
+% ─────────────────────────────────────────────────────────────────
+\section{Structure du projet}
+
+Le projet est organisé en mono-dépôt : les trois applications vivent dans un
+même dépôt Git, à trois emplacements distincts. Ce choix évite la
+désynchronisation entre le contrat de l'API et ses consommateurs --- une
+modification du serveur et son adaptation côté client sont validées ensemble
+par la même chaîne d'intégration continue.
+
+\begin{table}[H]
+\centering
+\caption{Organisation du mono-dépôt}
+\label{tab:monodepot}
+\begin{tabularx}{\textwidth}{L{2.4cm} L{3.4cm} X}
+\toprule
+\entete{Dossier} & \entete{Rôle} & \entete{Pile technique} \\
+\midrule
+\texttt{backend/} & API REST, règles métier, base de données &
+NestJS · Prisma · PostgreSQL \\
+\texttt{backoffice/} & Interface de gestion &
+React · Vite · Zustand \\
+\texttt{mobile/} & Application cliente &
+Expo · React Native · i18next \\
+\texttt{scripts/} & Sauvegarde de la base & Shell \\
+\texttt{brand/} & Identité visuelle et génération des icônes & Python \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Le backend}
+
+Le code de l'API représente environ 8~000 lignes, auxquelles s'ajoutent 5~150
+lignes de tests. Il est découpé en quatorze modules NestJS, réunis par un
+module racine.
+
+\figProjet[0.7]{structure-backend.png}{Structure des modules du backend}{structure-backend}
+
+Douze d'entre eux exposent un contrôleur et suivent tous la même organisation,
+ce qui rend le code prévisible :
+
+\begin{itemize}[leftmargin=1.2cm]
+  \item le \textbf{contrôleur} déclare les routes, leurs droits d'accès, leurs
+  limites de débit et leur documentation ; il ne contient aucune règle ;
+  \item le \textbf{service} porte la logique métier et les accès aux données ;
+  \item les \textbf{objets de transfert} décrivent et valident les entrées ;
+  \item les \textbf{tests} accompagnent le module qu'ils vérifient.
+\end{itemize}
+
+Les deux modules restants n'exposent aucune route : \texttt{prisma} met le
+client de base de données à la disposition des autres, et \texttt{mail}
+l'acheminement des courriels.
+
+Trois dossiers, enfin, ne sont pas des modules mais du code partagé :
+\texttt{common} regroupe le filtre d'exceptions, l'intercepteur de traduction,
+la pagination et les validateurs communs, \texttt{config} valide les variables
+d'environnement au démarrage, et \texttt{i18n} porte les messages traduits de
+l'API.
+
+\paragraph{Le c\oe ur du système.} Trois services concentrent l'essentiel de la
+complexité : le service des rendez-vous (693 lignes), qui porte le moteur de
+créneaux, la gestion du fuseau et le verrou de réservation ; le service de
+fidélité (837 lignes), qui porte les deux circuits de récompense et
+l'idempotence des crédits ; et le service d'authentification (477 lignes), qui
+porte la rotation des jetons et les défenses contre l'énumération de comptes.
+
+\subsection{Le back-office}
+
+Le back-office représente environ 6~500 lignes de TypeScript et React,
+organisées en huit pages et sept composants partagés.
+
+\figProjet[0.7]{structure-backoffice.png}{Structure du back-office}{structure-backoffice}
+
+\begin{itemize}[leftmargin=1.2cm]
+  \item \texttt{pages/} --- une page par domaine métier : tableau de bord,
+  commandes, rendez-vous, catalogue, fidélité, horaires, utilisateurs,
+  connexion ;
+  \item \texttt{components/} --- les éléments réutilisés : mise en page,
+  pagination, boîte de confirmation, garde de route authentifiée, formulaire de
+  catalogue, fenêtre d'export, fenêtre de réservation pour une cliente ;
+  \item \texttt{api/} --- une façade par domaine, seule à connaître les
+  adresses des routes ; les pages ne manipulent jamais d'URL ;
+  \item \texttt{stores/} --- l'état global, réduit à la session authentifiée ;
+  \item \texttt{theme/} --- la charte graphique partagée.
+\end{itemize}
+
+Le client HTTP centralise deux comportements délicats : l'ajout automatique du
+jeton d'accès à chaque requête, et le rafraîchissement transparent de la
+session lorsqu'il expire --- la requête ayant échoué est alors rejouée, sans
+que l'utilisatrice s'aperçoive de quoi que ce soit.
+
+\subsection{L'application mobile}
+
+L'application mobile représente environ 9~700 lignes, réparties en vingt-quatre
+écrans et dix-huit composants.
+
+\figProjet[0.7]{structure-mobile.png}{Structure de l'application mobile}{structure-mobile}
+
+La navigation s'organise en une barre d'onglets --- Accueil, Prestations,
+Produits, Fidélité, Profil --- surmontant des piles de navigation propres à
+chaque section. Le panier et la session sont conservés dans des magasins
+d'état, le jeton de session étant stocké dans le coffre sécurisé du système
+d'exploitation plutôt qu'en clair.
+
+L'application est traduite en trois langues, avec chargement de la langue du
+téléphone au démarrage. La prise en charge de l'arabe a demandé une attention
+particulière : au-delà de la traduction, elle impose de vérifier chaque écran
+dans le sens d'écriture de droite à gauche.
+
+% ─────────────────────────────────────────────────────────────────
+\section{Tests et validation}
+
+\subsection{Stratégie de tests}
+
+La stratégie retenue repose sur un constat simple : \emph{les propriétés les
+plus importantes de ce projet ne sont pas démontrables par un test unitaire
+classique}. Qu'un calcul de points donne le bon résultat se vérifie avec une
+base simulée. Que trois réservations simultanées ne puissent pas occuper deux
+cabines ne se vérifie qu'avec une vraie base, un vrai verrou et de vraies
+transactions.
+
+Les tests se répartissent donc en deux familles.
+
+\begin{itemize}[leftmargin=1.2cm]
+  \item \textbf{Les tests unitaires}, sur base simulée. Ils vérifient les
+  règles métier pures : calcul des points, transitions d'états autorisées,
+  génération de la grille de créneaux, validation des entrées, contrôle des
+  droits.
+
+  \item \textbf{Les tests d'intégration}, sur une véritable base PostgreSQL.
+  Ils vérifient ce qu'une base simulée ne saurait démontrer : sérialisation des
+  réservations concurrentes, atomicité du crédit de fidélité, annulation
+  effective d'une transaction en échec, idempotence de l'émission des bons,
+  rotation et détection de réutilisation des jetons, anonymisation des comptes.
+\end{itemize}
+
+Au total, le backend est couvert par 231 tests répartis en 25 suites, dont 8
+écrivent réellement en base.
+
+\begin{table}[H]
+\centering
+\caption{Répartition des suites de tests par domaine}
+\label{tab:suites-tests}
+\begin{tabularx}{\textwidth}{L{3.0cm} C{1.3cm} C{1.9cm} X}
+\toprule
+\entete{Domaine} & \entete{Suites} & \entete{Base réelle} & \entete{Propriétés vérifiées} \\
+\midrule
+Rendez-vous & 5 & 1 &
+Grille de créneaux, fuseau du centre, fermetures, machine à états, capacité
+sous concurrence \\
+
+Fidélité & 4 & 2 &
+Calcul et idempotence des crédits, débit conditionnel du solde, paliers de
+visites, émission et remise des bons \\
+
+Commandes & 5 & 2 &
+Contrôle et décrément atomique du stock, restitution à l'annulation, crédit à
+la remise, machine à états \\
+
+Authentification & 3 & 1 &
+Hachage, rotation des jetons, détection de réutilisation, validation du jeton
+d'accès \\
+
+Utilisateurs & 3 & 1 &
+Profil, unicité de l'administratrice, anonymisation du compte supprimé \\
+
+Exports & 2 & 0 &
+Génération des classeurs, restriction à la gérante, bornes de dates \\
+
+Horaires & 1 & 0 & Refus des plages qui se chevauchent \\
+Infrastructure & 2 & 1 & Connexion à la base, sonde de santé \\
+\midrule
+\textbf{Total} & \textbf{25} & \textbf{8} & \textbf{231 tests} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Le test de concurrence, en détail}
+
+Le test le plus instructif du projet mérite d'être décrit, car il a
+directement dicté une décision d'architecture.
+
+Il place le centre à une capacité de deux places, puis lance trois réservations
+\emph{réellement simultanées} sur le même créneau. La propriété attendue est
+que deux réussissent et qu'une échoue --- jamais trois.
+
+\begin{lstlisting}[caption={Principe du test de concurrence sur les réservations},captionpos=b]
+// Trois réservations lancées en parallèle sur le même créneau,
+// avec une capacité de 2 places.
+const resultats = await Promise.allSettled([
+  service.create(cliente1.id, { serviceId, startAt }),
+  service.create(cliente2.id, { serviceId, startAt }),
+  service.create(cliente3.id, { serviceId, startAt }),
+]);
+
+const reussies = resultats.filter((r) => r.status === 'fulfilled');
+expect(reussies).toHaveLength(2);   // et jamais 3
+\end{lstlisting}
+
+Sur l'implémentation initiale --- compter les rendez-vous du créneau, puis
+insérer --- ce test échouait de façon reproductible : les trois réservations
+étaient acceptées. Les trois comptaient avant qu'aucune n'ait inséré, et les
+trois trouvaient de la place. C'est ce test, et non une revue de code, qui a
+imposé le recours au verrou consultatif décrit au chapitre~2.
+
+Ces tests partagent la même base et le même verrou : ils doivent donc être
+exécutés en série, ce qui est imposé par une option dédiée du lanceur de tests.
+
+\subsection{Intégration continue}
+
+L'ensemble est rejoué automatiquement à chaque modification par une chaîne
+GitHub Actions. Elle comporte trois travaux.
+
+\begin{table}[H]
+\centering
+\caption{Travaux de la chaîne d'intégration continue}
+\label{tab:ci}
+\begin{tabularx}{\textwidth}{L{2.8cm} X}
+\toprule
+\entete{Travail} & \entete{Étapes} \\
+\midrule
+Backend &
+Installation des dépendances, génération du client Prisma, application des
+migrations sur une base PostgreSQL éphémère, exécution du script d'amorçage,
+compilation, puis exécution des 25 suites de tests. \\
+
+Back-office & Installation des dépendances et vérification de types. \\
+
+Mobile & Installation des dépendances et vérification de types. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Un point de cette chaîne mérite d'être signalé, car il n'est pas évident : le
+script d'amorçage y est indispensable. Il crée les horaires d'ouverture, et
+sans une seule ligne dans cette table, le centre est considéré fermé tous les
+jours --- toute la suite de tests des rendez-vous échouerait pour une raison
+qui n'a rien à voir avec le code testé.
+
+\figProjet[0.85]{ci-github.png}{Exécution de la chaîne d'intégration continue}{ci-github}
+
+\subsection{Résultats}
+
+\figProjet[0.85]{resultats-tests.png}{Résultat de l'exécution complète de la suite de tests}{resultats-tests}
+
+L'exécution complète est verte : 25 suites, 231 tests, aucun échec. Le
+back-office et l'application mobile, qui n'ont pas de tests automatisés, sont
+couverts par la vérification de types --- un filet plus mince, mais qui détecte
+effectivement toute divergence entre le contrat de l'API et ses consommateurs.
+
+% ─────────────────────────────────────────────────────────────────
+\section{Interfaces graphiques}
+
+\subsection{Application mobile}
+
+\subsubsection{Authentification}
+
+\figDouble{mobile-connexion.png}{Écran de connexion}{mobile-inscription.png}{Écran d'inscription}{mobile-auth}
+
+L'inscription recueille l'adresse, le mot de passe, le nom, le prénom et le
+téléphone. Ces trois derniers champs sont obligatoires : un rendez-vous ou une
+commande sans nom ni numéro de téléphone est inexploitable pour l'institut, qui
+doit pouvoir rappeler la cliente. Un code de vérification est envoyé par
+e-mail à l'issue de l'inscription.
+
+\figDouble{mobile-verification.png}{Vérification de l'adresse}{mobile-mdp-oublie.png}{Mot de passe oublié}{mobile-verif}
+
+\subsubsection{Accueil et catalogues}
+
+\figDouble{mobile-accueil.png}{Écran d'accueil}{mobile-prestations.png}{Catalogue des prestations}{mobile-accueil-prestations}
+
+L'accueil réunit en une vue le solde de fidélité, une sélection de prestations
+et une sélection de produits. C'est l'écran le plus consulté, et celui dont le
+coût en requêtes a été le plus surveillé : il ne demande que ce qu'il affiche.
+
+\figDouble{mobile-detail-prestation.png}{Détail d'une prestation}{mobile-produits.png}{Catalogue des produits}{mobile-details}
+
+\subsubsection{Réservation}
+
+\figDouble{mobile-reservation.png}{Choix de la date et du créneau}{mobile-recap-reservation.png}{Récapitulatif avant validation}{mobile-reservation}
+
+L'écran de réservation affiche la grille des créneaux du jour choisi. Les
+créneaux indisponibles --- capacité atteinte, ou heure déjà passée --- restent
+visibles mais désactivés, plutôt que masqués : une cliente qui ne voit pas le
+créneau de 15\,h ignore s'il est pris ou si l'institut n'ouvre pas à cette
+heure-là.
+
+Un jour fermé, qu'il le soit par les horaires hebdomadaires ou par une
+fermeture exceptionnelle, est annoncé explicitement.
+
+\figDouble{mobile-confirmation-rdv.png}{Confirmation du rendez-vous}{mobile-mes-rdv.png}{Mes rendez-vous}{mobile-rdv}
+
+\subsubsection{Commande de produits}
+
+\figDouble{mobile-detail-produit.png}{Détail d'un produit}{mobile-panier.png}{Panier}{mobile-produit-panier}
+
+\figDouble{mobile-checkout.png}{Validation de commande}{mobile-mes-commandes.png}{Mes commandes}{mobile-commande}
+
+La validation propose le retrait à l'institut ou la livraison à domicile,
+laquelle exige une adresse. Le paiement s'effectue à la remise. La cliente peut
+annuler sa commande tant qu'elle ne lui a pas été remise.
+
+\subsubsection{Fidélité}
+
+\figDouble{mobile-fidelite.png}{Écran de fidélité}{mobile-recompenses.png}{Mes récompenses et bons}{mobile-fidelite}
+
+L'écran de fidélité réunit le solde de points, la progression vers le prochain
+palier de visites, le catalogue des récompenses échangeables et l'historique
+des mouvements. L'écran des récompenses présente les bons dus : ceux offerts
+par un palier et ceux obtenus par échange de points, avec leur code à présenter
+au comptoir.
+
+\subsubsection{Profil}
+
+\figDouble{mobile-profil.png}{Profil et réglages}{mobile-edition-profil.png}{Modification du profil}{mobile-profil}
+
+Les réglages permettent de changer de langue, de basculer entre les modes clair
+et sombre, de modifier le mot de passe et de supprimer le compte.
+
+\subsection{Back-office}
+
+\figProjet{bo-connexion.png}{Back-office --- écran de connexion}{bo-connexion}
+
+Une cliente est refusée à l'entrée du back-office : ce contrôle est effectué
+par le serveur et non par l'interface.
+
+\figProjet{bo-dashboard.png}{Back-office --- tableau de bord}{bo-dashboard}
+
+Le tableau de bord réunit ce qui appelle une action immédiate : les commandes
+en attente de confirmation, les rendez-vous du jour et les produits en stock
+faible. La notion d'« aujourd'hui » y est calculée par le serveur, dans le
+fuseau du centre : c'est lui qui fait autorité, et non le poste qui consulte.
+
+\figProjet{bo-commandes.png}{Back-office --- gestion des commandes}{bo-commandes}
+
+Les commandes sont présentées par statut. Chaque changement de statut est
+soumis à la machine à états : les seules transitions proposées sont celles que
+le serveur accepterait.
+
+\figProjet{bo-rendezvous.png}{Back-office --- gestion des rendez-vous}{bo-rendezvous}
+
+Cette page permet également de réserver pour le compte d'une cliente ---
+c'est-à-dire de saisir un rendez-vous pris par téléphone --- et de reporter un
+rendez-vous existant, avec les mêmes contrôles de disponibilité que ceux
+appliqués à une réservation cliente.
+
+\figProjet{bo-catalogue.png}{Back-office --- gestion du catalogue}{bo-catalogue}
+
+Le catalogue couvre les prestations, les produits et leurs catégories, y
+compris le téléversement des photos et le suivi des stocks. Un élément retiré
+du catalogue est désactivé et non supprimé : il disparaît immédiatement des
+applications clientes, mais reste rattaché à l'historique des commandes et des
+rendez-vous qui le référencent.
+
+\figProjet{bo-fidelite.png}{Back-office --- programme de fidélité}{bo-fidelite}
+
+Cette page réunit le catalogue des récompenses, les paliers de visites, la
+liste des bons dus au comptoir, l'ajout manuel de points --- motif obligatoire
+--- et le journal d'audit de ces ajouts, consultable par la seule gérante.
+
+\figProjet{bo-horaires.png}{Back-office --- horaires et fermetures}{bo-horaires}
+
+Les horaires se règlent par plages, à raison de plusieurs plages par jour. Un
+jour sans aucune plage est fermé. Les fermetures exceptionnelles --- congés,
+jours fériés --- priment sur les horaires hebdomadaires. La capacité du centre
+et l'écart entre créneaux se règlent depuis cette même page, sans
+redéploiement.
+
+\figProjet{bo-utilisateurs.png}{Back-office --- gestion des utilisateurs}{bo-utilisateurs}
+
+\figProjet[0.7]{bo-export.png}{Back-office --- fenêtre d'export Excel}{bo-export}
+
+Les exports produisent des classeurs Excel des clientes, des commandes et des
+rendez-vous, sur une période choisie. Le fichier est destiné à la gérante et
+non à un développeur : aucune valeur technique brute n'y apparaît --- les
+statuts y sont écrits en toutes lettres --- et les montants y restent des
+\emph{nombres} plutôt que du texte, de sorte qu'une somme ou un tableau croisé
+fonctionne dans le classeur.
+
+\subsection{Courriers électroniques}
+
+\figProjet[0.7]{mail-verification.png}{Courriel de vérification d'adresse}{mail-verification}
+
+Les courriels sont envoyés dans la langue choisie par la cliente. En
+développement, aucun message ne part : les codes s'affichent dans les journaux
+du serveur, ce qui permet de dérouler l'intégralité des parcours --- inscription,
+vérification, mot de passe oublié --- sans dépendre d'un fournisseur de
+messagerie.
+
+% ─────────────────────────────────────────────────────────────────
+\section{Déploiement et exploitation}
+
+\subsection{Mise en production}
+
+La pile complète se lance par une commande unique, qui enchaîne la base de
+données, l'application des migrations et le démarrage de l'API. La
+documentation interactive de l'API est automatiquement coupée en production.
+
+\subsection{Sauvegardes}
+
+Un script produit un cliché horodaté de la base et supprime ceux de plus de
+quatorze jours. Deux règles d'exploitation l'accompagnent, et elles comptent
+autant que le script lui-même :
+
+\begin{itemize}[leftmargin=1.2cm]
+  \item \textbf{le cliché doit être recopié hors de la machine} --- une
+  sauvegarde qui vit sur le serveur qu'elle sauvegarde ne protège de rien ;
+  \item \textbf{les images du catalogue vivent hors de la base} et ne sont pas
+  couvertes par ce script : leur dossier doit être copié séparément.
+\end{itemize}
+
+La procédure de restauration, et la vérification qui doit la suivre, sont
+documentées dans le script lui-même --- à l'endroit où on la cherchera le jour
+où elle servira.
+
+\subsection{Ce qui reste à faire avant une ouverture publique}
+
+Par honnêteté sur l'état de la livraison, trois points restent ouverts :
+
+\begin{itemize}[leftmargin=1.2cm]
+  \item l'acquisition d'un nom de domaine et d'un certificat HTTPS ;
+  \item la mise en place d'un serveur de messagerie définitif, à la place de la
+  solution provisoire actuelle ;
+  \item les notifications \textit{push}, qui dépendent d'une compilation
+  native, donc du nom de domaine.
+\end{itemize}
+
+\section*{Conclusion}
+\addcontentsline{toc}{section}{Conclusion}
+
+Ce chapitre a présenté la mise en \oe uvre de la solution : la structure du code
+des trois applications, la stratégie de tests et son automatisation, les
+interfaces réalisées et les modalités d'exploitation. La démonstration du
+produit final à travers ses écrans montre une plate-forme complète et
+cohérente ; les 231 tests qui l'accompagnent, dont ceux qui écrivent dans une
+véritable base, en établissent les propriétés les plus difficiles.

@@ -1,0 +1,244 @@
+% ═══════════════════════════════════════════════════════════════════
+%  Pages liminaires : dédicace, remerciements, résumé, abstract, glossaire
+% ═══════════════════════════════════════════════════════════════════
+
+% ── Dédicace ─────────────────────────────────────────────────────
+\pageLiminaire{Dédicace}
+
+\vspace{1.5cm}
+\begin{center}
+\begin{minipage}{0.82\textwidth}
+\itshape
+\large
+
+Je dédie ce modeste travail :
+
+\vspace{0.7cm}
+
+À mes parents, pour leurs sacrifices, leur patience et la confiance qu'ils
+n'ont jamais cessé de m'accorder.
+
+\vspace{0.5cm}
+
+À ma famille et à mes amis, pour leur soutien constant et leurs
+encouragements tout au long de ces années.
+
+\vspace{0.5cm}
+
+À tous les professeurs de \nouvelleEtablissement, qui ont donné sans compter
+de leur temps et de leur savoir pour nous former.
+
+\vspace{0.5cm}
+
+À Madame Fati, gérante du centre \yani, pour m'avoir ouvert les portes de son
+institut, pour le temps qu'elle a consacré à répondre à mes questions et pour
+la confiance qu'elle a placée dans ce projet.
+
+\vspace{0.5cm}
+
+À toutes celles et ceux qui, de près ou de loin, ont participé à
+l'élaboration de ce travail.
+
+\vspace{0.5cm}
+
+Et à toute personne qui prendra ce rapport entre ses mains.
+
+\end{minipage}
+\end{center}
+
+% ── Remerciements ────────────────────────────────────────────────
+\pageLiminaire{Remerciements}
+
+C'est avec une grande satisfaction que je tiens à remercier toutes les
+personnes qui m'ont aidé, accompagné et soutenu jusqu'à l'aboutissement de ce
+projet de fin d'études.
+
+\vspace{0.3cm}
+
+J'adresse en premier lieu mes remerciements à l'ensemble du corps professoral
+de \nouvelleEtablissement, dont les enseignements constituent le socle sur
+lequel ce travail a pu être bâti. Les notions de génie logiciel, de bases de
+données, de sécurité et de conduite de projet mobilisées dans les pages qui
+suivent y ont toutes été acquises.
+
+\vspace{0.3cm}
+
+Je remercie tout particulièrement \nouvelleEncadrantPedagogique, mon
+encadrant pédagogique, pour son suivi régulier, ses relectures exigeantes et
+les conseils qui ont orienté ce projet aux moments où il en avait le plus
+besoin.
+
+\vspace{0.3cm}
+
+Je remercie également \nouvelleEncadrantEntreprise, ainsi que Madame Fati,
+gérante du centre \yani, pour sa disponibilité et pour la qualité des échanges
+que nous avons eus. C'est en observant le fonctionnement réel de son institut
+--- le carnet de rendez-vous, les appels téléphoniques, la carte de fidélité
+tamponnée --- que les besoins de cette application ont pu être formulés
+autrement que de façon théorique. Les allers-retours réguliers avec elle ont
+directement façonné les arbitrages de conception exposés dans ce rapport :
+c'est à sa demande, par exemple, que la durée d'une prestation a cessé de
+commander la grille des créneaux.
+
+\vspace{0.3cm}
+
+Mes remerciements vont enfin aux membres du jury, qui me font l'honneur
+d'accepter d'évaluer ce travail, ainsi qu'à mes parents, dont le soutien
+indéfectible ne s'est jamais démenti.
+
+\vspace{0.5cm}
+
+Merci à toutes et à tous.
+
+% ── Résumé ───────────────────────────────────────────────────────
+\pageLiminaire{Résumé}
+
+Ce rapport de projet de fin d'études présente la conception et la réalisation
+d'une solution logicielle complète pour \yani, un centre de beauté situé à
+Casablanca. Le projet répond à une situation courante dans les petites
+structures de services : une activité entièrement pilotée à la main --- carnet
+de rendez-vous papier, prises de rendez-vous par téléphone et par messagerie
+instantanée, vente de produits sans suivi de stock, fidélité gérée par une
+carte tamponnée --- avec les conséquences qui en découlent : double
+réservation d'un même créneau, absence d'historique exploitable, temps
+consacré au téléphone au détriment des clientes présentes.
+
+\vspace{0.3cm}
+
+La solution développée est un mono-dépôt réunissant trois applications
+adossées à une même base de données PostgreSQL. Une \textbf{API REST} bâtie
+avec NestJS et Prisma porte l'ensemble des règles métier. Une
+\textbf{application mobile} développée avec React Native et Expo permet aux
+clientes de consulter les catalogues, de réserver une prestation, de commander
+des produits et de suivre leur compte de fidélité. Un \textbf{back-office} web
+en React donne à la gérante et à son personnel la maîtrise des commandes, des
+rendez-vous, du catalogue, des horaires d'ouverture et du programme de
+fidélité.
+
+\vspace{0.3cm}
+
+Le rapport détaille l'ensemble du cycle de développement : étude de
+l'existant, expression des besoins, modélisation UML, choix techniques,
+architecture en couches, implémentation et validation. Une méthode agile
+inspirée de SCRUM, organisée en six sprints, a permis de livrer par
+incréments et de confronter chaque version au fonctionnement réel de
+l'institut. Une attention particulière a été portée aux propriétés que les
+tests unitaires classiques ne savent pas démontrer : la sérialisation des
+réservations concurrentes par verrou consultatif PostgreSQL, l'atomicité du
+crédit de fidélité, l'idempotence de l'émission des bons de récompense et
+l'anonymisation des comptes supprimés, exigée par la loi 09-08 sur la
+protection des données personnelles. Vingt-cinq suites de tests, dont huit
+écrivent dans une véritable base PostgreSQL, sont rejouées à chaque
+modification par une chaîne d'intégration continue.
+
+\vspace{0.3cm}
+
+Le résultat est une plate-forme fonctionnelle, trilingue (français, arabe,
+anglais), documentée et prête au déploiement, qui supprime le carnet papier,
+rend la réservation possible à toute heure et donne à l'institut une visibilité
+qu'il n'avait pas sur son activité.
+
+\vspace{0.6cm}
+
+\textbf{Mots clés :} application mobile, API REST, NestJS, Prisma, PostgreSQL,
+React Native, Expo, React, TypeScript, réservation en ligne, programme de
+fidélité, back-office, concurrence, sécurité applicative, internationalisation,
+intégration continue.
+
+% ── Abstract ─────────────────────────────────────────────────────
+\pageLiminaire{Abstract}
+
+\selectlanguage{english}
+
+This final year project report presents the design and implementation of a
+complete software solution for \textit{Yani Concept by Fati}, a beauty centre
+located in Casablanca. The project addresses a situation common to small
+service businesses: an activity managed entirely by hand --- a paper
+appointment book, bookings taken over the phone and through instant messaging,
+product sales with no stock tracking, and a loyalty programme run on a stamped
+card --- with the consequences that follow: the same slot booked twice, no
+usable history, and time spent on the phone at the expense of the customers
+already in the salon.
+
+\vspace{0.3cm}
+
+The delivered solution is a monorepo bringing together three applications
+backed by a single PostgreSQL database. A \textbf{REST API} built with NestJS
+and Prisma carries all the business rules. A \textbf{mobile application} built
+with React Native and Expo lets customers browse the catalogues, book a
+treatment, order products and follow their loyalty account. A \textbf{web
+back-office} written in React gives the manager and her staff control over
+orders, appointments, the catalogue, opening hours and the loyalty programme.
+
+\vspace{0.3cm}
+
+The report covers the full development cycle: study of the existing process,
+requirements elicitation, UML modelling, technical choices, layered
+architecture, implementation and validation. An agile method inspired by SCRUM,
+organised into six sprints, made it possible to deliver in increments and to
+confront each version with the real workings of the salon. Particular care was
+given to properties that ordinary unit tests cannot demonstrate: serialisation
+of concurrent bookings through a PostgreSQL advisory lock, atomicity of loyalty
+crediting, idempotent issuance of reward vouchers, and anonymisation of deleted
+accounts as required by Moroccan law 09-08 on personal data protection.
+Twenty-five test suites, eight of which write to a real PostgreSQL database,
+are replayed on every change by a continuous integration pipeline.
+
+\vspace{0.3cm}
+
+The result is a working, trilingual (French, Arabic, English), documented
+platform, ready for deployment, which removes the paper book, makes booking
+possible at any hour, and gives the salon a visibility over its own activity
+that it previously lacked.
+
+\vspace{0.6cm}
+
+\textbf{Keywords:} mobile application, REST API, NestJS, Prisma, PostgreSQL,
+React Native, Expo, React, TypeScript, online booking, loyalty programme,
+back-office, concurrency, application security, internationalisation,
+continuous integration.
+
+\selectlanguage{french}
+
+% ── Glossaire ────────────────────────────────────────────────────
+\pageLiminaire{Glossaire}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{L{2.6cm} X}
+\toprule
+\entete{Sigle} & \entete{Signification} \\
+\midrule
+API      & \textit{Application Programming Interface} --- interface de programmation applicative \\
+Argon2   & Fonction de dérivation de clé, lauréate du \textit{Password Hashing Competition} \\
+CI       & \textit{Continuous Integration} --- intégration continue \\
+CNDP     & Commission Nationale de contrôle de la protection des Données à caractère Personnel \\
+COD      & \textit{Cash On Delivery} --- paiement à la remise ou à la livraison \\
+CORS     & \textit{Cross-Origin Resource Sharing} --- partage de ressources entre origines \\
+CSP      & \textit{Content Security Policy} --- politique de sécurité du contenu \\
+DTO      & \textit{Data Transfer Object} --- objet de transfert de données \\
+EAS      & \textit{Expo Application Services} --- chaîne de compilation native d'Expo \\
+HSTS     & \textit{HTTP Strict Transport Security} \\
+HTTP(S)  & \textit{HyperText Transfer Protocol (Secure)} \\
+IHM      & Interface Homme--Machine \\
+i18n     & \textit{Internationalization} --- internationalisation \\
+IANA     & \textit{Internet Assigned Numbers Authority} --- source de la base des fuseaux horaires \\
+JSON     & \textit{JavaScript Object Notation} \\
+JWT      & \textit{JSON Web Token} --- jeton d'authentification signé \\
+ORM      & \textit{Object-Relational Mapping} --- correspondance objet-relationnel \\
+PFE      & Projet de Fin d'Études \\
+REST     & \textit{REpresentational State Transfer} --- style d'architecture d'API \\
+RGPD     & Règlement Général sur la Protection des Données \\
+SGBD     & Système de Gestion de Bases de Données \\
+SMTP     & \textit{Simple Mail Transfer Protocol} \\
+SPA      & \textit{Single Page Application} --- application web mono-page \\
+SQL      & \textit{Structured Query Language} \\
+TDD      & \textit{Test-Driven Development} --- développement piloté par les tests \\
+TTL      & \textit{Time To Live} --- durée de validité \\
+UI / UX  & \textit{User Interface} / \textit{User eXperience} \\
+UML      & \textit{Unified Modeling Language} --- langage de modélisation unifié \\
+UTC      & \textit{Coordinated Universal Time} --- temps universel coordonné \\
+UUID     & \textit{Universally Unique Identifier} \\
+XSS      & \textit{Cross-Site Scripting} \\
+\bottomrule
+\end{tabularx}
+\end{center}

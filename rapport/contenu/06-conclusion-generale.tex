@@ -1,0 +1,152 @@
+% ═══════════════════════════════════════════════════════════════════
+%  Conclusion générale et perspectives
+% ═══════════════════════════════════════════════════════════════════
+\pageLiminaire{Conclusion Générale et Perspectives}
+
+\section*{Bilan du travail réalisé}
+
+Ce projet de fin d'études a abouti à une plate-forme logicielle complète pour
+\yani\ : une API REST portant l'intégralité des règles métier, une application
+mobile trilingue destinée aux clientes, et un back-office web destiné à
+l'institut. Les trois applications partagent une même base PostgreSQL et un
+même langage, et sont validées ensemble par une chaîne d'intégration continue.
+
+Les objectifs fixés au départ ont été atteints. La réservation est possible à
+toute heure, sur une grille de créneaux calculée à partir des horaires réels du
+centre. Le carnet papier est remplacé par une base sauvegardée, consultable
+depuis plusieurs postes. La carte de fidélité tamponnée a laissé place à un
+compte doté d'un solde, d'un historique, de paliers de visites et de bons
+traçables. Le stock est suivi, contrôlé et décrémenté au bon moment. La gérante
+dispose enfin d'une visibilité sur son activité et de l'export de ses données.
+
+Le travail ne s'est cependant pas limité à la mise en \oe uvre de
+fonctionnalités. Sa part la plus exigeante a porté sur des propriétés qui ne se
+voient pas à l'écran :
+
+\begin{itemize}[leftmargin=1.2cm]
+  \item \textbf{la correction sous concurrence} --- un créneau n'est jamais
+  vendu deux fois, une unité de stock jamais attribuée deux fois, un point de
+  fidélité jamais crédité deux fois ; ces propriétés sont établies par des
+  tests qui écrivent dans une véritable base PostgreSQL, parce qu'aucune base
+  simulée ne saurait les démontrer ;
+
+  \item \textbf{la fidélité au temps réel} --- les instants sont stockés en
+  temps universel, les horaires exprimés en heure locale du centre, et la
+  conversion n'est faite qu'à un seul endroit, par le serveur, qui possède la
+  base des fuseaux ;
+
+  \item \textbf{la conservation de l'historique} --- une cliente peut exercer
+  son droit à l'effacement sans que le chiffre d'affaires qu'elle a généré ne
+  disparaisse avec elle ; les modes de suppression déclarés dans le schéma
+  rendent cette garantie structurelle plutôt que déclarative ;
+
+  \item \textbf{la sécurité} --- hachage Argon2, jetons courts, rotation avec
+  détection de réutilisation, autorisation vérifiée par le serveur sur chaque
+  route, validation stricte des entrées, contrôle des fichiers téléversés par
+  leur signature binaire.
+\end{itemize}
+
+\section*{Apports personnels}
+
+Sur le plan technique, ce projet a été l'occasion de mener seul, de bout en
+bout, une réalisation à trois cibles : un serveur, une application web et une
+application mobile. Il m'a permis d'approfondir des sujets que le cursus
+aborde nécessairement de façon théorique --- la concurrence en base de données,
+la gestion des fuseaux horaires, la sécurité applicative --- et de découvrir
+qu'ils ne se comprennent réellement qu'au moment où un test les met en échec.
+
+Le test de concurrence sur les réservations en est l'illustration la plus
+nette. L'implémentation initiale --- compter puis insérer --- paraissait
+évidemment correcte à la lecture. Il a fallu trois réservations réellement
+simultanées pour montrer qu'elle ne l'était pas. C'est l'enseignement que je
+retiens le plus fermement de ce projet : \emph{en matière de concurrence,
+l'intuition ne vaut rien, et seul un test qui reproduit la simultanéité fait
+autorité}.
+
+Sur le plan méthodologique, la démarche agile a démontré son intérêt de façon
+concrète. Plusieurs des règles les plus importantes du système --- qu'un
+rendez-vous occupe un créneau fixe et non la durée de sa prestation, qu'une
+réclamation de récompense doive laisser une trace au comptoir, qu'un produit
+retiré du catalogue ne doive pas s'effacer de l'historique --- ne figuraient
+dans aucune spécification initiale. Elles sont apparues en montrant des
+versions fonctionnelles à la personne qui allait s'en servir.
+
+Sur le plan personnel, travailler pour une utilisatrice unique, identifiée et
+non informaticienne a été formateur. Un message d'erreur incompréhensible n'est
+pas un détail lorsque la personne qui le reçoit n'a personne à qui le
+transmettre. Cette contrainte a orienté un grand nombre de décisions, du
+libellé des statuts dans les exports Excel jusqu'au choix d'afficher les
+créneaux indisponibles plutôt que de les masquer.
+
+\section*{Difficultés rencontrées}
+
+Trois difficultés méritent d'être mentionnées, ainsi que la façon dont elles
+ont été surmontées.
+
+\paragraph{La concurrence sur les réservations.} Décrite plus haut, elle a
+imposé de descendre au niveau du SGBD et de recourir à un verrou consultatif
+PostgreSQL --- une primitive qui ne figure dans aucune abstraction d'ORM.
+
+\paragraph{Les fuseaux horaires.} Les erreurs de fuseau sont silencieuses :
+elles ne lèvent aucune exception et produisent des résultats plausibles mais
+faux, décalés d'une heure. La convention a donc été fixée explicitement ---
+stockage en temps universel, horaires en heure locale, conversion en un seul
+endroit --- et documentée dans le code comme dans l'API.
+
+\paragraph{Les pièges de déploiement invisibles.} Plusieurs réglages
+d'exploitation ne cassent rien immédiatement, mais produisent des symptômes
+déroutants une fois en service : le réglage du proxy de confiance, sans lequel
+tout l'institut partage un seul compteur de requêtes ; la liste des origines
+autorisées, dont l'oubli n'apparaît que dans la console du navigateur. Ces
+pièges ont été documentés à l'endroit où ils se manifestent, avec leur symptôme
+et leur cause, plutôt que dans une documentation séparée que personne ne
+consulte au moment utile.
+
+\section*{Perspectives}
+
+La plate-forme livrée est fonctionnelle, mais plusieurs évolutions ont été
+identifiées, classées ici par horizon.
+
+\paragraph{À court terme --- finaliser la mise en service.}
+\begin{itemize}[leftmargin=1.2cm,nosep]
+  \item Acquisition d'un nom de domaine et d'un certificat HTTPS, avec le
+  reverse proxy correspondant.
+  \item Mise en place d'un serveur de messagerie définitif.
+  \item Publication de l'application sur les magasins Android et iOS.
+\end{itemize}
+
+\paragraph{À moyen terme --- enrichir l'usage.}
+\begin{itemize}[leftmargin=1.2cm,nosep]
+  \item \textbf{Notifications \textit{push}} : rappel de rendez-vous la veille,
+  avis de commande prête, alerte de palier de fidélité franchi. C'est
+  l'évolution la plus demandée, et elle dépend d'une compilation native, donc
+  du nom de domaine.
+  \item \textbf{Paiement en ligne}, en complément du paiement à la remise.
+  \item \textbf{Statistiques de pilotage} : chiffre d'affaires par période,
+  prestations les plus demandées, taux de retour de la clientèle. Les données
+  sont déjà en base ; il ne manque que leur restitution.
+  \item \textbf{Gestion fine des ressources} : aujourd'hui, la capacité du
+  centre est un nombre unique de places réservables. Distinguer les cabines et
+  les esthéticiennes permettrait de proposer des créneaux différenciés selon la
+  prestation.
+\end{itemize}
+
+\paragraph{À plus long terme.}
+\begin{itemize}[leftmargin=1.2cm,nosep]
+  \item \textbf{Fiche cliente} tenue par l'institut : historique des soins,
+  allergies signalées, préférences --- un dossier de suivi qui prolongerait la
+  relation personnelle qui fait la valeur du centre.
+  \item \textbf{Gestion multi-établissements}, si l'institut venait à ouvrir un
+  second point de vente.
+  \item \textbf{Automatisation du marketing} : relance des clientes non revenues
+  depuis un certain temps, offres d'anniversaire.
+\end{itemize}
+
+\vspace{0.5cm}
+
+Au terme de ce travail, la plate-forme est prête à entrer en service. Elle ne
+remplace pas la relation entre l'institut et ses clientes --- elle ne le
+cherche pas --- mais elle décharge la gérante de ce qui l'en éloignait : le
+téléphone qui sonne pendant un soin, le carnet à consulter, la carte de
+fidélité à retrouver. C'est, en définitive, la mesure la plus juste de sa
+réussite.

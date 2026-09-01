@@ -1,0 +1,139 @@
+% ═══════════════════════════════════════════════════════════════════
+%
+%   RAPPORT DE PROJET DE FIN D'ÉTUDES
+%   Yani Concept by Fati — application mobile, API et back-office
+%   pour un centre de beauté
+%
+%   Compilation :  latexmk -pdf main.tex
+%              ou :  pdflatex main && pdflatex main && pdflatex main
+%                    (trois passes : table des matières, listes, renvois)
+%
+%   Les figures manquantes s'affichent en cadres d'attente : déposer le
+%   fichier dans figures/ puis recompiler suffit à les remplacer.
+%   Voir figures/README.md pour la liste complète des visuels attendus.
+%
+% ═══════════════════════════════════════════════════════════════════
+\documentclass[a4paper,12pt,oneside]{report}
+
+% ── Informations à compléter ─────────────────────────────────────
+% Ce sont les seules valeurs à renseigner avant impression.
+% Les retours à la ligne sont explicites : le titre est composé en grand corps,
+% et un retour automatique y tomberait au mauvais endroit.
+\newcommand{\nouvelleTitre}{Conception et réalisation\\
+d'une application mobile, d'une API\\
+et d'un back-office pour un centre de beauté}
+\newcommand{\nouvelleTitreCourt}{Yani Concept by Fati}
+\newcommand{\nouvelleFiliere}{Ingénierie Informatique et Réseaux}
+\newcommand{\nouvelleAnnee}{Année 2025--2026}
+% Les trois noms ci-dessous apparaissent sur la page de garde, dans les
+% remerciements et dans le tableau des rôles SCRUM. Tant qu'ils ne sont pas
+% renseignés, ils s'affichent en gris italique — impossible de les oublier.
+\newcommand{\nouvelleAuteur}{\aCompleter{Prénom NOM}}
+\newcommand{\nouvelleEncadrantPedagogique}{\aCompleter{Mme/M. Prénom NOM}}
+\newcommand{\nouvelleEncadrantEntreprise}{\aCompleter{Mme/M. Prénom NOM}}
+\newcommand{\nouvelleEtablissement}{École Marocaine des Sciences de l'Ingénieur}
+
+\input{preambule}
+
+\begin{document}
+
+% ═══════════════════════════════════════════════════════════════════
+%  PAGE DE GARDE
+% ═══════════════════════════════════════════════════════════════════
+\begin{titlepage}
+\thispagestyle{empty}
+\centering
+
+\vspace*{0.5cm}
+
+{\large\scshape\color{yaniGris} \nouvelleEtablissement}\\[0.2cm]
+{\color{yaniOr}\rule{0.4\textwidth}{0.8pt}}
+
+\vspace{1.6cm}
+
+{\Huge\bfseries\color{yaniOrProfond} PROJET DE FIN D'ÉTUDES}\\[0.5cm]
+{\large\color{yaniGris} \nouvelleAnnee}
+
+\vspace{1.4cm}
+
+{\color{yaniOr}\rule{0.75\textwidth}{1.5pt}}\\[0.7cm]
+{\Large\bfseries\color{yaniNoir} \nouvelleTitre}\\[0.7cm]
+{\color{yaniOr}\rule{0.75\textwidth}{1.5pt}}
+
+\vspace{0.9cm}
+
+{\large\itshape\color{yaniGris} \nouvelleFiliere}
+
+\vspace{1.2cm}
+
+% Le logo réel du projet vit dans brand/logo-master.png à la racine du dépôt.
+% Le copier ici sous le nom logo.png pour qu'il remplace le cadre d'attente.
+\IfFileExists{figures/logo.png}
+  {\includegraphics[width=0.32\textwidth,keepaspectratio]{figures/logo.png}}
+  {\cadreAttente{logo.png}{Logo de \yani}}
+
+\vfill
+
+\begin{minipage}{0.46\textwidth}
+  \raggedright
+  {\bfseries\color{yaniOrProfond} Réalisé par :}\\[0.2cm]
+  \nouvelleAuteur
+\end{minipage}
+\hfill
+\begin{minipage}{0.46\textwidth}
+  \raggedleft
+  {\bfseries\color{yaniOrProfond} Encadré par :}\\[0.2cm]
+  \nouvelleEncadrantPedagogique\\[0.15cm]
+  \nouvelleEncadrantEntreprise
+\end{minipage}
+
+\vspace{1.2cm}
+
+\end{titlepage}
+
+% ═══════════════════════════════════════════════════════════════════
+%  PAGES LIMINAIRES — numérotation romaine
+% ═══════════════════════════════════════════════════════════════════
+\pagenumbering{roman}
+\setcounter{page}{1}
+
+\input{contenu/00-liminaires}
+
+% ── Listes automatiques ──────────────────────────────────────────
+% Ces trois commandes ouvrent elles-mêmes leur page et composent leur titre
+% (style « chapitre non numéroté » défini dans le préambule) ; il ne reste
+% qu'à poser l'ancre et l'entrée de table des matières juste avant.
+\cleardoublepage
+\phantomsection
+\addcontentsline{toc}{chapter}{Liste des figures}
+\markboth{Liste des figures}{}
+\listoffigures
+
+\cleardoublepage
+\phantomsection
+\addcontentsline{toc}{chapter}{Liste des tableaux}
+\markboth{Liste des tableaux}{}
+\listoftables
+
+\cleardoublepage
+\phantomsection
+\addcontentsline{toc}{chapter}{Table des matières}
+\markboth{Table des matières}{}
+\tableofcontents
+
+% ═══════════════════════════════════════════════════════════════════
+%  CORPS DU RAPPORT — numérotation arabe
+% ═══════════════════════════════════════════════════════════════════
+\cleardoublepage
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+\input{contenu/01-introduction-generale}
+\input{contenu/02-chapitre1-organisme}
+\input{contenu/03-chapitre2-analyse}
+\input{contenu/04-chapitre3-technique}
+\input{contenu/05-chapitre4-mise-en-oeuvre}
+\input{contenu/06-conclusion-generale}
+\input{contenu/07-webographie}
+
+\end{document}

@@ -1,0 +1,597 @@
+% ═══════════════════════════════════════════════════════════════════
+%  Chapitre 2 — Analyse et conception
+% ═══════════════════════════════════════════════════════════════════
+\chapter{Analyse et conception}
+
+\section*{Introduction}
+\addcontentsline{toc}{section}{Introduction}
+
+Ce chapitre présente le résultat du travail d'analyse et de conception. Il
+commence par la spécification des besoins --- fonctionnels puis non
+fonctionnels --- et par l'identification des acteurs du système. Il expose
+ensuite la modélisation UML retenue : les diagrammes de cas d'utilisation,
+leur description textuelle, les diagrammes de séquence des processus les plus
+délicats, et enfin le diagramme de classes qui fixe la structure des données.
+
+Une précision liminaire sur la méthode : les modèles présentés ici ne sont pas
+des artefacts produits en amont puis abandonnés. Ils ont été révisés à chaque
+sprint, et le diagramme de classes en particulier reflète l'état final d'un
+schéma qui a connu vingt migrations successives. Les choix qui l'ont fait
+évoluer sont explicités en fin de chapitre, car ils constituent l'essentiel de
+l'apport de conception de ce projet.
+
+% ─────────────────────────────────────────────────────────────────
+\section{Spécifications des besoins}
+
+\subsection{Besoins fonctionnels}
+
+Les besoins fonctionnels décrivent ce que le système doit permettre de faire.
+Ils ont été regroupés en huit domaines.
+
+\paragraph{Gestion des comptes et de l'authentification.}
+\begin{itemize}[leftmargin=1.2cm,nosep]
+  \item Inscription d'une cliente avec adresse e-mail, mot de passe, nom,
+  prénom et téléphone.
+  \item Confirmation de l'adresse e-mail par un code à usage unique.
+  \item Connexion, déconnexion et maintien de session sans reconnexion
+  quotidienne.
+  \item Réinitialisation du mot de passe oublié, par code envoyé par e-mail.
+  \item Consultation et modification du profil, changement de mot de passe.
+  \item Suppression du compte à la demande de la cliente.
+\end{itemize}
+
+\paragraph{Catalogue de prestations.}
+\begin{itemize}[leftmargin=1.2cm,nosep]
+  \item Consultation publique des prestations actives, par catégorie.
+  \item Consultation du détail d'une prestation : description, tarif, photo.
+  \item Création, modification, activation et désactivation des prestations et
+  de leurs catégories par la gérante.
+\end{itemize}
+
+\paragraph{Catalogue de produits.}
+\begin{itemize}[leftmargin=1.2cm,nosep]
+  \item Consultation publique des produits actifs, par catégorie.
+  \item Affichage de la disponibilité en stock.
+  \item Gestion complète du catalogue et des stocks par la gérante.
+\end{itemize}
+
+\paragraph{Gestion des rendez-vous.}
+\begin{itemize}[leftmargin=1.2cm,nosep]
+  \item Consultation des créneaux disponibles pour une prestation à une date
+  donnée.
+  \item Réservation d'un créneau par la cliente.
+  \item Consultation de ses propres rendez-vous, à venir et passés.
+  \item Annulation par la cliente.
+  \item Réservation \emph{pour le compte} d'une cliente par le personnel, pour
+  les rendez-vous pris par téléphone ou au comptoir.
+  \item Confirmation, clôture, annulation et report d'un rendez-vous par le
+  personnel.
+\end{itemize}
+
+\paragraph{Gestion des commandes.}
+\begin{itemize}[leftmargin=1.2cm,nosep]
+  \item Panier et passage de commande, avec retrait à l'institut ou livraison à
+  domicile.
+  \item Paiement à la remise ou à la livraison.
+  \item Consultation de ses commandes et de leur avancement par la cliente.
+  \item Annulation par la cliente tant que la commande n'a pas été remise.
+  \item Traitement des commandes par le personnel selon un cycle de vie
+  contrôlé.
+\end{itemize}
+
+\paragraph{Programme de fidélité.}
+\begin{itemize}[leftmargin=1.2cm,nosep]
+  \item Gain automatique de points sur les prestations réalisées et les
+  commandes remises.
+  \item Consultation du solde et de l'historique des mouvements.
+  \item Catalogue de récompenses échangeables contre des points.
+  \item Paliers de visites offrant automatiquement une récompense, avec option
+  de récurrence.
+  \item Émission d'un bon de récompense doté d'un code lisible, honoré au
+  comptoir.
+  \item Ajout manuel de points par le personnel, avec motif obligatoire et
+  journal consultable par la gérante.
+\end{itemize}
+
+\paragraph{Paramétrage du centre.}
+\begin{itemize}[leftmargin=1.2cm,nosep]
+  \item Définition des horaires d'ouverture, à raison de plusieurs plages par
+  jour.
+  \item Déclaration de fermetures exceptionnelles (congés, jours fériés).
+  \item Réglage du nombre de places réservables simultanément et de l'écart
+  entre créneaux, sans redéploiement.
+\end{itemize}
+
+\paragraph{Pilotage et exports.}
+\begin{itemize}[leftmargin=1.2cm,nosep]
+  \item Tableau de bord : commandes en attente, rendez-vous du jour, alertes de
+  stock faible.
+  \item Gestion des comptes du personnel et attribution des rôles.
+  \item Export au format Excel des clientes, des commandes et des rendez-vous,
+  réservé à la gérante.
+\end{itemize}
+
+\subsection{Besoins non fonctionnels}
+
+Les besoins non fonctionnels portent sur les qualités attendues de la solution
+plutôt que sur ses fonctions. Sept ont été retenus, chacun assorti du moyen
+concret par lequel il est satisfait --- un besoin non fonctionnel qui ne se
+traduit par aucune décision d'implémentation n'est qu'une intention.
+
+\begin{table}[H]
+\centering
+\caption{Besoins non fonctionnels et moyens de satisfaction}
+\label{tab:besoins-non-fonctionnels}
+\begin{tabularx}{\textwidth}{L{3.1cm} X}
+\toprule
+\entete{Besoin} & \entete{Moyen retenu} \\
+\midrule
+\textbf{Exactitude} &
+Aucun créneau ni aucune unité de stock ne peut être attribué deux fois. Les
+réservations concurrentes sont sérialisées par un verrou consultatif
+PostgreSQL ; le stock et le solde de points sont modifiés par écritures
+atomiques conditionnelles. \\
+
+\textbf{Sécurité} &
+Mots de passe hachés avec Argon2 ; jetons d'accès JWT de courte durée ; jetons
+de rafraîchissement stockés hachés, avec rotation et détection de réutilisation ;
+autorisation par rôle vérifiée côté serveur sur chaque route ; en-têtes de
+sécurité HTTP ; validation stricte de toute entrée ; limitation du débit par
+adresse IP. \\
+
+\textbf{Fiabilité} &
+Aucune erreur technique n'atteint l'utilisatrice : un filtre d'exceptions
+global traduit les erreurs de base de données en messages compréhensibles.
+Les états des rendez-vous et des commandes sont régis par des machines à états
+explicites qui interdisent toute transition incohérente. \\
+
+\textbf{Performance} &
+Toutes les listes susceptibles de croître sont paginées côté serveur ; le
+tableau de bord ne demande que ce qu'il affiche ; les images du catalogue sont
+servies avec un cache d'un an et décodées à la taille réellement affichée. \\
+
+\textbf{Ergonomie} &
+Charte graphique unifiée entre les trois applications, modes clair et sombre,
+messages en langue naturelle, aucun terme technique exposé. \\
+
+\textbf{Accessibilité linguistique} &
+Interface mobile disponible en français, en arabe et en anglais ; les réponses
+de l'API suivent l'en-tête \texttt{Accept-Language} de la requête et les
+e-mails la langue choisie par la cliente. \\
+
+\textbf{Conformité} &
+Droit à l'effacement réellement exerçable, par anonymisation du compte plutôt
+que par suppression en cascade, afin de préserver l'historique comptable de
+l'institut (loi 09-08, CNDP). \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Acteurs du système}
+
+Cinq acteurs interagissent avec le système : quatre acteurs humains --- la
+visiteuse non authentifiée et les trois rôles applicatifs --- et un acteur
+secondaire non humain.
+
+\begin{itemize}[leftmargin=1.2cm]
+  \item \textbf{La visiteuse} --- acteur non authentifié. Elle consulte les
+  catalogues publics et peut créer un compte. Elle ne peut ni réserver ni
+  commander.
+
+  \item \textbf{La cliente} (\texttt{CLIENT}) --- acteur principal de
+  l'application mobile. Elle réserve, commande, suit son compte de fidélité et
+  gère son profil. Elle n'a aucun accès au back-office : une tentative de
+  connexion y est refusée à l'entrée.
+
+  \item \textbf{Le personnel} (\texttt{STAFF}) --- acteur principal du
+  back-office. Il traite les commandes et les rendez-vous, réserve pour le
+  compte d'une cliente, honore les bons de récompense et crédite manuellement
+  des points.
+
+  \item \textbf{La gérante} (\texttt{ADMIN}) --- elle dispose de tous les
+  droits du personnel, auxquels s'ajoutent la maîtrise du catalogue, des
+  horaires, des réglages du centre, du programme de fidélité, des comptes
+  utilisateurs, du journal des ajouts manuels de points et des exports Excel.
+
+  \item \textbf{Le service de messagerie} --- acteur secondaire non humain. Il
+  achemine les codes de vérification d'adresse et de réinitialisation de mot de
+  passe.
+\end{itemize}
+
+\subsection{Langage de modélisation}
+
+Le langage UML (\textit{Unified Modeling Language}) a été retenu pour
+modéliser le système. C'est un langage graphique normalisé, indépendant de tout
+processus de développement et de tout langage de programmation, ce qui permet
+de l'intégrer sans friction à une démarche agile : les diagrammes sont révisés
+à chaque sprint plutôt que figés au départ.
+
+Trois types de diagrammes ont été employés, chacun pour ce qu'il montre le
+mieux :
+
+\begin{itemize}[leftmargin=1.2cm]
+  \item les \textbf{diagrammes de cas d'utilisation}, pour délimiter le
+  périmètre fonctionnel et répartir les droits entre acteurs ;
+  \item les \textbf{diagrammes de séquence}, pour décrire l'ordre des échanges
+  dans les processus où cet ordre est précisément ce qui fait la correction du
+  système ;
+  \item le \textbf{diagramme de classes}, pour fixer la structure des données
+  persistantes et leurs relations.
+\end{itemize}
+
+% ─────────────────────────────────────────────────────────────────
+\section{Diagrammes de cas d'utilisation}
+
+\subsection{Diagramme de cas d'utilisation général}
+
+La figure ci-dessous présente la vue d'ensemble des cas d'utilisation du
+système, tous acteurs confondus.
+
+\figProjet{cu-general.png}{Diagramme de cas d'utilisation général de la plate-forme}{cu-general}
+
+\subsection{Cas d'utilisation : réservation d'une prestation}
+
+Le domaine de la réservation est le plus riche du système. Il fait intervenir
+la cliente et le personnel sur des cas partiellement communs : le personnel
+peut réserver pour le compte d'une cliente, ce qui est le même cas
+d'utilisation exercé par un autre acteur, mais il dispose en outre du report et
+du changement de statut.
+
+\figProjet{cu-reservation.png}{Diagramme de cas d'utilisation --- gestion des rendez-vous}{cu-reservation}
+
+\subsection{Cas d'utilisation : commande de produits}
+
+\figProjet{cu-commande.png}{Diagramme de cas d'utilisation --- commande de produits}{cu-commande}
+
+\subsection{Cas d'utilisation : programme de fidélité}
+
+Le programme de fidélité comporte deux circuits de récompense bien
+distincts, qui convergent vers un même objet : le bon de récompense. Le premier
+est automatique : un palier de visites franchi débloque une récompense que la
+cliente réclame. Le second est volontaire : la cliente échange ses points
+contre une récompense du catalogue. Dans les deux cas, un bon est émis, et
+c'est ce bon que le personnel honore au comptoir.
+
+\figProjet{cu-fidelite.png}{Diagramme de cas d'utilisation --- programme de fidélité}{cu-fidelite}
+
+\subsection{Cas d'utilisation : administration}
+
+\figProjet{cu-backoffice.png}{Diagramme de cas d'utilisation --- back-office}{cu-backoffice}
+
+% ─────────────────────────────────────────────────────────────────
+\section{Description des cas d'utilisation}
+
+Les cas d'utilisation les plus structurants sont décrits ci-après sous forme
+textuelle. Les scénarios alternatifs y occupent une place volontairement
+importante : ce sont eux qui déterminent la robustesse du système, et plusieurs
+d'entre eux n'ont été identifiés qu'à l'usage.
+
+\begin{table}[H]
+\centering
+\caption{Description du cas d'utilisation « Réserver une prestation »}
+\label{tab:cu-reserver}
+\begin{tabularx}{\textwidth}{L{3.1cm} X}
+\toprule
+\entete{Cas d'utilisation} & Réserver une prestation \\
+\midrule
+\entete{Acteur principal} & La cliente \\
+\entete{Objectif} & Obtenir un rendez-vous pour une prestation, à une date et
+une heure disponibles \\
+\entete{Préconditions} & La cliente est authentifiée ; la prestation est active
+au catalogue \\
+\entete{Scénario nominal} &
+\begin{enumerate}[leftmargin=*,nosep]
+  \item La cliente sélectionne une prestation et une date.
+  \item Le système calcule la grille des créneaux du jour à partir des plages
+  d'ouverture, de l'écart réglé par le centre et des fermetures
+  exceptionnelles.
+  \item Le système marque comme indisponible tout créneau dont la capacité est
+  atteinte, ainsi que tout créneau déjà passé.
+  \item La cliente choisit un créneau libre et valide.
+  \item Le système prend le verrou de réservation, contrôle à nouveau la
+  disponibilité, enregistre le rendez-vous au statut \textit{en attente} et fige
+  le tarif de la prestation.
+  \item Le système affiche la confirmation.
+\end{enumerate} \\
+\entete{Alternatives} &
+\textbf{2a.} Le jour est fermé (aucune plage, ou fermeture exceptionnelle) : le
+système l'indique et ne propose aucun créneau.\newline
+\textbf{4a.} Le créneau a été pris entre l'affichage et la validation : le
+système refuse et invite à en choisir un autre.\newline
+\textbf{5a.} La date demandée est passée : le système refuse la réservation. \\
+\entete{Postconditions} & Le rendez-vous existe au statut \textit{en attente} ;
+la capacité du créneau est diminuée d'une unité \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Description du cas d'utilisation « Passer une commande »}
+\label{tab:cu-commander}
+\begin{tabularx}{\textwidth}{L{3.1cm} X}
+\toprule
+\entete{Cas d'utilisation} & Passer une commande de produits \\
+\midrule
+\entete{Acteur principal} & La cliente \\
+\entete{Objectif} & Commander des produits, avec retrait à l'institut ou
+livraison à domicile \\
+\entete{Préconditions} & La cliente est authentifiée ; son panier n'est pas
+vide \\
+\entete{Scénario nominal} &
+\begin{enumerate}[leftmargin=*,nosep]
+  \item La cliente ajoute des produits à son panier et ouvre la validation.
+  \item Elle choisit le mode de remise ; en cas de livraison, elle saisit une
+  adresse.
+  \item Le système fusionne les lignes en double, contrôle que chaque produit
+  est actif et que le stock est suffisant.
+  \item Le système fige le prix unitaire de chaque ligne, calcule le total et
+  enregistre la commande au statut \textit{en attente}.
+  \item La cliente reçoit le récapitulatif de sa commande.
+\end{enumerate} \\
+\entete{Alternatives} &
+\textbf{2a.} Livraison choisie sans adresse : le système refuse.\newline
+\textbf{3a.} Un produit a été retiré du catalogue ou son stock est
+insuffisant : le système refuse la commande en désignant le produit en
+cause. \\
+\entete{Postconditions} & La commande existe au statut \textit{en attente} ;
+\emph{le stock n'est pas encore décrémenté} --- il ne l'est qu'à la
+confirmation par le personnel \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Ce dernier point mérite d'être souligné, car il résulte d'un arbitrage
+explicite. Décrémenter le stock dès la commande aurait permis de le réserver,
+mais aurait ouvert la porte au blocage du stock par des commandes jamais
+honorées. Le paiement s'effectuant à la remise, l'institut confirme chaque
+commande par un appel : c'est ce moment, et non la commande elle-même, qui
+engage réellement le produit.
+
+\begin{table}[H]
+\centering
+\caption{Description du cas d'utilisation « Échanger des points contre une récompense »}
+\label{tab:cu-echanger}
+\begin{tabularx}{\textwidth}{L{3.1cm} X}
+\toprule
+\entete{Cas d'utilisation} & Échanger des points contre une récompense \\
+\midrule
+\entete{Acteur principal} & La cliente \\
+\entete{Objectif} & Convertir un solde de points en récompense utilisable à
+l'institut \\
+\entete{Préconditions} & La cliente est authentifiée ; la récompense est active
+au catalogue \\
+\entete{Scénario nominal} &
+\begin{enumerate}[leftmargin=*,nosep]
+  \item La cliente consulte le catalogue des récompenses et son solde.
+  \item Elle demande l'échange d'une récompense.
+  \item Le système débite le solde de façon atomique, conditionnellement à sa
+  suffisance.
+  \item Le système enregistre le mouvement et émet un bon de récompense muni
+  d'un code lisible.
+  \item La cliente présente ce code au comptoir lors de sa prochaine visite.
+\end{enumerate} \\
+\entete{Alternatives} &
+\textbf{3a.} Le solde est devenu insuffisant entre l'affichage et la demande :
+le débit conditionnel n'affecte aucune ligne, l'échange est refusé et rien
+n'est émis. \\
+\entete{Postconditions} & Le solde est diminué du coût de la récompense ; un
+bon dû figure sur la liste du comptoir \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Description du cas d'utilisation « Traiter une commande »}
+\label{tab:cu-traiter}
+\begin{tabularx}{\textwidth}{L{3.1cm} X}
+\toprule
+\entete{Cas d'utilisation} & Traiter une commande \\
+\midrule
+\entete{Acteur principal} & Le personnel \\
+\entete{Objectif} & Faire progresser une commande jusqu'à sa remise à la
+cliente \\
+\entete{Préconditions} & Le membre du personnel est authentifié au back-office
+avec le rôle \texttt{STAFF} ou \texttt{ADMIN} \\
+\entete{Scénario nominal} &
+\begin{enumerate}[leftmargin=*,nosep]
+  \item Le personnel ouvre la liste des commandes en attente.
+  \item Il confirme la commande après appel à la cliente : le système
+  décrémente le stock de chaque ligne de façon atomique.
+  \item Il marque la commande \textit{prête} lorsqu'elle est préparée.
+  \item Il la marque \textit{terminée} à la remise : le système crédite les
+  points de fidélité correspondants et met à jour le compteur de visites.
+\end{enumerate} \\
+\entete{Alternatives} &
+\textbf{2a.} Le stock est devenu insuffisant : la confirmation échoue et la
+commande reste en attente.\newline
+\textbf{$\ast$a.} Une transition non autorisée est demandée (par exemple
+\textit{terminée} depuis \textit{en attente}) : le système la refuse.\newline
+\textbf{$\ast$b.} La commande est annulée après confirmation : le stock
+décrémenté est restitué. \\
+\entete{Postconditions} & La commande est au statut \textit{terminée} ; les
+points sont crédités exactement une fois \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ─────────────────────────────────────────────────────────────────
+\section{Diagrammes de séquence}
+
+Cinq processus ont été modélisés sous forme de diagrammes de séquence. Ils ont
+été choisis non pour leur fréquence d'usage, mais parce que dans chacun d'eux
+\emph{l'ordre des opérations détermine la correction du résultat} --- ce qu'un
+diagramme de cas d'utilisation ne peut pas montrer.
+
+\subsection{Inscription et vérification de l'adresse e-mail}
+
+\figProjet{seq-inscription.png}{Diagramme de séquence --- inscription et vérification de l'adresse}{seq-inscription}
+
+L'inscription crée le compte, son compte de fidélité associé, et renvoie
+immédiatement les jetons de session. Ce dernier point n'allait pas de soi : une
+première version renvoyait un simple accusé de création, et l'application
+enchaînait sur un appel de connexion. Entre les deux appels, la protection
+anti-force brute pouvait refuser le second, laissant la cliente devant un
+message d'échec alors même que son compte venait d'être créé. L'inscription
+renvoie donc désormais exactement ce que renvoie la connexion.
+
+Un code à six chiffres est envoyé par e-mail dans la langue choisie par la
+cliente. Seule son empreinte est conservée en base : une fuite de la base ne
+livrerait aucun code exploitable. Le nombre de tentatives est plafonné --- six
+chiffres représentent un million de possibilités, ce qui se parcourt en
+quelques minutes sans ce garde-fou. L'émission d'un nouveau code efface le
+précédent du même usage, ce qui garantit qu'au plus une ligne active existe par
+cliente et par usage.
+
+\subsection{Réservation d'un créneau}
+
+C'est le processus le plus délicat du système, et le diagramme ci-dessous en
+montre la raison.
+
+\figProjet{seq-reservation.png}{Diagramme de séquence --- réservation d'un créneau}{seq-reservation}
+
+La difficulté tient à ce que la contrainte de capacité porte sur un
+\emph{ensemble} de lignes --- le nombre de rendez-vous qui chevauchent le
+créneau --- et non sur une ligne particulière. Aucune écriture conditionnelle
+ne peut donc la garantir. La séquence « compter les rendez-vous du créneau,
+puis insérer si la capacité le permet » est correcte pour une cliente seule, et
+fausse dès que deux réservations se croisent : les deux comptent avant que
+l'une ou l'autre n'ait inséré, les deux trouvent de la place, et deux cabines
+en accueillent trois.
+
+La solution retenue consiste à ouvrir une transaction et à y prendre un verrou
+consultatif PostgreSQL, tenu jusqu'à la fin de la transaction. La seconde
+réservation attend que la première soit écrite avant de compter. Ce verrou se
+libère automatiquement au \textit{commit} comme au \textit{rollback}, ce qui
+écarte tout risque de blocage résiduel.
+
+À l'intérieur de cette transaction, la vérification enchaîne quatre contrôles :
+la prestation existe et est active, la date n'est pas passée, le jour n'est ni
+fermé ni exceptionnellement clos, et la capacité du créneau n'est pas atteinte.
+Le tarif est enfin figé sur le rendez-vous, afin qu'une révision ultérieure des
+prix ne modifie pas les points gagnés sur un rendez-vous déjà réservé.
+
+\subsection{Traitement d'une commande et gestion du stock}
+
+\figProjet{seq-commande.png}{Diagramme de séquence --- commande et décrément du stock}{seq-commande}
+
+Le décrément du stock à la confirmation obéit à la même exigence d'atomicité
+que la réservation, mais il se traite plus simplement : la contrainte porte
+cette fois sur une ligne unique --- le produit --- et une mise à jour
+conditionnelle suffit. La condition « décrémenter de $n$ à condition que le
+stock soit au moins égal à $n$ » est évaluée par la base au moment de
+l'écriture. Si elle n'est pas satisfaite, aucune ligne n'est affectée et la
+transaction entière est annulée : la commande reste en attente et le stock
+demeure cohérent.
+
+\subsection{Clôture d'un rendez-vous et crédit de fidélité}
+
+\figProjet{seq-fidelite.png}{Diagramme de séquence --- clôture d'un rendez-vous, crédit de points et palier}{seq-fidelite}
+
+La clôture d'un rendez-vous déclenche une chaîne d'opérations qui doivent
+toutes réussir ou toutes échouer : passage au statut \textit{terminé}, calcul
+des points sur le tarif figé, incrément du solde et du compteur de visites,
+écriture du mouvement d'historique, puis évaluation des paliers de visites. Le
+tout s'exécute dans une seule transaction.
+
+L'idempotence est assurée à deux niveaux. Le mouvement de fidélité porte une
+référence unique vers le rendez-vous : une clôture rejouée ne peut pas créditer
+deux fois. Les déblocages de paliers portent une contrainte d'unicité sur le
+triplet (compte, palier, cycle), où le cycle indique combien de fois le seuil a
+été franchi --- ce qui permet à un palier d'être récurrent tout en gardant
+chaque déblocage unique.
+
+\subsection{Rotation des jetons de session}
+
+\figProjet{seq-refresh.png}{Diagramme de séquence --- rafraîchissement et rotation des jetons}{seq-refresh}
+
+Le jeton d'accès est volontairement de courte durée. Pour éviter de demander à
+la cliente de se reconnecter plusieurs fois par jour, un jeton de
+rafraîchissement de longue durée permet d'en obtenir un nouveau.
+
+Ce mécanisme est protégé par une rotation : chaque rafraîchissement révoque le
+jeton présenté et en émet un nouveau, rattaché à la même famille. Si un jeton
+déjà utilisé est présenté une seconde fois, c'est le signe qu'il a été
+dérobé --- soit par l'attaquant, soit par la cliente légitime, sans qu'il soit
+possible de savoir lequel. Le système révoque alors toute la famille : les deux
+parties sont déconnectées, et l'accès frauduleux prend fin.
+
+% ─────────────────────────────────────────────────────────────────
+\section{Diagramme de classes}
+
+\subsection{Vue d'ensemble}
+
+Le diagramme de classes ci-dessous présente la structure des données
+persistantes. Il comporte dix-neuf entités, réparties en six domaines :
+utilisateurs et sessions, catalogues, rendez-vous, commandes, fidélité, et
+paramétrage du centre.
+
+\figProjet[0.98]{diagramme-classes.png}{Diagramme de classes de la plate-forme}{diagramme-classes}
+
+\subsection{Choix structurants du modèle}
+
+Cinq décisions de modélisation méritent d'être explicitées, car elles ne
+découlent pas mécaniquement des besoins et constituent l'essentiel de l'apport
+de conception.
+
+\paragraph{Le figement des montants.} Un rendez-vous conserve le tarif de la
+prestation \emph{tel qu'il était à la réservation}, et chaque ligne de commande
+conserve le prix unitaire du produit \emph{tel qu'il était à la commande}.
+Sans cela, une révision des tarifs réécrirait rétroactivement l'historique :
+une commande passée en juillet afficherait le prix d'août, et les points gagnés
+sur un rendez-vous changeraient après coup. Le même principe s'applique aux
+récompenses de palier, dont la référence est figée au déblocage, et aux points
+dépensés, figés sur le bon émis.
+
+\paragraph{L'anonymisation plutôt que la suppression.} Une cliente qui exerce
+son droit à l'effacement voit son compte vidé de tout ce qui l'identifie ---
+adresse e-mail, nom, téléphone, mot de passe --- et marqué comme supprimé, mais
+sa ligne n'est pas détruite. Ses commandes et ses rendez-vous portent en effet
+le chiffre d'affaires de l'institut, qui doit survivre à son départ. Les
+relations le garantissent structurellement : les rendez-vous et les commandes
+sont rattachés à la cliente en mode \texttt{Restrict}, si bien qu'une
+suppression échouerait bruyamment plutôt que de détruire l'historique en
+silence. Un compte ainsi marqué ne peut plus se connecter, ni recevoir
+d'e-mail, ni réinitialiser son mot de passe.
+
+\paragraph{Le traitement différencié des employées.} Les écritures de fidélité
+saisies par le personnel et les bons honorés au comptoir désignent l'employée
+concernée, mais en mode \texttt{SetNull} et non \texttt{Cascade}. Le départ
+d'une employée ne doit pas effacer les points des clientes qu'elle a servies ni
+la trace de ce qui leur a été remis : l'écriture demeure, elle ne désigne
+simplement plus personne.
+
+\paragraph{Le bon de récompense comme entité de première classe.} C'est la
+notion qui manquait à la première version du programme de fidélité. Sans elle,
+réclamer une récompense offerte la faisait disparaître des deux côtés à la fois
+--- l'application filtrait sur la date de réclamation, la fiche du comptoir
+aussi --- et un échange de points ne laissait qu'une ligne d'historique que
+personne ne listait. Le bon réunit les deux circuits de récompense en un objet
+unique : une seule chose à afficher pour la cliente, une seule liste à traiter
+au comptoir. Son unicité par origine --- un déblocage de palier, ou un
+mouvement de points --- constitue le véritable garde-fou d'idempotence : une
+réclamation rejouée ne peut pas émettre un second bon.
+
+\paragraph{La plage d'ouverture plutôt que le jour ouvré.} Les horaires sont
+modélisés comme des \emph{plages}, et non comme des jours dotés d'une heure
+d'ouverture et d'une heure de fermeture. Un même jour en porte donc autant que
+nécessaire --- 9\,h--13\,h puis 14\,h--18\,h --- et un jour sans aucune plage
+est fermé. Ce modèle exprime naturellement la pause déjeuner, qu'un booléen
+« fermé » assorti de deux heures ne savait représenter qu'au prix d'une plage
+trouée. Les fermetures exceptionnelles, elles, sont stockées comme des dates de
+calendrier et non comme des instants : une fermeture est un jour du calendrier
+local du centre, et stocker un instant obligerait à choisir une heure
+arbitraire.
+
+\section*{Conclusion}
+\addcontentsline{toc}{section}{Conclusion}
+
+Ce chapitre a présenté l'analyse et la conception du système : les besoins
+fonctionnels et non fonctionnels, les acteurs, les cas d'utilisation et leur
+description, les séquences des processus les plus délicats, et la structure des
+données. Les décisions de modélisation y ont été justifiées plutôt que
+seulement énoncées, car plusieurs d'entre elles --- le figement des montants,
+l'anonymisation, le bon de récompense --- constituent la réponse à des
+difficultés qui ne se voyaient qu'à l'usage. Le chapitre suivant expose les
+choix techniques qui permettent de réaliser cette conception.

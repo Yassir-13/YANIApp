@@ -1,0 +1,297 @@
+% ═══════════════════════════════════════════════════════════════════
+%  Préambule — paquets, style, macros
+%  Rapport de projet de fin d'études — Yani Concept by Fati
+% ═══════════════════════════════════════════════════════════════════
+
+% ── Langue et encodage ───────────────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{lmodern}
+\usepackage{textcomp}
+
+% Babel français met une espace fine avant « : » et transforme les listes.
+% On garde ses règles typographiques, mais on lui interdit de redéfinir les
+% puces des listes, pour que itemize reste homogène dans tout le document.
+\frenchsetup{StandardLists=true}
+
+% ── Mise en page ─────────────────────────────────────────────────
+\usepackage[a4paper,top=2.5cm,bottom=2.5cm,left=3cm,right=2.5cm]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{parskip}
+\setlength{\parindent}{0pt}
+
+% ── Graphismes et couleurs ───────────────────────────────────────
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{tikz}
+
+% ── Tableaux ─────────────────────────────────────────────────────
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{multirow}
+\usepackage{colortbl}
+
+% ── Divers ───────────────────────────────────────────────────────
+\usepackage{amssymb}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage[font=small,labelfont=bf,labelsep=colon]{caption}
+
+% Babel français légende les tableaux « Table ». L'usage académique marocain,
+% et le modèle de rapport suivi ici, disent « Tableau ». La redéfinition passe
+% par \addto\captionsfrench, sans quoi babel la réécrirait au \begin{document}.
+\addto\captionsfrench{%
+  \renewcommand{\tablename}{Tableau}%
+  \renewcommand{\listtablename}{Liste des tableaux}%
+  \renewcommand{\listfigurename}{Liste des figures}%
+}
+\usepackage{emptypage}
+\usepackage{lastpage}
+\usepackage{listings}
+
+% hyperref en dernier (il redéfinit beaucoup de commandes)
+\usepackage[hidelinks,breaklinks=true]{hyperref}
+
+% ═══════════════════════════════════════════════════════════════════
+%  Charte graphique — reprise de la palette réelle de l'application
+%  (or #D8A848 sur crème #F9F6F0, cf. mobile/src/theme/colors.ts)
+% ═══════════════════════════════════════════════════════════════════
+\definecolor{yaniOr}{HTML}{D8A848}
+\definecolor{yaniOrClair}{HTML}{E4C15E}
+\definecolor{yaniOrProfond}{HTML}{886028}
+\definecolor{yaniNoir}{HTML}{1A1712}
+\definecolor{yaniCreme}{HTML}{F9F6F0}
+\definecolor{yaniGris}{HTML}{6B6252}
+\definecolor{yaniGrisClair}{HTML}{EBE3D4}
+
+% ═══════════════════════════════════════════════════════════════════
+%  Titres
+% ═══════════════════════════════════════════════════════════════════
+
+% Titre de chapitre : un filet doré, le mot « Chapitre N », puis le titre.
+\titleformat{\chapter}[display]
+  {\normalfont\huge\bfseries\color{yaniNoir}}
+  {\filright\normalsize\color{yaniOrProfond}\MakeUppercase{\chaptertitlename\ \thechapter}}
+  {8pt}
+  {\filright\Large\color{yaniNoir}}
+  [\vspace{4pt}{\color{yaniOr}\titlerule[1.5pt]}]
+
+\titlespacing*{\chapter}{0pt}{0pt}{28pt}
+
+% Chapitre NON numéroté : dédicace, remerciements, résumé, listes, table des
+% matières, introduction générale, conclusion, webographie. Titre centré,
+% souligné du même filet doré que les chapitres numérotés.
+%
+% C'est titlesec qui doit porter ce style, et non un titre composé à la main
+% avant l'appel : \listoffigures, \listoftables et \tableofcontents ouvrent
+% eux-mêmes une page par \chapter*, si bien qu'un titre écrit juste avant se
+% retrouverait seul sur la page précédente.
+\titleformat{name=\chapter,numberless}[display]
+  {\normalfont\bfseries\color{yaniNoir}}
+  {}
+  {0pt}
+  {\centering\LARGE}
+  [\vspace{6pt}\centering{\color{yaniOr}\rule{0.35\textwidth}{1.5pt}}]
+
+\titlespacing*{name=\chapter,numberless}{0pt}{0pt}{30pt}
+
+\titleformat{\section}
+  {\normalfont\large\bfseries\color{yaniOrProfond}}{\thesection}{0.8em}{}
+\titleformat{\subsection}
+  {\normalfont\normalsize\bfseries\color{yaniNoir}}{\thesubsection}{0.7em}{}
+\titleformat{\subsubsection}
+  {\normalfont\normalsize\itshape\color{yaniNoir}}{\thesubsubsection}{0.7em}{}
+
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{2}
+
+% ═══════════════════════════════════════════════════════════════════
+%  En-têtes et pieds de page
+% ═══════════════════════════════════════════════════════════════════
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+\fancyhead[L]{\footnotesize\itshape\color{yaniGris}\nouvelleTitreCourt}
+\fancyhead[R]{\footnotesize\itshape\color{yaniGris}\leftmark}
+\fancyfoot[C]{\thepage}
+
+% `plain` (première page de chapitre) garde le numéro, sans en-tête.
+\fancypagestyle{plain}{%
+  \fancyhf{}%
+  \renewcommand{\headrulewidth}{0pt}%
+  \fancyfoot[C]{\thepage}%
+}
+
+% \leftmark sans le « CHAPITRE 1. » automatique
+\renewcommand{\chaptermark}[1]{\markboth{#1}{}}
+
+% ═══════════════════════════════════════════════════════════════════
+%  Numérotation des figures et tableaux par chapitre (Figure 1.1, …)
+% ═══════════════════════════════════════════════════════════════════
+\counterwithin{figure}{chapter}
+\counterwithin{table}{chapter}
+
+% ═══════════════════════════════════════════════════════════════════
+%  Figures : image réelle si le fichier existe, cadre d'attente sinon
+% ═══════════════════════════════════════════════════════════════════
+%
+%  C'est le mécanisme qui permet de rédiger et de compiler le rapport AVANT
+%  d'avoir produit les captures d'écran et les diagrammes UML. Chaque appel
+%  cherche le fichier dans `figures/` :
+%
+%   • le fichier est là  → l'image est insérée à la largeur demandée ;
+%   • le fichier manque  → un cadre gris s'affiche à sa place, portant le nom
+%                          de fichier attendu et la légende.
+%
+%  Il n'y a donc RIEN à modifier dans le texte le jour où les images arrivent :
+%  il suffit de déposer `figures/<nom>.png` et de recompiler.
+%
+%  Usage :  \figProjet[largeur]{nom-du-fichier}{Légende}{cle-de-label}
+%           largeur  : fraction de \textwidth (0.85 par défaut)
+%           renvoi   : \figref{cle-de-label}
+%
+\newcommand{\cadreAttente}[2]{%
+  \setlength{\fboxrule}{1pt}%
+  \setlength{\fboxsep}{0pt}%
+  \fcolorbox{yaniOr}{yaniCreme}{%
+    \begin{minipage}[c][4.2cm][c]{0.85\textwidth}
+      \centering
+      {\color{yaniOrProfond}\Large$\square$}\\[6pt]
+      {\color{yaniGris}\small\textsc{figure à insérer}}\\[8pt]
+      {\color{yaniNoir}\small\textbf{#2}}\\[8pt]
+      {\color{yaniGris}\footnotesize\ttfamily figures/#1}
+    \end{minipage}%
+  }%
+}
+
+\newcommand{\figProjet}[4][0.85]{%
+  \begin{figure}[H]
+    \centering
+    \IfFileExists{figures/#2}%
+      {\includegraphics[width=#1\textwidth,keepaspectratio]{figures/#2}}%
+      {\cadreAttente{#2}{#3}}%
+    \caption{#3}
+    \label{fig:#4}
+  \end{figure}%
+}
+
+% Deux figures côte à côte (captures d'écran mobile, souvent étroites).
+\newcommand{\figDouble}[6][0.42]{%
+  \begin{figure}[H]
+    \centering
+    \begin{minipage}[t]{0.48\textwidth}
+      \centering
+      \IfFileExists{figures/#2}%
+        {\includegraphics[width=#1\textwidth,keepaspectratio]{figures/#2}}%
+        {\cadreAttenteEtroit{#2}{#3}}%
+    \end{minipage}\hfill
+    \begin{minipage}[t]{0.48\textwidth}
+      \centering
+      \IfFileExists{figures/#4}%
+        {\includegraphics[width=#1\textwidth,keepaspectratio]{figures/#4}}%
+        {\cadreAttenteEtroit{#4}{#5}}%
+    \end{minipage}
+    \caption{#3 · #5}
+    \label{fig:#6}
+  \end{figure}%
+}
+
+\newcommand{\cadreAttenteEtroit}[2]{%
+  \setlength{\fboxrule}{1pt}%
+  \setlength{\fboxsep}{0pt}%
+  \fcolorbox{yaniOr}{yaniCreme}{%
+    \begin{minipage}[c][4.2cm][c]{0.92\textwidth}
+      \centering
+      {\color{yaniOrProfond}\large$\square$}\\[5pt]
+      {\color{yaniGris}\scriptsize\textsc{figure à insérer}}\\[6pt]
+      {\color{yaniNoir}\scriptsize\textbf{#2}}\\[6pt]
+      {\color{yaniGris}\scriptsize\ttfamily figures/#1}
+    \end{minipage}%
+  }%
+}
+
+\newcommand{\figref}[1]{figure~\ref{fig:#1}}
+\newcommand{\tabref}[1]{tableau~\ref{tab:#1}}
+
+% ═══════════════════════════════════════════════════════════════════
+%  Tableaux — style commun
+% ═══════════════════════════════════════════════════════════════════
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\renewcommand{\arraystretch}{1.25}
+
+% En-tête de tableau : fond doré pâle, texte sombre.
+\newcommand{\entete}[1]{\cellcolor{yaniGrisClair}\textbf{#1}}
+
+% ═══════════════════════════════════════════════════════════════════
+%  Code source
+% ═══════════════════════════════════════════════════════════════════
+\lstdefinestyle{yani}{
+  basicstyle=\ttfamily\scriptsize,
+  keywordstyle=\color{yaniOrProfond}\bfseries,
+  commentstyle=\color{yaniGris}\itshape,
+  stringstyle=\color{yaniOrProfond},
+  numbers=none,
+  frame=single,
+  rulecolor=\color{yaniGrisClair},
+  backgroundcolor=\color{yaniCreme},
+  breaklines=true,
+  showstringspaces=false,
+  columns=fullflexible,
+  xleftmargin=6pt,
+  framexleftmargin=6pt,
+  literate=%
+    {é}{{\'e}}1 {è}{{\`e}}1 {ê}{{\^e}}1 {à}{{\`a}}1
+    {ç}{{\c c}}1 {ù}{{\`u}}1 {û}{{\^u}}1 {î}{{\^i}}1 {ô}{{\^o}}1
+    {É}{{\'E}}1 {—}{{---}}1 {’}{{'}}1 {«}{{\guillemotleft}}1 {»}{{\guillemotright}}1
+}
+\lstset{style=yani}
+
+% ═══════════════════════════════════════════════════════════════════
+%  Pages liminaires
+% ═══════════════════════════════════════════════════════════════════
+%
+%  Ouvre une page non numérotée : titre centré (style titlesec ci-dessus),
+%  entrée dans la table des matières, et en-tête courant correspondant.
+%  L'ancre hyperref est posée AVANT le titre, pour que le lien de la table des
+%  matières arrive en haut de la page et non sous le titre.
+\newcommand{\pageLiminaire}[1]{%
+  \cleardoublepage
+  \phantomsection
+  \chapter*{#1}%
+  \addcontentsline{toc}{chapter}{#1}%
+  \markboth{#1}{}%
+}
+
+% ═══════════════════════════════════════════════════════════════════
+%  Encadré « point d'attention » — utilisé pour les pièges d'exploitation
+% ═══════════════════════════════════════════════════════════════════
+\newenvironment{attention}[1][Point d'attention]{%
+  \par\vspace{6pt}
+  \begin{list}{}{%
+    \setlength{\leftmargin}{12pt}\setlength{\rightmargin}{12pt}
+    \setlength{\topsep}{0pt}}
+  \item[]
+  \setlength{\fboxrule}{0pt}%
+  {\color{yaniOrProfond}\textbf{#1.}}\ %
+}{%
+  \end{list}\vspace{6pt}\par
+}
+
+% ═══════════════════════════════════════════════════════════════════
+%  Raccourcis de nommage
+% ═══════════════════════════════════════════════════════════════════
+\newcommand{\yani}{\textit{Yani Concept by Fati}}
+
+% Valeur restant à renseigner : affichée en gris italique, elle se repère d'un
+% coup d'œil dans le PDF et se coupe normalement en fin de ligne — au
+% contraire d'une suite de points de suspension, qui déborde des cellules de
+% tableau étroites.
+\newcommand{\aCompleter}[1]{\textit{\textcolor{yaniGris}{#1}}}
