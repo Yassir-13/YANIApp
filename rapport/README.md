@@ -1,6 +1,7 @@
-# Rapport de projet de fin d'études
+# Rapport de projet de fin d'année
 
-Source LaTeX du rapport de PFE sur le projet Yani Concept by Fati.
+Source LaTeX du rapport de projet de fin d'année (PFA) sur le projet
+Yani Concept by Fati.
 
 Le rapport suit la structure du modèle académique fourni : pages liminaires,
 introduction générale, cinq chapitres, conclusion et webographie. Le
