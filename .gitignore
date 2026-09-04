@@ -78,3 +78,4 @@ rapport/*.lot
 rapport/*.fls
 rapport/*.fdb_latexmk
 rapport/*.synctex.gz
+rapport/couverture-seule.pdf

@@ -1,0 +1,118 @@
+% ═══════════════════════════════════════════════════════════════════
+%  PAGE DE GARDE — format EMSI
+% ═══════════════════════════════════════════════════════════════════
+%
+%  Ce fichier est appelé de DEUX endroits :
+%    · main.tex             — le rapport complet ;
+%    · couverture-seule.tex — un document d'une page, pour régler la
+%                             couverture sans recompiler les 102 pages.
+%
+%  Il n'existe donc qu'une seule version de la couverture : ce qu'on ajuste
+%  ici se retrouve des deux côtés.
+%
+%  Les valeurs affichées (titre, noms, filière, année) ne sont PAS ici : elles
+%  vivent en tête de main.tex et de couverture-seule.tex, dans le bloc encadré
+%  de ▼▼▼ / ▲▲▲.
+%
+%  ⚠️ Deux passes de compilation sont nécessaires : `remember picture` doit
+%  connaître la position des coins de la page, ce qu'il n'apprend qu'au
+%  passage suivant. Une couverture décalée au premier essai est normale.
+%
+%  Toutes les positions sont mesurées depuis le COIN SUPÉRIEUR GAUCHE de la
+%  page (`current page.north west`), en centimètres, y négatif vers le bas.
+%  Pour descendre un bloc, augmenter son deuxième nombre.
+%
+%  Repères verticaux : logos −2,3 · filière −6,6 · cadre du titre −7,9 à −12,9
+%  · « Réalisé par » −16,5 · « Encadré par » −20,6 · année −27,6.
+\begin{titlepage}
+\thispagestyle{empty}
+\begin{tikzpicture}[remember picture, overlay]
+
+  % ---- Bande jaune en haut à gauche ----
+  \fill[jauneEMSI] ($(current page.north west)+(0.4cm,-1.1cm)$)
+    rectangle ($(current page.north west)+(8cm,-1.5cm)$);
+
+  % ---- Logos : l'école à gauche, le projet à droite ----
+  \node[anchor=north west] at ($(current page.north west)+(0.7cm,-2.3cm)$) {%
+    \logoCouverture{EMSI.png}{2.1cm}
+  };
+  \node[anchor=north east] at ($(current page.north east)+(-1cm,-2.3cm)$) {%
+    \logoCouverture{logo.png}{2.3cm}
+  };
+
+  % ---- Bande jaune sous les logos ----
+  \fill[jauneEMSI] ($(current page.north west)+(3.6cm,-5.3cm)$)
+    rectangle ($(current page.north east)+(-0.4cm,-5.7cm)$);
+
+  % ---- Nature du travail + filière ----
+  \node[anchor=north east] at ($(current page.north east)+(-1cm,-6.6cm)$) {%
+    \begin{minipage}{9cm}\raggedleft
+      {\large\bfseries \nouvelleNature}\\[4pt]
+      {\normalsize\bfseries\color{vertEMSI} \nouvelleFiliere}
+    \end{minipage}
+  };
+
+  % ---- Ombre + cadre arrondi du titre, avec ses deux attaches jaunes ----
+  \fill[ombre, rounded corners=8pt] ($(current page.north west)+(0.9cm,-8.1cm)$)
+    rectangle ($(current page.north west)+(11.2cm,-13.1cm)$);
+  \draw[jauneEMSI, line width=3pt, rounded corners=8pt]
+    ($(current page.north west)+(0.7cm,-7.9cm)$)
+    rectangle ($(current page.north west)+(11cm,-12.9cm)$);
+  \fill[jauneEMSI] ($(current page.north west)+(11cm,-8.3cm)$)
+    rectangle ($(current page.north east)+(-0.4cm,-8.7cm)$);
+  \fill[jauneEMSI] ($(current page.north west)+(11cm,-12.1cm)$)
+    rectangle ($(current page.north west)+(11.4cm,-12.9cm)$);
+  % La césure est désactivée ici seulement : un titre coupé en « ap-plication »
+  % au milieu d'une couverture se voit tout de suite. Le reste du rapport, lui,
+  % garde la césure — sans elle, le texte justifié se troue.
+  %
+  % \hyphenchar et non \hyphenpenalty : dans un nœud TikZ, la pénalité est
+  % rétablie avant que le paragraphe ne soit coupé, donc sans effet. Retirer le
+  % caractère de césure de la police, après l'avoir sélectionnée, tient.
+  \node[anchor=center, align=center, text width=9.6cm]
+    at ($(current page.north west)+(5.85cm,-10.4cm)$) {%
+    \normalsize\bfseries\selectfont
+    \hyphenchar\font=-1\relax
+    \nouvelleTitre
+  };
+
+  % ---- Filet jaune de séparation ----
+  \fill[jauneEMSI] ($(current page.north west)+(1cm,-13.9cm)$)
+    rectangle ($(current page.north east)+(-1cm,-14.05cm)$);
+
+  % ---- Bloc « Réalisé par » ----
+  % La barre est calée sur UN auteur. Pour un binôme, ajouter la seconde ligne
+  % dans le minipage ci-dessous et descendre le −17.9 à −18.5.
+  \fill[jauneEMSI] ($(current page.north west)+(1.1cm,-16.5cm)$)
+    rectangle ($(current page.north west)+(1.4cm,-17.9cm)$);
+  \node[anchor=north west] at ($(current page.north west)+(1.7cm,-16.6cm)$) {%
+    \begin{minipage}{12cm}
+      {\bfseries\color{vertEMSI} Réalisé par~:}\\[6pt]
+      \nouvelleAuteur
+    \end{minipage}
+  };
+
+  % ---- Bloc « Encadré par » ----
+  \fill[jauneEMSI] ($(current page.north west)+(1.1cm,-20.6cm)$)
+    rectangle ($(current page.north west)+(1.4cm,-23.4cm)$);
+  \node[anchor=north west] at ($(current page.north west)+(1.7cm,-20.7cm)$) {%
+    \begin{minipage}{15.5cm}
+      {\bfseries\color{vertEMSI} Encadré par~:}\\[6pt]
+      \nouvelleEncadrantPedagogique, Encadrant Académique,
+      EMSI \nouvelleVille.\\[6pt]
+      \nouvelleEncadrantEntreprise, Encadrant Professionnel,
+      \nouvelleTitreCourt, \nouvelleVille.
+    \end{minipage}
+  };
+
+  % ---- Filet jaune de bas de page ----
+  \fill[jauneEMSI] ($(current page.north west)+(1cm,-26.7cm)$)
+    rectangle ($(current page.north east)+(-1cm,-26.85cm)$);
+
+  % ---- Année universitaire ----
+  \node[anchor=north] at ($(current page.north)+(0cm,-27.6cm)$) {%
+    {\large\bfseries Année Universitaire~: \nouvelleAnnee}
+  };
+
+\end{tikzpicture}
+\end{titlepage}

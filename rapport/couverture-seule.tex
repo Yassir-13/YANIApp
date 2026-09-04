@@ -1,0 +1,82 @@
+% ═══════════════════════════════════════════════════════════════════
+%
+%   PAGE DE GARDE SEULE — document autonome, une page
+%
+%   À quoi ça sert : régler la couverture sans recompiler les 102 pages du
+%   rapport. Sur Overleaf, choisir ce fichier comme document principal
+%   (menu Menu → Main document), ajuster, puis rebasculer sur main.tex.
+%
+%   La couverture elle-même vit dans page-de-garde.tex, partagé avec le
+%   rapport : ce qui est réglé ici s'y retrouve, sans recopie.
+%
+%   ⚠️ COMPILER DEUX FOIS. `remember picture` a besoin d'une première passe
+%   pour connaître la position des coins de la page. Une couverture décalée
+%   au premier essai est normale, pas une erreur.
+%
+% ═══════════════════════════════════════════════════════════════════
+\documentclass[a4paper,12pt]{report}
+
+% ═══════════════════════════════════════════════════════════════════
+%  ▼▼▼  TOUT CE QUI EST À RENSEIGNER TIENT DANS CE BLOC  ▼▼▼
+%       (recopier les mêmes valeurs dans main.tex, lignes 19 à 41)
+% ═══════════════════════════════════════════════════════════════════
+% Le titre est composé dans un cadre de 9,6 cm : il se replie tout seul,
+% aucun retour à la ligne à placer à la main.
+\newcommand{\nouvelleTitre}{Conception et réalisation d'une application
+mobile, d'une API et d'un back-office pour un centre de beauté}
+
+\newcommand{\nouvelleNature}{Projet de Fin d'Année}
+\newcommand{\nouvelleFiliere}{Cybersécurité et Infrastructures Réseau}
+\newcommand{\nouvelleAnnee}{2025--2026}
+
+\newcommand{\nouvelleAuteur}{\aCompleter{Prénom NOM}}
+\newcommand{\nouvelleEncadrantPedagogique}{\aCompleter{Pr. Prénom NOM}}
+\newcommand{\nouvelleEncadrantEntreprise}{\aCompleter{Mme/M. Prénom NOM}}
+
+\newcommand{\nouvelleEtablissement}{École Marocaine des Sciences de l'Ingénieur}
+\newcommand{\nouvelleVille}{Marrakech}
+\newcommand{\nouvelleTitreCourt}{Yani Concept by Fati}
+% ═══════════════════════════════════════════════════════════════════
+%  ▲▲▲  FIN DU BLOC À RENSEIGNER  ▲▲▲
+% ═══════════════════════════════════════════════════════════════════
+
+% ── Le strict nécessaire à la couverture ─────────────────────────
+% Volontairement plus court que le préambule du rapport : ce document ne
+% compose qu'une page, inutile d'y charger de quoi en composer cent.
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{lmodern}
+\usepackage[a4paper,top=2.5cm,bottom=2.5cm,left=3cm,right=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{calc}
+
+% ── Couleurs institutionnelles EMSI ──────────────────────────────
+\definecolor{jauneEMSI}{RGB}{234, 224, 15}
+\definecolor{vertEMSI}{RGB}{0, 120, 70}
+\definecolor{ombre}{RGB}{225, 225, 225}
+\definecolor{yaniGris}{HTML}{6B6252}
+
+% ── Valeur restant à renseigner, en gris italique ────────────────
+\newcommand{\aCompleter}[1]{\textit{\textcolor{yaniGris}{#1}}}
+
+% ── Logo, avec repli si le fichier manque ────────────────────────
+% Tant que figures/EMSI.png n'est pas déposé, un cadre le nomme : le
+% document compile quand même.
+\newcommand{\logoCouverture}[2]{%
+  \IfFileExists{figures/#1}%
+    {\includegraphics[height=#2,keepaspectratio]{figures/#1}}%
+    {\setlength{\fboxrule}{0.8pt}\setlength{\fboxsep}{4pt}%
+     \fcolorbox{jauneEMSI}{white}{%
+       \begin{minipage}[c][#2][c]{3.4cm}
+         \centering\scriptsize\color{yaniGris}\ttfamily figures/#1
+       \end{minipage}}}%
+}
+
+\begin{document}
+
+\input{page-de-garde}
+
+\end{document}

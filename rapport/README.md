@@ -24,6 +24,22 @@ de page que ces listes ont décalés.
 
 Le résultat est `main.pdf`.
 
+### Régler la couverture sans recompiler tout
+
+```bash
+pdflatex couverture-seule && pdflatex couverture-seule
+```
+
+`couverture-seule.tex` produit **la couverture seule, en une page**. Elle
+appelle le même `page-de-garde.tex` que le rapport : ce qui est réglé là se
+retrouve ici, sans recopie. Sur Overleaf : Menu → *Main document* →
+`couverture-seule.tex`, puis rebasculer sur `main.tex` une fois satisfait.
+
+⚠️ **Deux passes obligatoires** pour la couverture. Elle est dessinée en
+surimpression avec `remember picture`, qui n'apprend la position des coins de
+la page qu'au passage suivant. Une couverture décalée au premier essai est
+normale — ce n'est pas une erreur.
+
 ### Dépendances
 
 Une distribution TeX Live complète suffit. Sur Debian ou Ubuntu :
@@ -66,7 +82,9 @@ Le logo est déjà en place (`figures/logo.png`, copié depuis
 
 ```
 rapport/
-├── main.tex                 # document maître : page de garde, ordre des parties
+├── main.tex                 # document maître : ordre des parties, valeurs à renseigner
+├── page-de-garde.tex        # la couverture (format EMSI)
+├── couverture-seule.tex     # ↑ la même, en document d'une page (mise au point)
 ├── preambule.tex            # paquets, charte graphique, macros
 ├── contenu/
 │   ├── 00-liminaires.tex            # dédicace, remerciements, résumé, abstract, glossaire
