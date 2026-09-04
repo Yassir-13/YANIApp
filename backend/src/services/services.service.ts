@@ -27,11 +27,13 @@ export class ServicesService {
   // Une faute de frappe dans un nom de catégorie était définitive : seul POST
   // existait. Le nom reste unique — le renommage vers un nom déjà pris est
   // refusé par la base (409).
-  async renameCategory(id: string, name: string) {
+  // Le DTO entier, et pas seulement le nom : c'est aussi par ici que passent
+  // les traductions arabe et anglaise de la catégorie.
+  async renameCategory(id: string, dto: CreateServiceCategoryDto) {
     await this.findCategoryOrFail(id);
     return this.prisma.serviceCategory.update({
       where: { id },
-      data: { name },
+      data: dto,
     });
   }
 

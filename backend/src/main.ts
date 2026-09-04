@@ -7,6 +7,7 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { TranslateResponseInterceptor } from './common/interceptors/translate-response.interceptor';
+import { LocalizeCatalogInterceptor } from './common/interceptors/localize-catalog.interceptor';
 import { UPLOADS_ROUTE, resolveUploadsDir } from './uploads/uploads.config';
 
 async function bootstrap() {
@@ -65,7 +66,14 @@ async function bootstrap() {
   // 200 avec une phrase destinée à la cliente (« Mot de passe modifié… ») que
   // l'application affiche telle quelle : cet intercepteur les traduit aussi,
   // d'après le même en-tête `Accept-Language`.
-  app.useGlobalInterceptors(new TranslateResponseInterceptor());
+  //
+  // Et le contenu du catalogue avec elles : noms et descriptions de
+  // prestations, de produits, de catégories et de récompenses sont servis dans
+  // la langue de la requête, où qu'ils apparaissent dans la réponse.
+  app.useGlobalInterceptors(
+    new TranslateResponseInterceptor(),
+    new LocalizeCatalogInterceptor(),
+  );
 
   // ── Adresse IP réelle derrière un reverse proxy ──
   // Le rate limiting compte les requêtes par IP. Derrière nginx ou un

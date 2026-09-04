@@ -1,0 +1,713 @@
+{
+  "_lisezMoi": "Traductions arabe et anglaise du catalogue. La clé est le nom FRANÇAIS de la fiche, qui est unique dans chaque table ; renommer une fiche dans le back-office détache sa traduction, et « npm run catalog:translate » le signale. Le français ne se saisit PAS ici : il vient du back-office.",
+  "serviceCategories": {
+    "Amincissement et Drainage (Machine Ultra Vitalo)": {
+      "nameAr": "التنحيف والتصريف اللمفاوي (جهاز أُلترا فيتالو)",
+      "nameEn": "Slimming & Lymphatic Drainage (Ultra Vitalo)"
+    },
+    "Beauté du regard": {
+      "nameAr": "جمال العينين",
+      "nameEn": "Eye Beauty"
+    },
+    "HIFU": {
+      "nameAr": "هيفو",
+      "nameEn": "HIFU"
+    },
+    "Laser Diod Cold": {
+      "nameAr": "ليزر ديود البارد",
+      "nameEn": "Cold Diode Laser"
+    },
+    "Laser Titanium Gold": {
+      "nameAr": "ليزر تيتانيوم غولد",
+      "nameEn": "Titanium Gold Laser"
+    },
+    "Lifting Colombien Boost": {
+      "nameAr": "الشدّ الكولومبي بوست",
+      "nameEn": "Colombian Lift Boost"
+    },
+    "Lifting Colombien Normal": {
+      "nameAr": "الشدّ الكولومبي العادي",
+      "nameEn": "Colombian Lift Standard"
+    },
+    "Maquillage Semi Permanent et Detatouage": {
+      "nameAr": "المكياج نصف الدائم وإزالة الوشم",
+      "nameEn": "Semi-Permanent Makeup & Tattoo Removal"
+    },
+    "Microneedling Cheveux": {
+      "nameAr": "مايكرونيدلينغ الشعر",
+      "nameEn": "Hair Microneedling"
+    },
+    "Microneedling Corps (prix par zone)": {
+      "nameAr": "مايكرونيدلينغ الجسم (السعر حسب المنطقة)",
+      "nameEn": "Body Microneedling (price per area)"
+    },
+    "Microneedling Visage": {
+      "nameAr": "مايكرونيدلينغ الوجه",
+      "nameEn": "Facial Microneedling"
+    },
+    "Plasma Pen": {
+      "nameAr": "قلم البلازما",
+      "nameEn": "Plasma Pen"
+    },
+    "Soin Hydra Facial et Produits Bio": {
+      "nameAr": "عناية هيدرافيشال ومنتجات عضوية",
+      "nameEn": "Hydrafacial & Organic Products"
+    },
+    "Soin dentaire": {
+      "nameAr": "العناية بالأسنان",
+      "nameEn": "Dental Care"
+    }
+  },
+  "productCategories": {
+    "Crèmes": {
+      "nameAr": "الكريمات",
+      "nameEn": "Creams"
+    },
+    "Huiles de corps": {
+      "nameAr": "زيوت الجسم",
+      "nameEn": "Body Oils"
+    },
+    "Soins visage": {
+      "nameAr": "العناية بالوجه",
+      "nameEn": "Face Care"
+    },
+    "Sérums": {
+      "nameAr": "السيرومات",
+      "nameEn": "Serums"
+    }
+  },
+  "services": {
+    "Amincissement et Drainage - 1 seance": {
+      "nameAr": "التنحيف والتصريف اللمفاوي - حصة واحدة",
+      "nameEn": "Slimming & Drainage - single session",
+      "descriptionAr": "تدليك للتنحيف بجهاز أُلترا فيتالو مع زيوتنا العضوية: تصريف لمفاوي، وتفكيك للدهون الموضعية، وتقليل مظهر قشرة البرتقال. حصة تعريفية.",
+      "descriptionEn": "A slimming massage with the Ultra Vitalo machine combined with our organic oils: lymphatic drainage, breakdown of localised fat and reduction of the orange-peel look. An introductory session."
+    },
+    "Amincissement et Drainage - Pack du 10 seances": {
+      "nameAr": "التنحيف والتصريف اللمفاوي - باقة 10 حصص",
+      "nameEn": "Slimming & Drainage - pack of 10 sessions",
+      "descriptionAr": "الدورة الكاملة بأفضل سعر. وهي الصيغة الأكثر فعالية على السيلوليت المستقر واحتباس الماء والمناطق العنيدة.",
+      "descriptionEn": "The complete course at the best price. This is the most effective format for established cellulite, water retention and stubborn areas."
+    },
+    "Amincissement et Drainage - Pack du 5 seances": {
+      "nameAr": "التنحيف والتصريف اللمفاوي - باقة 5 حصص",
+      "nameEn": "Slimming & Drainage - pack of 5 sessions",
+      "descriptionAr": "خمس حصص لبدء عمل حقيقي على القوام. هو الإيقاع المنصوح به لبدء ملاحظة أوّل السنتيمترات تتراجع والبشرة تستوي.",
+      "descriptionEn": "Five sessions to start working on the figure in earnest. This is the recommended pace to begin seeing the first centimetres go and the skin smooth out."
+    },
+    "Baby lips": {
+      "nameAr": "بيبي ليبس — تصبيغ الشفاه الطبيعي",
+      "nameEn": "Baby lips",
+      "descriptionAr": "مكياج نصف دائم للشفاه بلون هادئ وطبيعي. يعيد رسم المحيط ويُنعش اللون ويمنح مظهرًا ممتلئًا ومشرقًا دون أثر مكياج ظاهر.",
+      "descriptionEn": "Semi-permanent lip colour in a soft, natural shade. It redraws the outline, revives the colour and gives a fresh, plumped look without appearing made up."
+    },
+    "Blanchiment des dents - 1 séance": {
+      "nameAr": "تبييض الأسنان - حصة واحدة",
+      "nameEn": "Teeth whitening - single session",
+      "descriptionAr": "تفتيح الابتسامة في حصة واحدة، بجل يُنشَّط بمصباح LED. عدة درجات تُكتسب في زيارة واحدة، دون الإضرار بمينا الأسنان.",
+      "descriptionEn": "A brighter smile in one session, with a gel activated by an LED lamp. Several shades gained in a single visit, without damaging the enamel."
+    },
+    "Blanchiment des dents - 2 seances": {
+      "nameAr": "تبييض الأسنان - حصتان",
+      "nameEn": "Teeth whitening - 2 sessions",
+      "descriptionAr": "حصتان لنتيجة أوضح وثبات أفضل مع الوقت. يُنصح بهما للأسنان الشديدة التصبّغ بفعل القهوة أو الشاي أو التبغ.",
+      "descriptionEn": "Two sessions for a more pronounced result that holds better over time. Recommended for teeth heavily stained by coffee, tea or tobacco."
+    },
+    "Bords de maillot - 1 seance": {
+      "nameAr": "حدود البيكيني - حصة واحدة",
+      "nameEn": "Bikini line - single session",
+      "descriptionAr": "محيط منطقة البيكيني، لخطٍّ واضح دون تهيّج ولا شعر ناشب. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. حصة مفردة؛ يُنصح في المتوسط بـ 6 إلى 8 حصص بفاصل 4 إلى 6 أسابيع للحصول على نتيجة نهائية.",
+      "descriptionEn": "The bikini contours, for a clean line without irritation or ingrown hairs. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A single session; on average 6 to 8 sessions spaced 4 to 6 weeks apart are needed for a permanent result."
+    },
+    "Bords de maillot - Pack 6 seances": {
+      "nameAr": "حدود البيكيني - باقة 6 حصص",
+      "nameEn": "Bikini line - pack of 6 sessions",
+      "descriptionAr": "محيط منطقة البيكيني، لخطٍّ واضح دون تهيّج ولا شعر ناشب. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. باقة من 6 حصص: الدورة الكاملة بسعر مُفضّل، وهي الصيغة المنصوح بها لنتيجة دائمة.",
+      "descriptionEn": "The bikini contours, for a clean line without irritation or ingrown hairs. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A pack of 6 sessions: the full cycle at a preferential price, the recommended option for a lasting result."
+    },
+    "Bras complet - 1 seance": {
+      "nameAr": "الذراعان كاملتان - حصة واحدة",
+      "nameEn": "Full arms - single session",
+      "descriptionAr": "الذراعان كاملتان، من المعصم إلى الكتف. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. حصة مفردة؛ يُنصح في المتوسط بـ 6 إلى 8 حصص بفاصل 4 إلى 6 أسابيع للحصول على نتيجة نهائية.",
+      "descriptionEn": "The entire arms, from wrist to shoulder. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A single session; on average 6 to 8 sessions spaced 4 to 6 weeks apart are needed for a permanent result."
+    },
+    "Bras complet - Pack 6 seances": {
+      "nameAr": "الذراعان كاملتان - باقة 6 حصص",
+      "nameEn": "Full arms - pack of 6 sessions",
+      "descriptionAr": "الذراعان كاملتان، من المعصم إلى الكتف. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. باقة من 6 حصص: الدورة الكاملة بسعر مُفضّل، وهي الصيغة المنصوح بها لنتيجة دائمة.",
+      "descriptionEn": "The entire arms, from wrist to shoulder. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A pack of 6 sessions: the full cycle at a preferential price, the recommended option for a lasting result."
+    },
+    "Brow lift": {
+      "nameAr": "رفع الحاجبين",
+      "nameEn": "Brow lift",
+      "descriptionAr": "إعادة تشكيل الحاجبين: تُليَّن الشعيرات ثم تُقوَّم وتُثبَّت للحصول على خط كثيف ومنسجم ومنضبط. مفعول طبيعي يدوم من 6 إلى 8 أسابيع.",
+      "descriptionEn": "Brow restructuring: the hairs are softened, straightened and then set to achieve a dense, harmonious and disciplined line. A natural effect lasting 6 to 8 weeks."
+    },
+    "Corps Z/G - 1 seance": {
+      "nameAr": "الجسم — المناطق الكبرى - حصة واحدة",
+      "nameEn": "Body — large areas - single session",
+      "descriptionAr": "صيغة تجمع المناطق الكبرى من الجسم في خدمة واحدة. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. حصة مفردة؛ يُنصح في المتوسط بـ 6 إلى 8 حصص بفاصل 4 إلى 6 أسابيع للحصول على نتيجة نهائية.",
+      "descriptionEn": "A formula grouping the large body areas into a single treatment. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A single session; on average 6 to 8 sessions spaced 4 to 6 weeks apart are needed for a permanent result."
+    },
+    "Corps Z/G - Pack 6 seances": {
+      "nameAr": "الجسم — المناطق الكبرى - باقة 6 حصص",
+      "nameEn": "Body — large areas - pack of 6 sessions",
+      "descriptionAr": "صيغة تجمع المناطق الكبرى من الجسم في خدمة واحدة. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. باقة من 6 حصص: الدورة الكاملة بسعر مُفضّل، وهي الصيغة المنصوح بها لنتيجة دائمة.",
+      "descriptionEn": "A formula grouping the large body areas into a single treatment. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A pack of 6 sessions: the full cycle at a preferential price, the recommended option for a lasting result."
+    },
+    "Corps complet - 1 seance": {
+      "nameAr": "الجسم كاملًا - حصة واحدة",
+      "nameEn": "Full body - single session",
+      "descriptionAr": "الجسم كاملًا في صيغة واحدة، من الرأس إلى القدمين. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. حصة مفردة؛ يُنصح في المتوسط بـ 6 إلى 8 حصص بفاصل 4 إلى 6 أسابيع للحصول على نتيجة نهائية.",
+      "descriptionEn": "The whole body treated in a single formula, from head to toe. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A single session; on average 6 to 8 sessions spaced 4 to 6 weeks apart are needed for a permanent result."
+    },
+    "Corps complet - Pack 6 seances": {
+      "nameAr": "الجسم كاملًا - باقة 6 حصص",
+      "nameEn": "Full body - pack of 6 sessions",
+      "descriptionAr": "الجسم كاملًا في صيغة واحدة، من الرأس إلى القدمين. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. باقة من 6 حصص: الدورة الكاملة بسعر مُفضّل، وهي الصيغة المنصوح بها لنتيجة دائمة.",
+      "descriptionEn": "The whole body treated in a single formula, from head to toe. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A pack of 6 sessions: the full cycle at a preferential price, the recommended option for a lasting result."
+    },
+    "Correction de la couleur des levres et contour - 1ere seance": {
+      "nameAr": "تصحيح لون الشفاه ومحيطها - الحصة الأولى",
+      "nameEn": "Lip colour & outline correction - first session",
+      "descriptionAr": "معالجة كاملة للون الشفاه ومحيطها: يُعاد توحيد اللون ورسم الخط لتصحيح عدم التناظر أو عمل سابق. الحصة الأولى من البروتوكول.",
+      "descriptionEn": "A full rework of the lip colour and outline: the shade is rebalanced and the line redrawn to correct an asymmetry or earlier work. The first session of the protocol."
+    },
+    "Correction de la couleur des levres et contour - 2eme seance (max apres 1 mois)": {
+      "nameAr": "تصحيح لون الشفاه ومحيطها - الحصة الثانية (خلال شهر على الأكثر)",
+      "nameEn": "Lip colour & outline correction - second session (within 1 month)",
+      "descriptionAr": "حصة التصحيح النهائي، تُجرى خلال شهر على الأكثر بعد الأولى. تُثبّت اللون النهائي وتصحّح المناطق الأقل ثباتًا وتضمن دوام النتيجة.",
+      "descriptionEn": "The retouch session, to be done at most one month after the first. It sets the final shade, corrects the areas that took less pigment and secures the result over time."
+    },
+    "Correction de la couleur des levres et contour - Pack 2 seances": {
+      "nameAr": "تصحيح لون الشفاه ومحيطها - باقة حصتين",
+      "nameEn": "Lip colour & outline correction - pack of 2 sessions",
+      "descriptionAr": "البروتوكول الكامل في حصتين (التصحيح ثم اللمسة النهائية) بسعر مُفضّل. الصيغة المنصوح بها لنتيجة متقنة ودائمة.",
+      "descriptionEn": "The complete two-session protocol (correction then retouch) at a preferential price. The recommended option for a finished, lasting result."
+    },
+    "Demi Bras - 1 seance": {
+      "nameAr": "نصف الذراع - حصة واحدة",
+      "nameEn": "Half arms - single session",
+      "descriptionAr": "الساعدان، من المرفق إلى المعصم. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. حصة مفردة؛ يُنصح في المتوسط بـ 6 إلى 8 حصص بفاصل 4 إلى 6 أسابيع للحصول على نتيجة نهائية.",
+      "descriptionEn": "The forearms, from elbow to wrist. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A single session; on average 6 to 8 sessions spaced 4 to 6 weeks apart are needed for a permanent result."
+    },
+    "Demi Bras - Pack 6 seances": {
+      "nameAr": "نصف الذراع - باقة 6 حصص",
+      "nameEn": "Half arms - pack of 6 sessions",
+      "descriptionAr": "الساعدان، من المرفق إلى المعصم. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. باقة من 6 حصص: الدورة الكاملة بسعر مُفضّل، وهي الصيغة المنصوح بها لنتيجة دائمة.",
+      "descriptionEn": "The forearms, from elbow to wrist. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A pack of 6 sessions: the full cycle at a preferential price, the recommended option for a lasting result."
+    },
+    "Demi Dos - 1 seance": {
+      "nameAr": "نصف الظهر - حصة واحدة",
+      "nameEn": "Half back - single session",
+      "descriptionAr": "أعلى الظهر أو أسفله، حسب اختيارك. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. حصة مفردة؛ يُنصح في المتوسط بـ 6 إلى 8 حصص بفاصل 4 إلى 6 أسابيع للحصول على نتيجة نهائية.",
+      "descriptionEn": "The upper or the lower back, as you prefer. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A single session; on average 6 to 8 sessions spaced 4 to 6 weeks apart are needed for a permanent result."
+    },
+    "Demi Dos - Pack 6 seances": {
+      "nameAr": "نصف الظهر - باقة 6 حصص",
+      "nameEn": "Half back - pack of 6 sessions",
+      "descriptionAr": "أعلى الظهر أو أسفله، حسب اختيارك. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. باقة من 6 حصص: الدورة الكاملة بسعر مُفضّل، وهي الصيغة المنصوح بها لنتيجة دائمة.",
+      "descriptionEn": "The upper or the lower back, as you prefer. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A pack of 6 sessions: the full cycle at a preferential price, the recommended option for a lasting result."
+    },
+    "Demi Jambe - 1 seance": {
+      "nameAr": "نصف الساق - حصة واحدة",
+      "nameEn": "Half legs - single session",
+      "descriptionAr": "نصف الساقين، من الركبة إلى الكاحل. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. حصة مفردة؛ يُنصح في المتوسط بـ 6 إلى 8 حصص بفاصل 4 إلى 6 أسابيع للحصول على نتيجة نهائية.",
+      "descriptionEn": "The lower legs, from knee to ankle. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A single session; on average 6 to 8 sessions spaced 4 to 6 weeks apart are needed for a permanent result."
+    },
+    "Demi Jambe - Pack 6 seances": {
+      "nameAr": "نصف الساق - باقة 6 حصص",
+      "nameEn": "Half legs - pack of 6 sessions",
+      "descriptionAr": "نصف الساقين، من الركبة إلى الكاحل. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. باقة من 6 حصص: الدورة الكاملة بسعر مُفضّل، وهي الصيغة المنصوح بها لنتيجة دائمة.",
+      "descriptionEn": "The lower legs, from knee to ankle. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A pack of 6 sessions: the full cycle at a preferential price, the recommended option for a lasting result."
+    },
+    "Detatouage (tattoo Corps) avec Laser a partir du": {
+      "nameAr": "إزالة وشم الجسم بالليزر ابتداءً من",
+      "nameEn": "Body tattoo removal with laser, from",
+      "descriptionAr": "محو الوشم بالليزر: تُفتَّت الأصباغ ثم يتخلّص منها الجسم طبيعيًا. السعر ابتدائي، ويختلف بحسب المساحة والألوان وعدد الحصص اللازمة.",
+      "descriptionEn": "Laser tattoo removal: the pigments are broken up and then cleared naturally by the body. Starting price, varying with the surface, the colours and the number of sessions needed."
+    },
+    "Detatouage (tattoo Corps) avec Produits a partir du": {
+      "nameAr": "إزالة وشم الجسم بالمستحضرات ابتداءً من",
+      "nameEn": "Body tattoo removal with products, from",
+      "descriptionAr": "إزالة تدريجية لوشم الجسم بمحلول استخراج يرفع الأصباغ نحو السطح. السعر ابتدائي، يُضبط بحسب الحجم والعمق وقِدَم الوشم.",
+      "descriptionEn": "Gradual removal of a body tattoo using an extraction solution that draws the pigments to the surface. Starting price, adjusted for size, depth and age of the tattoo."
+    },
+    "Detatouage des sourcils 1 seance": {
+      "nameAr": "إزالة وشم الحاجبين - حصة واحدة",
+      "nameEn": "Brow tattoo removal - single session",
+      "descriptionAr": "تفتيح مكياج دائم قديم صار داكنًا أكثر من اللازم أو في غير موضعه أو تغيّر لونه. حصة تفتيح تدريجي للانطلاق من أرضية نظيفة قبل عمل جديد.",
+      "descriptionEn": "Fading an old permanent makeup that has gone too dark, sits badly or has changed colour. One session of gradual lightening, to start again from a clean base before new work."
+    },
+    "Detatouage des sourcils Pack 2 seances": {
+      "nameAr": "إزالة وشم الحاجبين - باقة حصتين",
+      "nameEn": "Brow tattoo removal - pack of 2 sessions",
+      "descriptionAr": "حصتا تفتيح متباعدتان بسعر مُفضّل. يُنصح بهما للأصباغ القديمة أو الشديدة التشبّع أو العميقة، التي تحتاج إلى أكثر من مرور واحد.",
+      "descriptionEn": "Two spaced-out fading sessions at a preferential price. Recommended for old, heavily saturated or deeply set pigments that need more than one pass."
+    },
+    "Duvet + Menton - 1 seance": {
+      "nameAr": "شعر الشفة العليا والذقن - حصة واحدة",
+      "nameEn": "Upper lip + chin - single session",
+      "descriptionAr": "شعر الشفة العليا والذقن معًا — وهي التركيبة الأكثر طلبًا في الوجه. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. حصة مفردة؛ يُنصح في المتوسط بـ 6 إلى 8 حصص بفاصل 4 إلى 6 أسابيع للحصول على نتيجة نهائية.",
+      "descriptionEn": "Upper-lip hair and chin treated together — the most requested facial combination. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A single session; on average 6 to 8 sessions spaced 4 to 6 weeks apart are needed for a permanent result."
+    },
+    "Duvet + Menton - Pack 6 seances": {
+      "nameAr": "شعر الشفة العليا والذقن - باقة 6 حصص",
+      "nameEn": "Upper lip + chin - pack of 6 sessions",
+      "descriptionAr": "شعر الشفة العليا والذقن معًا — وهي التركيبة الأكثر طلبًا في الوجه. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. باقة من 6 حصص: الدورة الكاملة بسعر مُفضّل، وهي الصيغة المنصوح بها لنتيجة دائمة.",
+      "descriptionEn": "Upper-lip hair and chin treated together — the most requested facial combination. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A pack of 6 sessions: the full cycle at a preferential price, the recommended option for a lasting result."
+    },
+    "Duvet - 1 seance": {
+      "nameAr": "شعر الشفة العليا - حصة واحدة",
+      "nameEn": "Upper lip - single session",
+      "descriptionAr": "الشعر الناعم فوق الشفة العليا. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. حصة مفردة؛ يُنصح في المتوسط بـ 6 إلى 8 حصص بفاصل 4 إلى 6 أسابيع للحصول على نتيجة نهائية.",
+      "descriptionEn": "The fine hair on the upper lip. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A single session; on average 6 to 8 sessions spaced 4 to 6 weeks apart are needed for a permanent result."
+    },
+    "Duvet - Pack 6 seances": {
+      "nameAr": "شعر الشفة العليا - باقة 6 حصص",
+      "nameEn": "Upper lip - pack of 6 sessions",
+      "descriptionAr": "الشعر الناعم فوق الشفة العليا. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. باقة من 6 حصص: الدورة الكاملة بسعر مُفضّل، وهي الصيغة المنصوح بها لنتيجة دائمة.",
+      "descriptionEn": "The fine hair on the upper lip. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A pack of 6 sessions: the full cycle at a preferential price, the recommended option for a lasting result."
+    },
+    "Epilation definitive a partir de (par zone)": {
+      "nameAr": "إزالة الشعر النهائية ابتداءً من (حسب المنطقة)",
+      "nameEn": "Permanent hair removal from (per area)",
+      "descriptionAr": "إزالة نهائية للشعر بالليزر البارد: يُتلَف الشعر من جذوره دون تسخين البشرة، فتكون الحصة مريحة. السعر ابتدائي حسب المنطقة، ويختلف بحسب المساحة المعالَجة.",
+      "descriptionEn": "Permanent hair removal with cold laser: the hair is destroyed at the root without heating the skin, for a comfortable session. Starting price per area, varying with the surface to be treated."
+    },
+    "Jambe Complete - 1 seance": {
+      "nameAr": "الساقان كاملتان - حصة واحدة",
+      "nameEn": "Full legs - single session",
+      "descriptionAr": "الساقان كاملتان، بما فيهما الفخذان والسمانتان. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. حصة مفردة؛ يُنصح في المتوسط بـ 6 إلى 8 حصص بفاصل 4 إلى 6 أسابيع للحصول على نتيجة نهائية.",
+      "descriptionEn": "The entire legs, thighs and calves included. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A single session; on average 6 to 8 sessions spaced 4 to 6 weeks apart are needed for a permanent result."
+    },
+    "Jambe Complete - Pack 6 seances": {
+      "nameAr": "الساقان كاملتان - باقة 6 حصص",
+      "nameEn": "Full legs - pack of 6 sessions",
+      "descriptionAr": "الساقان كاملتان، بما فيهما الفخذان والسمانتان. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. باقة من 6 حصص: الدورة الكاملة بسعر مُفضّل، وهي الصيغة المنصوح بها لنتيجة دائمة.",
+      "descriptionEn": "The entire legs, thighs and calves included. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A pack of 6 sessions: the full cycle at a preferential price, the recommended option for a lasting result."
+    },
+    "Lash lift": {
+      "nameAr": "رفع الرموش",
+      "nameEn": "Lash lift",
+      "descriptionAr": "رفع الرموش الطبيعية: تُجعَّد من الجذر للحصول على مفعول «العين المفتوحة»، دون تركيب رموش ولا ماسكارا. نتيجة فورية تدوم من 6 إلى 8 أسابيع.",
+      "descriptionEn": "A lift for your natural lashes: they are curled right from the root for an open-eye effect, with no extensions and no mascara. An immediate result that holds for 6 to 8 weeks."
+    },
+    "Le Double Menton - 1 seance": {
+      "nameAr": "الذقن المزدوج - حصة واحدة",
+      "nameEn": "Double chin - single session",
+      "descriptionAr": "المنطقة تحت الذقن وأعلى الرقبة. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. حصة مفردة؛ يُنصح في المتوسط بـ 6 إلى 8 حصص بفاصل 4 إلى 6 أسابيع للحصول على نتيجة نهائية.",
+      "descriptionEn": "The area under the chin and the upper neck. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A single session; on average 6 to 8 sessions spaced 4 to 6 weeks apart are needed for a permanent result."
+    },
+    "Le Double Menton - Pack 6 seances": {
+      "nameAr": "الذقن المزدوج - باقة 6 حصص",
+      "nameEn": "Double chin - pack of 6 sessions",
+      "descriptionAr": "المنطقة تحت الذقن وأعلى الرقبة. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. باقة من 6 حصص: الدورة الكاملة بسعر مُفضّل، وهي الصيغة المنصوح بها لنتيجة دائمة.",
+      "descriptionEn": "The area under the chin and the upper neck. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A pack of 6 sessions: the full cycle at a preferential price, the recommended option for a lasting result."
+    },
+    "Le Menton - 1 seance": {
+      "nameAr": "الذقن - حصة واحدة",
+      "nameEn": "Chin - single session",
+      "descriptionAr": "شعر الذقن، وهو غالبًا أخشن وأكثر تكرارًا. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. حصة مفردة؛ يُنصح في المتوسط بـ 6 إلى 8 حصص بفاصل 4 إلى 6 أسابيع للحصول على نتيجة نهائية.",
+      "descriptionEn": "Chin hair, often coarser and more persistent. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A single session; on average 6 to 8 sessions spaced 4 to 6 weeks apart are needed for a permanent result."
+    },
+    "Le Menton - Pack 6 seances": {
+      "nameAr": "الذقن - باقة 6 حصص",
+      "nameEn": "Chin - pack of 6 sessions",
+      "descriptionAr": "شعر الذقن، وهو غالبًا أخشن وأكثر تكرارًا. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. باقة من 6 حصص: الدورة الكاملة بسعر مُفضّل، وهي الصيغة المنصوح بها لنتيجة دائمة.",
+      "descriptionEn": "Chin hair, often coarser and more persistent. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A pack of 6 sessions: the full cycle at a preferential price, the recommended option for a lasting result."
+    },
+    "Les Aisselles - 1 seance": {
+      "nameAr": "الإبطان - حصة واحدة",
+      "nameEn": "Underarms - single session",
+      "descriptionAr": "الإبطان — منطقة سريعة العلاج ومن الأكثر استجابةً لليزر. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. حصة مفردة؛ يُنصح في المتوسط بـ 6 إلى 8 حصص بفاصل 4 إلى 6 أسابيع للحصول على نتيجة نهائية.",
+      "descriptionEn": "The underarms — a quick area to treat and among the most responsive to laser. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A single session; on average 6 to 8 sessions spaced 4 to 6 weeks apart are needed for a permanent result."
+    },
+    "Les Aisselles - Pack 6 seances": {
+      "nameAr": "الإبطان - باقة 6 حصص",
+      "nameEn": "Underarms - pack of 6 sessions",
+      "descriptionAr": "الإبطان — منطقة سريعة العلاج ومن الأكثر استجابةً لليزر. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. باقة من 6 حصص: الدورة الكاملة بسعر مُفضّل، وهي الصيغة المنصوح بها لنتيجة دائمة.",
+      "descriptionEn": "The underarms — a quick area to treat and among the most responsive to laser. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A pack of 6 sessions: the full cycle at a preferential price, the recommended option for a lasting result."
+    },
+    "Les Cuisses - 1 seance": {
+      "nameAr": "الفخذان - حصة واحدة",
+      "nameEn": "Thighs - single session",
+      "descriptionAr": "الفخذان، من الركبة إلى أعلى الساق. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. حصة مفردة؛ يُنصح في المتوسط بـ 6 إلى 8 حصص بفاصل 4 إلى 6 أسابيع للحصول على نتيجة نهائية.",
+      "descriptionEn": "The thighs, from knee to the top of the leg. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A single session; on average 6 to 8 sessions spaced 4 to 6 weeks apart are needed for a permanent result."
+    },
+    "Les Cuisses - Pack 6 seances": {
+      "nameAr": "الفخذان - باقة 6 حصص",
+      "nameEn": "Thighs - pack of 6 sessions",
+      "descriptionAr": "الفخذان، من الركبة إلى أعلى الساق. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. باقة من 6 حصص: الدورة الكاملة بسعر مُفضّل، وهي الصيغة المنصوح بها لنتيجة دائمة.",
+      "descriptionEn": "The thighs, from knee to the top of the leg. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A pack of 6 sessions: the full cycle at a preferential price, the recommended option for a lasting result."
+    },
+    "Lifting Colombien Boost (Massage, Drainage inclus 2 Machines 1h30) - 1 seance": {
+      "nameAr": "الشدّ الكولومبي بوست (تدليك وتصريف، جهازان، ساعة ونصف) - حصة واحدة",
+      "nameEn": "Colombian Lift Boost (massage & drainage, 2 machines, 1 hr 30) - single session",
+      "descriptionAr": "النسخة المكثّفة من الشدّ الكولومبي: ساعة ونصف تجمع بين التدليك اليدوي والتصريف اللمفاوي وجهازين. لمفعول شدّ ونحت أقوى بوضوح.",
+      "descriptionEn": "The intensive version of the Colombian lift: 90 minutes combining manual massage, lymphatic drainage and two machines. For a markedly stronger firming and sculpting effect."
+    },
+    "Lifting Colombien Boost - Pack du 10 seances": {
+      "nameAr": "الشدّ الكولومبي بوست - باقة 10 حصص",
+      "nameEn": "Colombian Lift Boost - pack of 10 sessions",
+      "descriptionAr": "دورة بوست الكاملة، وهي أكمل صيغة لدينا. نتائج قصوى على إعادة النحت والتصريف وجودة البشرة.",
+      "descriptionEn": "The full Boost course, our most complete formula. Maximum results on reshaping, drainage and skin quality."
+    },
+    "Lifting Colombien Boost - Pack du 4 seances": {
+      "nameAr": "الشدّ الكولومبي بوست - باقة 4 حصص",
+      "nameEn": "Colombian Lift Boost - pack of 4 sessions",
+      "descriptionAr": "أربع حصص مكثّفة لإطلاق إعادة النحت. الصيغة الأكثر فعالية في مدة قصيرة.",
+      "descriptionEn": "Four intensive sessions to kick off the reshaping. The most effective format over a short period."
+    },
+    "Lifting Colombien Boost - Pack du 6 seances": {
+      "nameAr": "الشدّ الكولومبي بوست - باقة 6 حصص",
+      "nameEn": "Colombian Lift Boost - pack of 6 sessions",
+      "descriptionAr": "ست حصص بوست لعمل عميق على التماسك والنحت. أفضل توازن بين النتيجة والميزانية.",
+      "descriptionEn": "Six Boost sessions for deep work on firmness and contour. The best balance between result and budget."
+    },
+    "Lifting Colombien Normal (Massage et Machine 1H) - 1 seance": {
+      "nameAr": "الشدّ الكولومبي العادي (تدليك وجهاز، ساعة) - حصة واحدة",
+      "nameEn": "Colombian Lift Standard (massage & machine, 1 hr) - single session",
+      "descriptionAr": "علاج بالتفريغ الهوائي: تشفط الكؤوس البشرة لتنشيط الدورة الدموية وتصريف السموم وشدّ المنطقة المعالَجة. ساعة من التدليك والجهاز، دون ألم ودون جراحة.",
+      "descriptionEn": "Vacuum therapy: suction cups lift the skin to boost circulation, drain toxins and firm the treated area. One hour of massage and machine work, painless and without surgery."
+    },
+    "Lifting Colombien Normal - Pack du 10 seances": {
+      "nameAr": "الشدّ الكولومبي العادي - باقة 10 حصص",
+      "nameEn": "Colombian Lift Standard - pack of 10 sessions",
+      "descriptionAr": "الدورة الكاملة بأفضل سعر. الصيغة الأكثر فعالية لتغيير ملحوظ يدوم في الزمن.",
+      "descriptionEn": "The complete course at the best price. The most effective format for a visible change that lasts."
+    },
+    "Lifting Colombien Normal - Pack du 4 seances": {
+      "nameAr": "الشدّ الكولومبي العادي - باقة 4 حصص",
+      "nameEn": "Colombian Lift Standard - pack of 4 sessions",
+      "descriptionAr": "أربع حصص لترسيخ مفعول النحت والشدّ. الصيغة التعريفية المثالية لأوّل هدف يخصّ القوام.",
+      "descriptionEn": "Four sessions to settle in the sculpting and firming effect. The ideal introductory format for a first body-shape goal."
+    },
+    "Lifting Colombien Normal - Pack du 6 seances": {
+      "nameAr": "الشدّ الكولومبي العادي - باقة 6 حصص",
+      "nameEn": "Colombian Lift Standard - pack of 6 sessions",
+      "descriptionAr": "ست حصص لإعادة نحت أوضح للمنطقة المعالَجة. الإيقاع المنصوح به: حصة إلى حصتين أسبوعيًا، مع يوم راحة بين كل حصة وأخرى.",
+      "descriptionEn": "Six sessions for more pronounced reshaping of the treated area. Recommended pace: one to two sessions a week, with a rest day in between."
+    },
+    "Maillot INT + l'anus - 1 seance": {
+      "nameAr": "البيكيني الكامل مع المنطقة الشرجية - حصة واحدة",
+      "nameEn": "Full bikini + anal area - single session",
+      "descriptionAr": "البيكيني الكامل والمنطقة الشرجية، لإزالة شعر شاملة. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. حصة مفردة؛ يُنصح في المتوسط بـ 6 إلى 8 حصص بفاصل 4 إلى 6 أسابيع للحصول على نتيجة نهائية.",
+      "descriptionEn": "Full bikini and anal area, for complete hair removal. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A single session; on average 6 to 8 sessions spaced 4 to 6 weeks apart are needed for a permanent result."
+    },
+    "Maillot INT + l'anus - Pack 6 seances": {
+      "nameAr": "البيكيني الكامل مع المنطقة الشرجية - باقة 6 حصص",
+      "nameEn": "Full bikini + anal area - pack of 6 sessions",
+      "descriptionAr": "البيكيني الكامل والمنطقة الشرجية، لإزالة شعر شاملة. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. باقة من 6 حصص: الدورة الكاملة بسعر مُفضّل، وهي الصيغة المنصوح بها لنتيجة دائمة.",
+      "descriptionEn": "Full bikini and anal area, for complete hair removal. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A pack of 6 sessions: the full cycle at a preferential price, the recommended option for a lasting result."
+    },
+    "Maillot integral - 1 seance": {
+      "nameAr": "البيكيني الكامل - حصة واحدة",
+      "nameEn": "Full bikini - single session",
+      "descriptionAr": "منطقة البيكيني كاملةً. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. حصة مفردة؛ يُنصح في المتوسط بـ 6 إلى 8 حصص بفاصل 4 إلى 6 أسابيع للحصول على نتيجة نهائية.",
+      "descriptionEn": "The bikini area in full. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A single session; on average 6 to 8 sessions spaced 4 to 6 weeks apart are needed for a permanent result."
+    },
+    "Maillot integral - Pack 6 seances": {
+      "nameAr": "البيكيني الكامل - باقة 6 حصص",
+      "nameEn": "Full bikini - pack of 6 sessions",
+      "descriptionAr": "منطقة البيكيني كاملةً. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. باقة من 6 حصص: الدورة الكاملة بسعر مُفضّل، وهي الصيغة المنصوح بها لنتيجة دائمة.",
+      "descriptionEn": "The bikini area in full. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A pack of 6 sessions: the full cycle at a preferential price, the recommended option for a lasting result."
+    },
+    "Microblading et Microshading": {
+      "nameAr": "مايكروبليدينغ ومايكروشيدينغ",
+      "nameEn": "Microblading & microshading",
+      "descriptionAr": "تصبيغ الحاجبين شعرة بشعرة (مايكروبليدينغ) أو بمفعول الظلّ البودري (مايكروشيدينغ). حاجبان كثيفان ومتناظران ومرسومان بإتقان، بنتيجة طبيعية تدوم من 12 إلى 18 شهرًا.",
+      "descriptionEn": "Brow pigmentation, hair by hair (microblading) or in a soft powdered shading (microshading). Dense, symmetrical, perfectly drawn brows, with a natural result lasting 12 to 18 months."
+    },
+    "Microneedling + Bbglow": {
+      "nameAr": "مايكرونيدلينغ + BB Glow",
+      "nameEn": "Microneedling + BB Glow",
+      "descriptionAr": "مايكرونيدلينغ مع BB Glow: يُدمج سيروم ملوّن في الطبقات السطحية لتوحيد لون البشرة وإخفاء التفاوتات، إضافةً إلى مفعول التجديد.",
+      "descriptionEn": "Microneedling combined with BB Glow: a tinted serum is infused into the surface layers to even out skin colour and mask irregularities, on top of the regenerating effect."
+    },
+    "Microneedling + Bbglow + LED": {
+      "nameAr": "مايكرونيدلينغ + BB Glow + LED",
+      "nameEn": "Microneedling + BB Glow + LED",
+      "descriptionAr": "الصيغة الكاملة: تجديد بالمايكرونيدلينغ، وتوحيد للون البشرة بـ BB Glow، وتهدئة بالـ LED. أكمل بروتوكول لبشرة الجسم لدينا.",
+      "descriptionEn": "The complete formula: regeneration through microneedling, an even tone from BB Glow and soothing from LED. Our most complete protocol for the skin of the body."
+    },
+    "Microneedling + LED": {
+      "nameAr": "مايكرونيدلينغ + LED",
+      "nameEn": "Microneedling + LED",
+      "descriptionAr": "مايكرونيدلينغ الجسم مع العلاج الضوئي LED، الذي يهدّئ المنطقة المعالَجة ويسرّع الالتئام. نتيجة أسرع وحصة أكثر راحة.",
+      "descriptionEn": "Body microneedling completed by LED light therapy, which soothes the treated area and speeds up healing. A faster result and a more comfortable session."
+    },
+    "Microneedling Cheveux - 1 seance": {
+      "nameAr": "مايكرونيدلينغ الشعر - حصة واحدة",
+      "nameEn": "Hair microneedling - single session",
+      "descriptionAr": "وخزات دقيقة في فروة الرأس مع سيرومات مقوّية. تنشّط الدورة الدموية الدقيقة وتوقظ البصيلات لتكثيف الشعر والحدّ من تساقطه.",
+      "descriptionEn": "Micro-perforations of the scalp combined with strengthening serums. They boost micro-circulation and wake up the follicles to thicken the hair and slow hair loss."
+    },
+    "Microneedling Cheveux - Pack 2 seances": {
+      "nameAr": "مايكرونيدلينغ الشعر - باقة حصتين",
+      "nameEn": "Hair microneedling - pack of 2 sessions",
+      "descriptionAr": "حصتان متباعدتان لترسيخ النتائج على فروة الرأس. الصيغة المنصوح بها في حالة التساقط الموسمي أو المناطق الخفيفة.",
+      "descriptionEn": "Two spaced-out sessions to anchor the results on the scalp. The recommended option for seasonal hair loss or thinning patches."
+    },
+    "Microneedling Gold visage et cernes": {
+      "nameAr": "مايكرونيدلينغ غولد للوجه والهالات السوداء",
+      "nameEn": "Gold microneedling, face & under-eye",
+      "descriptionAr": "بروتوكولنا الفاخر بسيروم الذهب، يشمل الوجه ومحيط العينين. يستهدف خصوصًا الهالات السوداء وعلامات التعب والخطوط الدقيقة، لنظرة مرتاحة وبشرة مشرقة.",
+      "descriptionEn": "Our premium protocol with gold serum, covering the face and the eye contour. It specifically targets dark circles, signs of tiredness and fine lines, for a rested look and a luminous complexion."
+    },
+    "Microneedling Normal": {
+      "nameAr": "مايكرونيدلينغ الوجه العادي",
+      "nameEn": "Standard facial microneedling",
+      "descriptionAr": "وخزات دقيقة محكومة تعيد إطلاق إنتاج الكولاجين والإيلاستين طبيعيًا. ملمس بشرة أنعم، ومسام أضيق، وآثار حبّ الشباب أخفّ، وتماسك مستعاد.",
+      "descriptionEn": "Controlled micro-perforations restart the natural production of collagen and elastin. Refined skin texture, tighter pores, softened acne scars and firmness regained."
+    },
+    "Microneedling simple": {
+      "nameAr": "مايكرونيدلينغ الجسم",
+      "nameEn": "Body microneedling",
+      "descriptionAr": "مايكرونيدلينغ موجَّه إلى منطقة من الجسم: تشقّقات الحمل أو الندبات أو ترهّل البشرة. تتجدّد البشرة وتستعيد كثافتها ومرونتها. السعر حسب المنطقة المعالَجة.",
+      "descriptionEn": "Microneedling targeted at one body area: stretch marks, scars or skin laxity. The skin regenerates and recovers its density and suppleness. Price per area treated."
+    },
+    "Microneedling vitamines et Led": {
+      "nameAr": "مايكرونيدلينغ بالفيتامينات و LED",
+      "nameEn": "Microneedling with vitamins & LED",
+      "descriptionAr": "مايكرونيدلينغ مع كوكتيل من الفيتامينات وعلاج ضوئي LED. تُدخل القنوات الدقيقة المواد الفعّالة إلى العمق، ويهدّئ الـ LED البشرة ويسرّع تجدّدها.",
+      "descriptionEn": "Microneedling combined with a vitamin cocktail and LED light therapy. The micro-channels carry the actives deep down, while the LED soothes the skin and speeds up regeneration."
+    },
+    "Neutralisation du blue des levres": {
+      "nameAr": "تحييد الزرقة في الشفاه",
+      "nameEn": "Neutralising blue-toned lips",
+      "descriptionAr": "تصحيح الشفاه التي تميل إلى الأزرق أو الرمادي، وهو ما يرتبط غالبًا بصبغة قديمة أو بفرط التصبّغ. تعيد الأصباغ المحيِّدة توازن اللون لاستعادة وردي طبيعي ومتجانس.",
+      "descriptionEn": "Correction for lips with a blue or grey cast, often left by an old pigment or by hyperpigmentation. Neutralising pigments rebalance the shade to bring back an even, natural pink."
+    },
+    "Plasma Pen Contre les Rides et Relachement de la Peau (par zone)": {
+      "nameAr": "قلم البلازما ضد التجاعيد وترهّل البشرة (حسب المنطقة)",
+      "nameEn": "Plasma Pen for wrinkles and skin laxity (per area)",
+      "descriptionAr": "قوس من البلازما يُحدث نقاطًا دقيقة تُقلّص البشرة فورًا وتحفّز إنتاج الكولاجين على مدى أسابيع. يستهدف الجفون المتدلّية والتجاعيد والترهّل. السعر حسب المنطقة.",
+      "descriptionEn": "A plasma arc creates micro-impacts that retract the skin immediately and restart collagen production over several weeks. It targets drooping eyelids, wrinkles and laxity. Price per area."
+    },
+    "Rajeunissement avec Laser et Radio Frequence integree a partir de (par zone)": {
+      "nameAr": "تجديد شباب البشرة بالليزر والترددات الراديوية المدمجة ابتداءً من (حسب المنطقة)",
+      "nameEn": "Laser & integrated radiofrequency rejuvenation from (per area)",
+      "descriptionAr": "ليزر وترددات راديوية معًا لشدّ البشرة وتضييق المسام وإعادة الإشراق إلى لون البشرة. بديل غير جراحي لعملية الشدّ. السعر ابتدائي حسب المنطقة.",
+      "descriptionEn": "Laser and radiofrequency combined to tighten the skin, shrink the pores and revive the complexion. A non-invasive alternative to a facelift. Starting price per area."
+    },
+    "Soin Complet inclus plusieurs etapes, massages lifting et LED": {
+      "nameAr": "عناية كاملة تشمل عدة مراحل وتدليك شدّ و LED",
+      "nameEn": "Complete treatment: multiple steps, lifting massage & LED",
+      "descriptionAr": "بروتوكول كامل على عدة مراحل: تنظيف، واستخراج الشوائب، وتدليك شدّ يدوي، وعلاج ضوئي LED. مثالي لإعادة الإشراق وتهدئة الاحمرار وشدّ الملامح.",
+      "descriptionEn": "A complete multi-step protocol: cleansing, extraction of impurities, manual lifting massage and LED light therapy. Ideal to restore radiance, calm redness and tighten the features."
+    },
+    "Soin Normal": {
+      "nameAr": "عناية هيدرافيشال عادية",
+      "nameEn": "Standard hydrafacial",
+      "descriptionAr": "تنظيف عميق وتقشير لطيف وترطيب مكثّف للوجه. العناية الأساسية لتخليص المسام من الشوائب وتهدئة البشرة واستعادة نضارة اللون منذ الحصة الأولى.",
+      "descriptionEn": "Deep cleansing, gentle exfoliation and intense hydration for the face. The essential treatment to clear the pores, calm the skin and recover a fresh complexion from the very first session."
+    },
+    "Soin Radio Frequence et vitamines": {
+      "nameAr": "عناية بالترددات الراديوية والفيتامينات",
+      "nameEn": "Radiofrequency & vitamin treatment",
+      "descriptionAr": "الهيدرافيشال مُعزَّزًا بكوكتيل من الفيتامينات وبمرحلة ترددات راديوية تُدفئ الأدمة وتعيد إطلاق إنتاج الكولاجين. بشرة مشدودة وملمس أنعم وإشراق فوري.",
+      "descriptionEn": "The hydrafacial enriched with a vitamin cocktail and a radiofrequency phase that warms the dermis and restarts collagen production. Firmer skin, refined texture and immediate radiance."
+    },
+    "Soin Royal avec Multiples etapes et Masques Facials inclus le Massage lifting visage Nuque et cheveux": {
+      "nameAr": "العناية الملكية بعدة مراحل وأقنعة للوجه، مع تدليك شدّ للوجه والرقبة وفروة الرأس",
+      "nameEn": "Royal treatment: multiple steps & face masks, with lifting massage of face, neck and scalp",
+      "descriptionAr": "عنايتنا المميّزة: مراحل متعددة من العناية، وأقنعة موجَّهة للوجه، وتدليك شدّ للوجه والرقبة وفروة الرأس. لحظة استرخاء حقيقية لبشرة تبدو أصغر سنًّا وأكثر امتلاءً.",
+      "descriptionEn": "Our signature treatment: multiple care steps, targeted face masks and a lifting massage of the face, neck and scalp. A genuine moment of calm, for visibly younger, plumper skin."
+    },
+    "Soin hydra facial pour le Dos (sans massage)": {
+      "nameAr": "هيدرافيشال للظهر (دون تدليك)",
+      "nameEn": "Back hydrafacial (without massage)",
+      "descriptionAr": "نفس بروتوكول التنظيف العميق للظهر (استخراج، تقشير، ترطيب)، دون مرحلة التدليك. صيغة أقصر بالفعالية نفسها على الشوائب.",
+      "descriptionEn": "The same deep-cleansing protocol for the back (extraction, exfoliation, hydration), without the massage phase. A shorter format, just as effective on blemishes."
+    },
+    "Soin hydra facial pour le Dos avec massage": {
+      "nameAr": "هيدرافيشال للظهر مع تدليك",
+      "nameEn": "Back hydrafacial with massage",
+      "descriptionAr": "تنظيف عميق للظهر: استخراج الشوائب وتقشير وترطيب، يليها تدليك مريح. العناية المثالية ضدّ الحبوب والرؤوس السوداء في منطقة الظهر.",
+      "descriptionEn": "Deep cleansing of the back: extraction of impurities, exfoliation and hydration, followed by a relaxing massage. The ideal treatment for spots and blackheads on the back."
+    },
+    "Torse - 1 seance": {
+      "nameAr": "الصدر - حصة واحدة",
+      "nameEn": "Chest - single session",
+      "descriptionAr": "الصدر — من أكثر المناطق طلبًا لدى الزبناء الرجال. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. حصة مفردة؛ يُنصح في المتوسط بـ 6 إلى 8 حصص بفاصل 4 إلى 6 أسابيع للحصول على نتيجة نهائية.",
+      "descriptionEn": "The chest — one of the most requested areas by male clients. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A single session; on average 6 to 8 sessions spaced 4 to 6 weeks apart are needed for a permanent result."
+    },
+    "Torse - Pack 6 seances": {
+      "nameAr": "الصدر - باقة 6 حصص",
+      "nameEn": "Chest - pack of 6 sessions",
+      "descriptionAr": "الصدر — من أكثر المناطق طلبًا لدى الزبناء الرجال. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. باقة من 6 حصص: الدورة الكاملة بسعر مُفضّل، وهي الصيغة المنصوح بها لنتيجة دائمة.",
+      "descriptionEn": "The chest — one of the most requested areas by male clients. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A pack of 6 sessions: the full cycle at a preferential price, the recommended option for a lasting result."
+    },
+    "Tracages de Barbe - 1 seance": {
+      "nameAr": "تحديد اللحية - حصة واحدة",
+      "nameEn": "Beard shaping - single session",
+      "descriptionAr": "رسم محيط اللحية وتنظيفه بالليزر، لخطٍّ واضح دون حلاقة يومية. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. حصة مفردة؛ يُنصح في المتوسط بـ 6 إلى 8 حصص بفاصل 4 إلى 6 أسابيع للحصول على نتيجة نهائية.",
+      "descriptionEn": "Laser shaping and cleaning of the beard contours, for a clean line without daily shaving. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A single session; on average 6 to 8 sessions spaced 4 to 6 weeks apart are needed for a permanent result."
+    },
+    "Tracages de Barbe - Pack 6 seances": {
+      "nameAr": "تحديد اللحية - باقة 6 حصص",
+      "nameEn": "Beard shaping - pack of 6 sessions",
+      "descriptionAr": "رسم محيط اللحية وتنظيفه بالليزر، لخطٍّ واضح دون حلاقة يومية. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. باقة من 6 حصص: الدورة الكاملة بسعر مُفضّل، وهي الصيغة المنصوح بها لنتيجة دائمة.",
+      "descriptionEn": "Laser shaping and cleaning of the beard contours, for a clean line without daily shaving. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A pack of 6 sessions: the full cycle at a preferential price, the recommended option for a lasting result."
+    },
+    "Ventre - 1 seance": {
+      "nameAr": "البطن - حصة واحدة",
+      "nameEn": "Stomach - single session",
+      "descriptionAr": "البطن، بما في ذلك الخط السُّرّي. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. حصة مفردة؛ يُنصح في المتوسط بـ 6 إلى 8 حصص بفاصل 4 إلى 6 أسابيع للحصول على نتيجة نهائية.",
+      "descriptionEn": "The stomach, including the belly line. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A single session; on average 6 to 8 sessions spaced 4 to 6 weeks apart are needed for a permanent result."
+    },
+    "Ventre - Pack 6 seances": {
+      "nameAr": "البطن - باقة 6 حصص",
+      "nameEn": "Stomach - pack of 6 sessions",
+      "descriptionAr": "البطن، بما في ذلك الخط السُّرّي. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. باقة من 6 حصص: الدورة الكاملة بسعر مُفضّل، وهي الصيغة المنصوح بها لنتيجة دائمة.",
+      "descriptionEn": "The stomach, including the belly line. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A pack of 6 sessions: the full cycle at a preferential price, the recommended option for a lasting result."
+    },
+    "Visage + coup - 1 seance": {
+      "nameAr": "الوجه والرقبة - حصة واحدة",
+      "nameEn": "Face + neck - single session",
+      "descriptionAr": "الوجه كاملًا مع الرقبة، لانسجام تام بين المنطقتين. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. حصة مفردة؛ يُنصح في المتوسط بـ 6 إلى 8 حصص بفاصل 4 إلى 6 أسابيع للحصول على نتيجة نهائية.",
+      "descriptionEn": "The whole face plus the neck, for perfect continuity between the two areas. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A single session; on average 6 to 8 sessions spaced 4 to 6 weeks apart are needed for a permanent result."
+    },
+    "Visage + coup - Pack 6 seances": {
+      "nameAr": "الوجه والرقبة - باقة 6 حصص",
+      "nameEn": "Face + neck - pack of 6 sessions",
+      "descriptionAr": "الوجه كاملًا مع الرقبة، لانسجام تام بين المنطقتين. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. باقة من 6 حصص: الدورة الكاملة بسعر مُفضّل، وهي الصيغة المنصوح بها لنتيجة دائمة.",
+      "descriptionEn": "The whole face plus the neck, for perfect continuity between the two areas. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A pack of 6 sessions: the full cycle at a preferential price, the recommended option for a lasting result."
+    },
+    "Visage entier - 1 seance": {
+      "nameAr": "الوجه كاملًا - حصة واحدة",
+      "nameEn": "Full face - single session",
+      "descriptionAr": "الوجه بأكمله: شعر الشفة العليا والذقن والخدّان والمحيط. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. حصة مفردة؛ يُنصح في المتوسط بـ 6 إلى 8 حصص بفاصل 4 إلى 6 أسابيع للحصول على نتيجة نهائية.",
+      "descriptionEn": "The entire face: upper lip, chin, cheeks and contours. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A single session; on average 6 to 8 sessions spaced 4 to 6 weeks apart are needed for a permanent result."
+    },
+    "Visage entier - Pack 6 seances": {
+      "nameAr": "الوجه كاملًا - باقة 6 حصص",
+      "nameEn": "Full face - pack of 6 sessions",
+      "descriptionAr": "الوجه بأكمله: شعر الشفة العليا والذقن والخدّان والمحيط. ليزر تيتانيوم بثلاثة أطوال موجية (755/808/1064 نانومتر)، فعّال على جميع أنواع البشرة ومزوّد بالتبريد لأقصى درجات الراحة. باقة من 6 حصص: الدورة الكاملة بسعر مُفضّل، وهي الصيغة المنصوح بها لنتيجة دائمة.",
+      "descriptionEn": "The entire face: upper lip, chin, cheeks and contours. Titanium laser with three wavelengths (755/808/1064 nm), effective on every skin type and cooled for maximum comfort. A pack of 6 sessions: the full cycle at a preferential price, the recommended option for a lasting result."
+    },
+    "hifu double menton": {
+      "nameAr": "هيفو الذقن المزدوج",
+      "nameEn": "HIFU double chin",
+      "descriptionAr": "هيفو موجَّه تحت الذقن: تعمل الموجات فوق الصوتية على الدهون الموضعية وعلى ترهّل البشرة معًا لإعادة رسم خط الفكّ، دون جراحة.",
+      "descriptionEn": "HIFU targeted under the chin: the ultrasound works on both localised fat and skin laxity to redraw the jawline, without surgery."
+    },
+    "hifu vaginal": {
+      "nameAr": "هيفو المنطقة الحميمة",
+      "nameEn": "HIFU intimate area",
+      "descriptionAr": "عناية حميمة بالموجات فوق الصوتية المركّزة، غير جراحية ودون فترة نقاهة. تستهدف شدّ الأنسجة واستعادة تماسكها. تُجرى في مقصورة خاصة، بسرّية تامة وعلى يد مختصّة مؤهَّلة.",
+      "descriptionEn": "An intimate treatment using focused ultrasound, non-invasive and with no downtime. It aims to firm and tone the tissue. Carried out in a private room, in complete discretion and by a trained practitioner."
+    },
+    "hifu visage": {
+      "nameAr": "هيفو الوجه",
+      "nameEn": "HIFU face",
+      "descriptionAr": "موجات فوق صوتية مركّزة عالية الكثافة: شدّ دون جراحة ولا حقن، يعيد شدّ بيضاوي الوجه في العمق. المفعول تدريجي، يبلغ ذروته نحو الشهر الثالث، دون توقّف عن الحياة اليومية.",
+      "descriptionEn": "High-intensity focused ultrasound: a lift without surgery or injections that tightens the contour of the face deep down. The effect is gradual, at its best around three months, with no social downtime."
+    }
+  },
+  "products": {
+    "Argan & Saffron Cream": {
+      "nameAr": "كريم الأركان والزعفران",
+      "nameEn": "Argan & Saffron Cream",
+      "descriptionAr": "كريم بزيت الأركان والزعفران، مركّب لمعالجة البقع الداكنة. يناسب جميع أنواع البشرة. — 50 غ",
+      "descriptionEn": "An argan and saffron cream formulated to target dark spots. Suitable for all skin types. — 50 g"
+    },
+    "Argan Cream & Prickly Pear Anti-Wrinkle": {
+      "nameAr": "كريم الأركان والتين الشوكي المضاد للتجاعيد",
+      "nameEn": "Argan & Prickly Pear Anti-Wrinkle Cream",
+      "descriptionAr": "كريم غني بفوائد الأركان والتين الشوكي. يقاوم التجاعيد ويغذّي البشرة ويرطّبها ويعيد بناءها. قوامه خفيف يناسب جميع أنواع البشرة، يُستعمل مساءً. — 50 غ",
+      "descriptionEn": "A cream rich in the benefits of argan and prickly pear. It fights wrinkles, nourishes, hydrates and restructures the skin. Light texture, suitable for all skin types, to be applied in the evening. — 50 g"
+    },
+    "Argan Oil & Musk for Beard": {
+      "nameAr": "زيت الأركان والمسك للّحية",
+      "nameEn": "Argan & Musk Beard Oil",
+      "descriptionAr": "زيت أركان عضوي غني بزيوت المسك والعنبر الأساسية. يُستعمل يوميًا للحصول على لحية مغذّاة وطريّة ولامعة وذات عطر لطيف. — 50 مل",
+      "descriptionEn": "Organic argan oil enriched with musk and amber essential oils. Apply daily for a nourished, soft, shiny and delicately scented beard. — 50 ml"
+    },
+    "Argan Oil Chocolate & Vanilla": {
+      "nameAr": "زيت الأركان بالشوكولاتة والفانيليا",
+      "nameEn": "Argan Oil Chocolate & Vanilla",
+      "descriptionAr": "زيت أركان للتدليك بعطر الشوكولاتة والفانيليا. ملطّف ومغذٍّ، ينساب بسلاسة على البشرة دون أن يترك أثرًا دهنيًا. — 100 مل",
+      "descriptionEn": "An argan massage oil scented with chocolate and vanilla. Softening and nourishing, it glides smoothly over the skin without leaving a greasy film. — 100 ml"
+    },
+    "Argan Oil Face Care": {
+      "nameAr": "زيت الأركان للعناية بالوجه",
+      "nameEn": "Argan Oil Face Care",
+      "descriptionAr": "زيت أركان بكر مخصّص للوجه. يغذّي البشرة ويليّنها ويوحّد لون البشرة. — 30 مل",
+      "descriptionEn": "Virgin argan oil dedicated to the face. It nourishes and softens the skin and evens out the complexion. — 30 ml"
+    },
+    "Argan Oil Musk & Amber": {
+      "nameAr": "زيت الأركان بالمسك والعنبر",
+      "nameEn": "Argan Oil Musk & Amber",
+      "descriptionAr": "زيت أركان للتدليك بعطر المسك والعنبر. ملطّف ومغذٍّ، ينساب بسلاسة على البشرة دون أن يترك أثرًا دهنيًا. — 100 مل",
+      "descriptionEn": "An argan massage oil scented with musk and amber. Softening and nourishing, it glides smoothly over the skin without leaving a greasy film. — 100 ml"
+    },
+    "Argan Oil Rose & Jasmine": {
+      "nameAr": "زيت الأركان بالورد والياسمين",
+      "nameEn": "Argan Oil Rose & Jasmine",
+      "descriptionAr": "زيت أركان للتدليك بعطر الورد والياسمين. ملطّف ومغذٍّ، ينساب بسلاسة على البشرة دون أن يترك أثرًا دهنيًا. — 100 مل",
+      "descriptionEn": "An argan massage oil scented with rose and jasmine. Softening and nourishing, it glides smoothly over the skin without leaving a greasy film. — 100 ml"
+    },
+    "Argan Soap (Savon d'argan)": {
+      "nameAr": "صابون الأركان",
+      "nameEn": "Argan Soap",
+      "descriptionAr": "صابون طبيعي لطيف ومنعش، غني جدًا بفيتامين E، يناسب جميع أنواع البشرة. مقشّر نباتي قوي يزيل الخلايا الميتة ويحفّز تجدّد البشرة ويساعد على طرد السموم. — 75 غ",
+      "descriptionEn": "A gentle, fresh natural soap, very rich in vitamin E and suitable for all skin types. A powerful plant-based exfoliant, it removes dead skin, supports cell renewal and helps eliminate toxins. — 75 g"
+    },
+    "Day Argan Cream (Crème de jour)": {
+      "nameAr": "كريم الأركان للنهار",
+      "nameEn": "Day Argan Cream",
+      "descriptionAr": "كريم نهاري غني بزيت الأركان. يغذّي البشرة ويرطّبها ويعيد بناءها مع حمايتها. قوامه خفيف يناسب جميع أنواع البشرة، يُستعمل صباحًا. — 50 غ",
+      "descriptionEn": "A day cream rich in argan oil. It nourishes, hydrates and restructures the skin while protecting it. Light texture, suitable for all skin types, to be applied in the morning. — 50 g"
+    },
+    "Night Argan Cream (Crème de nuit)": {
+      "nameAr": "كريم الأركان لليل",
+      "nameEn": "Night Argan Cream",
+      "descriptionAr": "كريم ليلي غني بزيت الأركان. يغذّي البشرة ويرطّبها ويعيد بناءها أثناء الليل. قوامه خفيف يناسب جميع أنواع البشرة. — 50 غ",
+      "descriptionEn": "A night cream rich in argan oil. It nourishes, hydrates and restructures the skin overnight. Light texture, suitable for all skin types. — 50 g"
+    },
+    "Organic Argan Oil (visage, corps et cheveux)": {
+      "nameAr": "زيت الأركان العضوي (للوجه والجسم والشعر)",
+      "nameEn": "Organic Argan Oil (face, body and hair)",
+      "descriptionAr": "زيت أركان بكر غير محمّص، طبيعي 100٪. غني بأوميغا 3 و6 و9 وبفيتامين E، يرطّب البشرة ويجمّلها ويعيد بناءها بتحسين التبادلات الخلوية. يُستعمل للوجه والجسم والشعر. — 50 مل",
+      "descriptionEn": "Virgin unroasted argan oil, 100% natural. Rich in omega 3, 6 and 9 and in vitamin E, it hydrates, beautifies and restructures the skin by improving cell exchange. For face, body and hair. — 50 ml"
+    },
+    "Prickly Pear Soap": {
+      "nameAr": "صابون التين الشوكي",
+      "nameEn": "Prickly Pear Soap",
+      "descriptionAr": "صابون بالتين الشوكي يناسب جميع أنواع البشرة. يحمي البشرة ويلطّفها، وله مفعول مضاد للتجاعيد بفضل نسبته العالية من فيتامين C. — 75 غ",
+      "descriptionEn": "A prickly pear soap suitable for all skin types. It protects and softens the skin, with an anti-wrinkle action thanks to its high vitamin C content. — 75 g"
+    },
+    "Royal Serum (Anti circle of eyes)": {
+      "nameAr": "السيروم الملكي (لمعالجة الهالات السوداء)",
+      "nameEn": "Royal Serum (anti-dark circles)",
+      "descriptionAr": "خليط طبيعي من زيت بذور التين الشوكي والكركم وفيتامين E. يستهدف الهالات السوداء والتجاعيد مع ترطيب البشرة وتغذيتها. — 30 مل",
+      "descriptionEn": "A natural blend of prickly pear seed oil, turmeric and vitamin E. It targets dark circles and wrinkles while hydrating and nourishing the skin. — 30 ml"
+    },
+    "Savon eclairssisent": {
+      "nameAr": "صابون تفتيح البشرة",
+      "nameEn": "Brightening Soap",
+      "descriptionAr": "100 غ",
+      "descriptionEn": "100 g"
+    },
+    "Écran solaire+ SPF 50": {
+      "nameAr": "واقٍ شمسي + بعامل حماية 50",
+      "nameEn": "Sunscreen+ SPF 50",
+      "descriptionAr": "50 غ",
+      "descriptionEn": "50 g"
+    }
+  },
+  "rewards": {
+    "Echantillon offert": {
+      "nameAr": "عيّنة مجّانية",
+      "nameEn": "Free sample"
+    },
+    "Soin visage offert": {
+      "nameAr": "عناية بالوجه مجّانية",
+      "nameEn": "Free facial",
+      "descriptionAr": "عناية كاملة بالوجه.",
+      "descriptionEn": "A complete facial treatment."
+    }
+  }
+}

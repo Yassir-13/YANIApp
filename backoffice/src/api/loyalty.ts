@@ -19,6 +19,11 @@ export interface Reward {
   id: string;
   name: string;
   description: string | null;
+  // `null` = pas encore traduit : l'application sert alors le français.
+  nameAr: string | null;
+  nameEn: string | null;
+  descriptionAr: string | null;
+  descriptionEn: string | null;
   pointsCost: number;
   active: boolean;
 }

@@ -87,6 +87,23 @@ uniquement, elle est coupée en production.
 > plus — le rejouer sur une base en service ne peut pas altérer les horaires
 > réels de l'institut.
 
+#### Catalogue trilingue
+
+Les prestations, produits, catégories et récompenses se saisissent en français
+dans le back-office, et portent en plus une traduction arabe et anglaise.
+L'API sert la langue de la requête (`Accept-Language`, ou `X-Locale` qui
+l'emporte) et retombe sur le français pour toute fiche pas encore traduite.
+
+```bash
+npm run catalog:translate             # contrôle seul, n'écrit rien
+npm run catalog:translate -- --apply  # charge prisma/catalog-translations.json
+```
+
+Le script est idempotent et ne remplace jamais une traduction déjà saisie : une
+correction faite dans le back-office survit à un rejeu (`--force` pour passer
+outre). Sans argument, il sort en code 1 s'il reste une fiche sans traduction —
+utilisable comme garde en intégration continue.
+
 ### 3. Back-office
 
 ```bash

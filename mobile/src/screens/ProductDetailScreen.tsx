@@ -19,7 +19,7 @@ const HERO_H = width * 0.9;
 
 export default function ProductDetailScreen({ route, navigation }: any) {
   const { theme } = useTheme();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const { productId } = route.params;
 
@@ -33,9 +33,15 @@ export default function ProductDetailScreen({ route, navigation }: any) {
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // `i18n.language` en dépendance, et pas seulement l'identifiant : depuis que
+  // le catalogue est traduit, la fiche chargée dépend de la langue. Cet écran
+  // ne recharge pas au focus — sans cette dépendance, changer de langue puis
+  // revenir en arrière laissait la fiche dans l'ancienne. Le cas ne concerne
+  // que français ↔ anglais : toute bascule avec l'arabe change le sens de
+  // lecture et impose déjà un redémarrage.
   useEffect(() => {
     productsApi.getOne(productId).then(setProduct).catch(() => {}).finally(() => setIsLoading(false));
-  }, [productId]);
+  }, [productId, i18n.language]);
 
   if (isLoading) {
     return (

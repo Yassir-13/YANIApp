@@ -3,6 +3,16 @@ import { apiClient } from './client';
 export interface Category {
   id: string;
   name: string;
+  nameAr: string | null;
+  nameEn: string | null;
+}
+
+// Créer une catégorie et la renommer, c'est le même corps : un nom français,
+// et ses deux traductions facultatives.
+export interface CategoryPayload {
+  name: string;
+  nameAr?: string | null;
+  nameEn?: string | null;
 }
 
 export interface Product {
@@ -10,6 +20,12 @@ export interface Product {
   categoryId: string;
   name: string;
   description: string | null;
+  // Traductions saisies dans le back-office. `null` = pas encore traduit :
+  // l'application sert alors le français.
+  nameAr: string | null;
+  nameEn: string | null;
+  descriptionAr: string | null;
+  descriptionEn: string | null;
   price: string;
   stockQty: number;
   imageUrl: string | null;
@@ -22,6 +38,11 @@ export interface ProductPayload {
   categoryId?: string;
   name?: string;
   description?: string;
+  // `null` pour effacer une traduction ; absent pour ne pas y toucher.
+  nameAr?: string | null;
+  nameEn?: string | null;
+  descriptionAr?: string | null;
+  descriptionEn?: string | null;
   price?: number;
   stockQty?: number;
   // `null` pour retirer la photo ; absent pour ne pas y toucher.
@@ -56,13 +77,13 @@ export const productsApi = {
     const { data } = await apiClient.delete(`/products/${id}`);
     return data;
   },
-  async createCategory(name: string): Promise<Category> {
-    const { data } = await apiClient.post('/products/categories', { name });
+  async createCategory(payload: CategoryPayload): Promise<Category> {
+    const { data } = await apiClient.post('/products/categories', payload);
     return data;
   },
   // Une faute de frappe dans un nom de catégorie était définitive.
-  async renameCategory(id: string, name: string): Promise<Category> {
-    const { data } = await apiClient.patch(`/products/categories/${id}`, { name });
+  async renameCategory(id: string, payload: CategoryPayload): Promise<Category> {
+    const { data } = await apiClient.patch(`/products/categories/${id}`, payload);
     return data;
   },
   // Refusé par le serveur si la catégorie contient encore des produits.

@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { Observable, map } from 'rxjs';
-import { pickLanguage, translateMessage } from '../../i18n';
+import { requestLanguage, translateMessage } from '../../i18n';
 
 /**
  * Traduit le champ `message` des réponses en SUCCÈS.
@@ -21,14 +21,14 @@ import { pickLanguage, translateMessage } from '../../i18n';
  * Ce trou n'avait pas été vu à la conception : c'est `scripts/i18n-manquants.js`
  * qui l'a signalé, en relevant des messages de succès parmi les non traduits.
  *
- * Comme le filtre, la traduction se décide sur `Accept-Language` : le
- * back-office n'en envoie pas et continue de recevoir du français.
+ * Comme le filtre, la traduction se décide sur la langue de la requête : le
+ * back-office demande explicitement le français — voir requestLanguage.
  */
 @Injectable()
 export class TranslateResponseInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const request = context.switchToHttp().getRequest<Request>();
-    const langue = pickLanguage(request.headers['accept-language']);
+    const langue = requestLanguage(request.headers);
 
     if (langue === 'fr') return next.handle();
 

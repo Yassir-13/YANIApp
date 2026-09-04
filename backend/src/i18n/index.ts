@@ -11,10 +11,7 @@ export { MESSAGES, PATTERNS, FRAGMENTS };
 const LANGUES: readonly ServerLanguage[] = ['fr', 'ar', 'en'];
 
 /**
- * Langue à utiliser pour une requête, d'après son en-tête `Accept-Language`.
- *
- * Le back-office n'envoie rien : il retombe donc sur le français, exactement
- * comme avant. L'application mobile envoie la langue choisie par la cliente.
+ * Langue à utiliser pour une requête, d'après une étiquette de langue.
  *
  * On ne lit que la PREMIÈRE étiquette et on ignore les facteurs de qualité
  * (`;q=0.9`). Un navigateur en envoie une liste ordonnée ; nous n'avons que
@@ -28,6 +25,29 @@ export function pickLanguage(header?: string | string[]): ServerLanguage {
   return (LANGUES as readonly string[]).includes(code)
     ? (code as ServerLanguage)
     : 'fr';
+}
+
+/**
+ * Langue d'UNE requête, d'après ses en-têtes.
+ *
+ * `X-Locale` l'emporte sur `Accept-Language`, et c'est volontaire : le
+ * back-office envoie `X-Locale: fr` pour recevoir le catalogue tel qu'il est
+ * saisi, quelle que soit la langue du navigateur de la gérante.
+ *
+ * Ce détour n'est pas de la ceinture et des bretelles. `Accept-Language` fait
+ * partie des en-têtes qu'une page web ne PEUT PAS écrire : le navigateur le
+ * pose lui-même, avec sa propre langue. Un back-office ouvert dans un Chrome
+ * en anglais recevait donc déjà les messages d'erreur en anglais, malgré le
+ * commentaire qui affirmait le contraire. Sur le catalogue, la conséquence
+ * aurait été plus grave qu'un affichage : le formulaire aurait chargé la
+ * traduction anglaise dans le champ français, et l'aurait réenregistrée par
+ * dessus l'original au premier « Enregistrer ».
+ */
+export function requestLanguage(headers: {
+  'x-locale'?: string | string[];
+  'accept-language'?: string | string[];
+}): ServerLanguage {
+  return pickLanguage(headers['x-locale'] ?? headers['accept-language']);
 }
 
 /**

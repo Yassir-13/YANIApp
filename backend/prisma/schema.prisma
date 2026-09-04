@@ -23,16 +23,16 @@ enum Role {
 }
 
 enum LoyaltyTxType {
-  EARN        // points gagnés (ex : RDV complété)
-  REDEEM      // points dépensés (échange récompense)
-  MANUAL      // ajout manuel par le staff
-  MILESTONE   // récompense de palier réclamée (offerte, 0 point dépensé)
+  EARN // points gagnés (ex : RDV complété)
+  REDEEM // points dépensés (échange récompense)
+  MANUAL // ajout manuel par le staff
+  MILESTONE // récompense de palier réclamée (offerte, 0 point dépensé)
 }
 
 // D'où vient un bon : les deux circuits de récompense de l'institut.
 enum VoucherSource {
   MILESTONE // offerte par un palier de visites, puis réclamée dans l'app
-  REDEEM    // achetée par la cliente avec ses points
+  REDEEM // achetée par la cliente avec ses points
 }
 
 enum AppointmentStatus {
@@ -43,21 +43,21 @@ enum AppointmentStatus {
 }
 
 enum VerificationPurpose {
-  EMAIL_VERIFY   // confirmer l'adresse à l'inscription
+  EMAIL_VERIFY // confirmer l'adresse à l'inscription
   PASSWORD_RESET // réinitialiser un mot de passe oublié
 }
 
 enum OrderStatus {
-  PENDING     // commande passée, en attente de confirmation staff
-  CONFIRMED   // staff a validé (appel client) — stock décrémenté
-  READY       // préparée / prête au retrait
-  COMPLETED   // remise ou livrée — points crédités
-  CANCELLED   // annulée
+  PENDING // commande passée, en attente de confirmation staff
+  CONFIRMED // staff a validé (appel client) — stock décrémenté
+  READY // préparée / prête au retrait
+  COMPLETED // remise ou livrée — points crédités
+  CANCELLED // annulée
 }
 
 enum FulfillmentType {
-  PICKUP    // retrait à l'institut
-  DELIVERY  // livraison à domicile
+  PICKUP // retrait à l'institut
+  DELIVERY // livraison à domicile
 }
 
 // ─────────────────────────────────────────────
@@ -81,7 +81,7 @@ model User {
   //
   // Le défaut « fr » vaut aussi pour les comptes créés avant ce champ : leurs
   // emails restent exactement ce qu'ils étaient.
-  locale       String   @default("fr")
+  locale String @default("fr")
 
   // Date à laquelle la cliente a prouvé qu'elle recevait bien ses mails à cette
   // adresse. null = jamais confirmée. On garde la date plutôt qu'un booléen :
@@ -100,14 +100,14 @@ model User {
   // réinitialiser son mot de passe : voir auth.service.ts.
   deletedAt DateTime? @map("deleted_at")
 
-  loyaltyAccount     LoyaltyAccount?
-  appointments       Appointment[]
-  refreshTokens RefreshToken[]
-  verificationCodes  VerificationCode[]
-  loyaltyTx          LoyaltyTransaction[] @relation("AccountOwner")
+  loyaltyAccount      LoyaltyAccount?
+  appointments        Appointment[]
+  refreshTokens       RefreshToken[]
+  verificationCodes   VerificationCode[]
+  loyaltyTx           LoyaltyTransaction[] @relation("AccountOwner")
   createdTransactions LoyaltyTransaction[] @relation("TransactionCreator")
-  orders             Order[]
-  honoredVouchers    RewardVoucher[]      @relation("VoucherHonorer")
+  orders              Order[]
+  honoredVouchers     RewardVoucher[]      @relation("VoucherHonorer")
 
   @@map("users")
 }
@@ -132,17 +132,17 @@ model LoyaltyAccount {
 }
 
 model LoyaltyTransaction {
-  id          String        @id @default(uuid())
-  accountId   String        @map("account_id")
-  ownerId     String        @map("owner_id")
-  pointsDelta Int           @map("points_delta")
-  type        LoyaltyTxType
-  createdById String?       @map("created_by")
-  reason      String?       @db.VarChar(255)
-  appointmentId String?     @unique @map("appointment_id")
-  createdAt   DateTime      @default(now()) @map("created_at")
-  rewardId    String?       @map("reward_id")
-  orderId     String?       @unique @map("order_id")
+  id            String        @id @default(uuid())
+  accountId     String        @map("account_id")
+  ownerId       String        @map("owner_id")
+  pointsDelta   Int           @map("points_delta")
+  type          LoyaltyTxType
+  createdById   String?       @map("created_by")
+  reason        String?       @db.VarChar(255)
+  appointmentId String?       @unique @map("appointment_id")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  rewardId      String?       @map("reward_id")
+  orderId       String?       @unique @map("order_id")
 
   account     LoyaltyAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
   // `owner` = la cliente à qui appartiennent les points. En cascade, comme
@@ -156,7 +156,7 @@ model LoyaltyTransaction {
   // clientes qu'elle a servies. L'écriture reste, elle ne désigne plus personne.
   createdBy   User?          @relation("TransactionCreator", fields: [createdById], references: [id], onDelete: SetNull)
   appointment Appointment?   @relation(fields: [appointmentId], references: [id])
-  reward      Reward?       @relation(fields: [rewardId], references: [id])
+  reward      Reward?        @relation(fields: [rewardId], references: [id])
   order       Order?         @relation(fields: [orderId], references: [id])
   // Bon émis par cette écriture (échange de points). Absent pour les autres types.
   voucher     RewardVoucher?
@@ -170,19 +170,19 @@ model LoyaltyTransaction {
 // ─────────────────────────────────────────────
 
 model Appointment {
-  id        String            @id @default(uuid())
-  userId    String            @map("user_id")
-  serviceId String            @map("service_id")
-  startAt   DateTime          @map("start_at")
-  status    AppointmentStatus @default(PENDING)
+  id             String            @id @default(uuid())
+  userId         String            @map("user_id")
+  serviceId      String            @map("service_id")
+  startAt        DateTime          @map("start_at")
+  status         AppointmentStatus @default(PENDING)
   // Prix de la prestation figé au moment de la réservation, comme
   // OrderItem.unitPrice pour les commandes. Sert de base au crédit fidélité,
   // pour qu'un changement de tarif ultérieur ne modifie pas les points d'un
   // RDV déjà réservé. Nullable : les RDV créés avant cette colonne n'en ont pas
   // (repli sur le prix courant côté service).
-  priceAtBooking Decimal?     @db.Decimal(10, 2) @map("price_at_booking")
-  createdAt DateTime          @default(now()) @map("created_at")
-  updatedAt DateTime          @updatedAt @map("updated_at")
+  priceAtBooking Decimal?          @map("price_at_booking") @db.Decimal(10, 2)
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
 
   // Restrict, et surtout pas Cascade : un rendez-vous est une prestation
   // facturée. Supprimer une cliente ne doit PAS emporter le chiffre d'affaires
@@ -204,22 +204,42 @@ model Appointment {
 //  CATALOGUE DE SERVICES
 // ─────────────────────────────────────────────
 
+// ── Catalogue trilingue ──────────────────────────────────────────────────
+//
+// `name` et `description` restent le FRANÇAIS, et rien d'autre : la gérante
+// saisit sa fiche dans sa langue, le back-office l'affiche telle quelle et les
+// exports, les emails et l'historique n'ont pas bougé d'une ligne.
+//
+// Les colonnes `*_ar` et `*_en` s'ajoutent par-dessus. Une case vide n'est pas
+// une anomalie : elle signifie « pas encore traduit », et l'API renvoie alors
+// le français. C'est ce qui remplace un booléen « à traduire », qui aurait pu
+// mentir dès qu'on modifie un texte sans le remettre à jour.
+//
+// La traduction est servie par LocalizeCatalogInterceptor, d'après la langue
+// de la requête. Voir backend/src/common/interceptors/localize-catalog.
+
 model ServiceCategory {
   id        String   @id @default(uuid())
   name      String   @unique
+  nameAr    String?  @map("name_ar")
+  nameEn    String?  @map("name_en")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  services  Service[]
+  services Service[]
 
   @@map("service_categories")
 }
 
 model Service {
-  id          String   @id @default(uuid())
-  categoryId  String   @map("category_id")
-  name        String
-  description String?
+  id            String        @id @default(uuid())
+  categoryId    String        @map("category_id")
+  name          String
+  nameAr        String?       @map("name_ar")
+  nameEn        String?       @map("name_en")
+  description   String?
+  descriptionAr String?       @map("description_ar")
+  descriptionEn String?       @map("description_en")
   // Purement documentaire, et facultative : le moteur de créneaux ne la lit
   // PLUS. Le centre espace ses rendez-vous d'un écart fixe (CenterSettings.
   // slotIntervalMin), quelle que soit la prestation — un choix de gestion, pas
@@ -228,15 +248,15 @@ model Service {
   //
   // ⚠️ La remettre dans le calcul des créneaux serait un retour en arrière :
   // une prestation d'1h25 réservée à 10h interdirait alors le créneau de 11h.
-  durationMin Int?     @map("duration_min")
-  price       Decimal  @db.Decimal(10, 2)
-  imageUrl    String?  @map("image_url")
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  appointments Appointment[]
+  durationMin   Int?          @map("duration_min")
+  price         Decimal       @db.Decimal(10, 2)
+  imageUrl      String?       @map("image_url")
+  active        Boolean       @default(true)
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  appointments  Appointment[]
 
-  category    ServiceCategory @relation(fields: [categoryId], references: [id])
+  category ServiceCategory @relation(fields: [categoryId], references: [id])
 
   @@index([categoryId])
   @@map("services")
@@ -249,28 +269,34 @@ model Service {
 model ProductCategory {
   id        String   @id @default(uuid())
   name      String   @unique
+  nameAr    String?  @map("name_ar")
+  nameEn    String?  @map("name_en")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  products  Product[]
+  products Product[]
 
   @@map("product_categories")
 }
 
 model Product {
-  id          String   @id @default(uuid())
-  categoryId  String   @map("category_id")
-  name        String
-  description String?
-  price       Decimal  @db.Decimal(10, 2)
-  stockQty    Int      @default(0) @map("stock_qty")
-  imageUrl    String?  @map("image_url")
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id            String   @id @default(uuid())
+  categoryId    String   @map("category_id")
+  name          String
+  nameAr        String?  @map("name_ar")
+  nameEn        String?  @map("name_en")
+  description   String?
+  descriptionAr String?  @map("description_ar")
+  descriptionEn String?  @map("description_en")
+  price         Decimal  @db.Decimal(10, 2)
+  stockQty      Int      @default(0) @map("stock_qty")
+  imageUrl      String?  @map("image_url")
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
-  category    ProductCategory @relation(fields: [categoryId], references: [id])
-  orderItems  OrderItem[]
+  category   ProductCategory @relation(fields: [categoryId], references: [id])
+  orderItems OrderItem[]
 
   @@index([categoryId])
   @@map("products")
@@ -290,8 +316,8 @@ model Product {
 model OpeningHours {
   id        String @id @default(uuid())
   dayOfWeek Int    @map("day_of_week") // 0 = dimanche ... 6 = samedi
-  startTime String @map("start_time")  // "09:00"
-  endTime   String @map("end_time")    // "12:00"
+  startTime String @map("start_time") // "09:00"
+  endTime   String @map("end_time") // "12:00"
 
   // Deux plages ne peuvent pas commencer à la même heure le même jour. Le
   // chevauchement, lui, est refusé par le service : une contrainte SQL ne sait
@@ -310,7 +336,7 @@ model OpeningHours {
 model Closure {
   id        String   @id @default(uuid())
   startDate String   @map("start_date") // "2026-08-20"
-  endDate   String   @map("end_date")   // "2026-08-27", incluse
+  endDate   String   @map("end_date") // "2026-08-27", incluse
   reason    String?
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -338,13 +364,17 @@ model CenterSettings {
 // ─────────────────────────────────────────────
 
 model Reward {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  pointsCost  Int      @map("points_cost")
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id            String   @id @default(uuid())
+  name          String
+  nameAr        String?  @map("name_ar")
+  nameEn        String?  @map("name_en")
+  description   String?
+  descriptionAr String?  @map("description_ar")
+  descriptionEn String?  @map("description_en")
+  pointsCost    Int      @map("points_cost")
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   transactions LoyaltyTransaction[]
   milestones   LoyaltyMilestone[]
@@ -419,18 +449,18 @@ model MilestoneGrant {
 // rejoignent ici. Un seul objet à afficher côté cliente, une seule liste à
 // traiter au comptoir.
 model RewardVoucher {
-  id        String        @id @default(uuid())
+  id          String        @id @default(uuid())
   // Code lisible à voix haute au comptoir (8 caractères, sans O/0/I/1).
   // Ce n'est PAS un secret : les routes staff sont déjà authentifiées. C'est
   // un identifiant court, pour ne pas dicter un UUID.
-  code      String        @unique
-  accountId String        @map("account_id")
-  rewardId  String        @map("reward_id")
-  source    VoucherSource
+  code        String        @unique
+  accountId   String        @map("account_id")
+  rewardId    String        @map("reward_id")
+  source      VoucherSource
   // Points réellement dépensés (0 pour une récompense offerte). Figé ici :
   // si le tarif de la récompense change, ce qui a été payé ne bouge pas.
-  pointsSpent Int         @default(0) @map("points_spent")
-  createdAt DateTime      @default(now()) @map("created_at")
+  pointsSpent Int           @default(0) @map("points_spent")
+  createdAt   DateTime      @default(now()) @map("created_at")
 
   // Remise effective au comptoir. null = encore dû.
   honoredAt   DateTime? @map("honored_at")
@@ -515,23 +545,23 @@ model VerificationCode {
 // ─────────────────────────────────────────────
 
 model Order {
-  id           String          @id @default(uuid())
-  userId       String          @map("user_id")
-  status       OrderStatus     @default(PENDING)
-  fulfillment  FulfillmentType
+  id          String          @id @default(uuid())
+  userId      String          @map("user_id")
+  status      OrderStatus     @default(PENDING)
+  fulfillment FulfillmentType
   // Adresse de livraison (requise uniquement si fulfillment = DELIVERY)
-  address      String?
+  address     String?
   // Total figé à la commande (somme des lignes)
-  total        Decimal         @db.Decimal(10, 2)
-  note         String?         // note optionnelle du client
-  createdAt    DateTime        @default(now()) @map("created_at")
-  updatedAt    DateTime        @updatedAt @map("updated_at")
+  total       Decimal         @db.Decimal(10, 2)
+  note        String? // note optionnelle du client
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
 
   // Restrict : même raison que pour les rendez-vous. Une commande porte un
   // total encaissé ; il survit au départ de la cliente. Voir User.deletedAt.
-  user         User            @relation(fields: [userId], references: [id], onDelete: Restrict)
-  items        OrderItem[]
-  loyaltyTx    LoyaltyTransaction?
+  user      User                @relation(fields: [userId], references: [id], onDelete: Restrict)
+  items     OrderItem[]
+  loyaltyTx LoyaltyTransaction?
 
   @@index([userId])
   @@index([status])
@@ -539,15 +569,15 @@ model Order {
 }
 
 model OrderItem {
-  id         String   @id @default(uuid())
-  orderId    String   @map("order_id")
-  productId  String   @map("product_id")
-  quantity   Int
+  id        String  @id @default(uuid())
+  orderId   String  @map("order_id")
+  productId String  @map("product_id")
+  quantity  Int
   // Prix unitaire figé au moment de la commande (immuable si le produit change ensuite)
-  unitPrice  Decimal  @db.Decimal(10, 2) @map("unit_price")
+  unitPrice Decimal @map("unit_price") @db.Decimal(10, 2)
 
-  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product    Product  @relation(fields: [productId], references: [id])
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
 
   @@index([orderId])
   @@index([productId])

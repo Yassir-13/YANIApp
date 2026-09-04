@@ -5,6 +5,19 @@ import { uploadsApi, MAX_IMAGE_BYTES } from '../api/uploads';
 
 export type CatalogKind = 'product' | 'service';
 
+// Les trois langues de l'application, et les champs que chacune remplit.
+//
+// Le français n'est pas une traduction : c'est la fiche, celle qui s'affiche
+// tant que les deux autres sont vides. D'où l'ordre, et d'où la pastille qui
+// ne peut apparaître que sur l'arabe et l'anglais.
+const LANGUES = [
+  { code: 'fr', libelle: 'Français', nom: 'name', desc: 'description', rtl: false },
+  { code: 'ar', libelle: 'العربية', nom: 'nameAr', desc: 'descriptionAr', rtl: true },
+  { code: 'en', libelle: 'English', nom: 'nameEn', desc: 'descriptionEn', rtl: false },
+] as const;
+
+type CodeLangue = (typeof LANGUES)[number]['code'];
+
 // Valeurs du formulaire — communes aux produits et aux prestations.
 // `stockQty` ne concerne que les produits, `durationMin` que les prestations —
 // cette dernière est facultative et n'entre pas dans le calcul des créneaux.
@@ -13,7 +26,11 @@ export type CatalogKind = 'product' | 'service';
 export interface CatalogFormValues {
   categoryId: string;
   name: string;
+  nameAr: string;
+  nameEn: string;
   description: string;
+  descriptionAr: string;
+  descriptionEn: string;
   price: string;
   stockQty: string;
   durationMin: string;
@@ -23,7 +40,11 @@ export interface CatalogFormValues {
 const EMPTY: CatalogFormValues = {
   categoryId: '',
   name: '',
+  nameAr: '',
+  nameEn: '',
   description: '',
+  descriptionAr: '',
+  descriptionEn: '',
   price: '',
   stockQty: '0',
   durationMin: '',
@@ -54,6 +75,7 @@ export default function CatalogForm({
   onCancel,
 }: CatalogFormProps) {
   const [values, setValues] = useState<CatalogFormValues>(EMPTY);
+  const [langue, setLangue] = useState<CodeLangue>('fr');
   const [uploading, setUploading] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -62,6 +84,10 @@ export default function CatalogForm({
   useEffect(() => {
     if (open) {
       setValues({ ...EMPTY, ...initial });
+      // Toujours rouvrir sur le français : c'est la langue de saisie, et
+      // rouvrir sur l'onglet arabe d'une fiche précédente ferait croire que
+      // le champ vide de celle-ci a été effacé.
+      setLangue('fr');
       setUploading(false);
       setImageError(null);
     }
@@ -107,6 +133,8 @@ export default function CatalogForm({
   };
 
   const noun = kind === 'product' ? 'produit' : 'prestation';
+  const actif = LANGUES.find((l) => l.code === langue)!;
+  const enFrancais = langue === 'fr';
 
   return (
     <div style={styles.backdrop} onClick={onCancel}>
@@ -153,24 +181,62 @@ export default function CatalogForm({
             )}
           </Field>
 
+          <div style={styles.langues}>
+            {LANGUES.map((l) => (
+              <button
+                key={l.code}
+                type="button"
+                onClick={() => setLangue(l.code)}
+                style={{
+                  ...styles.langue,
+                  ...(l.code === langue ? styles.langueActive : null),
+                }}
+              >
+                {l.libelle}
+                {/* Un point discret, et non un mot : la pastille se lit d'un
+                    coup d'œil sur les deux onglets à la fois. */}
+                {l.code !== 'fr' && !values[l.nom].trim() && (
+                  <span style={styles.pastille} title="Pas encore traduit" />
+                )}
+              </button>
+            ))}
+          </div>
+
           <Field label="Nom">
             <input
-              value={values.name}
-              onChange={(e) => set('name', e.target.value)}
-              placeholder={kind === 'product' ? 'Huile précieuse à l’argan' : 'Soin visage signature'}
-              required
+              key={`nom-${langue}`}
+              value={values[actif.nom]}
+              onChange={(e) => set(actif.nom, e.target.value)}
+              dir={actif.rtl ? 'rtl' : undefined}
+              placeholder={
+                enFrancais
+                  ? kind === 'product'
+                    ? 'Huile précieuse à l’argan'
+                    : 'Soin visage signature'
+                  : 'Optionnel'
+              }
+              required={enFrancais}
             />
           </Field>
 
           <Field label="Description">
             <textarea
-              value={values.description}
-              onChange={(e) => set('description', e.target.value)}
+              key={`desc-${langue}`}
+              value={values[actif.desc]}
+              onChange={(e) => set(actif.desc, e.target.value)}
+              dir={actif.rtl ? 'rtl' : undefined}
               rows={3}
               placeholder="Optionnel"
               style={{ resize: 'vertical' }}
             />
           </Field>
+
+          {!enFrancais && (
+            <div className="small muted" style={{ marginTop: -6 }}>
+              Laissez vide pour afficher le français aux clientes : une fiche
+              non traduite reste lisible, elle ne devient pas blanche.
+            </div>
+          )}
 
           <div style={styles.twoCols}>
             <Field label="Prix (dh)">
@@ -329,6 +395,41 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'linear-gradient(90deg, var(--gold-light), var(--gold))',
   },
   fields: { display: 'grid', gap: 'var(--sp-3)' },
+  langues: {
+    display: 'flex',
+    gap: 4,
+    padding: 3,
+    borderRadius: 'var(--radius-sm)',
+    background: 'var(--surface-alt)',
+    border: '1px solid var(--border)',
+  },
+  langue: {
+    flex: 1,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    padding: '6px 8px',
+    border: 'none',
+    borderRadius: 'calc(var(--radius-sm) - 2px)',
+    background: 'transparent',
+    color: 'var(--text-muted)',
+    font: 'inherit',
+    fontSize: 13,
+    cursor: 'pointer',
+  },
+  langueActive: {
+    background: 'var(--surface)',
+    color: 'var(--text)',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.12)',
+  },
+  pastille: {
+    width: 6,
+    height: 6,
+    borderRadius: '50%',
+    background: 'var(--warning)',
+    flexShrink: 0,
+  },
   twoCols: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sp-3)' },
   image: { display: 'flex', gap: 'var(--sp-3)', alignItems: 'center' },
   preview: {

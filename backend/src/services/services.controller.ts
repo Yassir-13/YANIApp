@@ -54,7 +54,7 @@ export class ServicesController {
   }
 
   // Renommer, c'est envoyer le même corps que créer : une catégorie n'a qu'un
-  // nom. Pas d'Update DTO pour redire la même chose.
+  // nom et ses deux traductions. Pas d'Update DTO pour redire la même chose.
   @ApiOperation({ summary: 'Renommer une catégorie' })
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -64,7 +64,7 @@ export class ServicesController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CreateServiceCategoryDto,
   ) {
-    return this.servicesService.renameCategory(id, dto.name);
+    return this.servicesService.renameCategory(id, dto);
   }
 
   @ApiOperation({ summary: 'Supprimer une catégorie vide' })

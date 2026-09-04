@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { productsApi, Product, Category } from '../api/products';
+import { productsApi, Product, Category, CategoryPayload } from '../api/products';
 import { servicesApi, Service } from '../api/services';
 import { mediaUrl } from '../api/config';
 import { useAuthStore } from '../stores/authStore';
@@ -8,6 +8,29 @@ import CatalogForm, { CatalogFormValues, CatalogKind } from '../components/Catal
 import Confirm from '../components/Confirm';
 
 const LOW_STOCK = 5;
+
+// Le nom d'une catégorie dans les trois langues. Les deux traductions sont
+// facultatives : vides, l'application affiche le français.
+interface NomsCategorie {
+  name: string;
+  nameAr: string;
+  nameEn: string;
+}
+
+const NOMS_VIDES: NomsCategorie = { name: '', nameAr: '', nameEn: '' };
+
+// Une fiche traduite l'est en arabe ET en anglais : l'application propose les
+// trois langues, en manquer une laisse une cliente devant du français.
+const traductionIncomplete = (it: { nameAr: string | null; nameEn: string | null }) =>
+  !it.nameAr?.trim() || !it.nameEn?.trim();
+
+// Une traduction laissée vide part en `null`, et non en chaîne vide : la base
+// distingue alors « pas encore traduit » de « traduit par du blanc ».
+const versPayload = (noms: NomsCategorie): CategoryPayload => ({
+  name: noms.name.trim(),
+  nameAr: noms.nameAr.trim() || null,
+  nameEn: noms.nameEn.trim() || null,
+});
 
 export default function CatalogPage() {
   const user = useAuthStore((s) => s.user);
@@ -40,11 +63,11 @@ export default function CatalogPage() {
   // existe aucune. Le renommage l'est devenu : une faute de frappe était
   // définitive, faute de route pour la corriger.
   const [catFormOpen, setCatFormOpen] = useState(false);
-  const [catName, setCatName] = useState('');
+  const [catName, setCatName] = useState<NomsCategorie>(NOMS_VIDES);
   const [catSaving, setCatSaving] = useState(false);
   const [catError, setCatError] = useState<string | null>(null);
   const [catRenamingId, setCatRenamingId] = useState<string | null>(null);
-  const [catRenameValue, setCatRenameValue] = useState('');
+  const [catRenameValue, setCatRenameValue] = useState<NomsCategorie>(NOMS_VIDES);
   const [catToDelete, setCatToDelete] = useState<Category | null>(null);
 
   const load = async () => {
@@ -111,7 +134,11 @@ export default function CatalogPage() {
     return {
       categoryId: editing.categoryId,
       name: editing.name,
+      nameAr: editing.nameAr ?? '',
+      nameEn: editing.nameEn ?? '',
       description: editing.description ?? '',
+      descriptionAr: editing.descriptionAr ?? '',
+      descriptionEn: editing.descriptionEn ?? '',
       price: editing.price,
       stockQty: 'stockQty' in editing ? String(editing.stockQty) : '0',
       durationMin: 'durationMin' in editing ? String(editing.durationMin ?? '') : '',
@@ -124,10 +151,20 @@ export default function CatalogPage() {
     setFormError(null);
     try {
       // Le backend attend des nombres, pas des chaînes
+      // Une traduction effacée doit partir en `null`, jamais en `undefined` :
+      // `undefined` disparaît du JSON et la colonne garderait l'ancien texte.
+      // À la création, il n'y a rien à effacer — le champ est simplement absent.
+      const vide = editing ? null : undefined;
+      const traduction = (t: string) => t.trim() || vide;
+
       const base = {
         categoryId: v.categoryId,
         name: v.name.trim(),
         description: v.description.trim() || undefined,
+        nameAr: traduction(v.nameAr),
+        nameEn: traduction(v.nameEn),
+        descriptionAr: traduction(v.descriptionAr),
+        descriptionEn: traduction(v.descriptionEn),
         price: parseFloat(v.price),
         // Sans image : `undefined` à la création (le champ est simplement
         // absent), mais `null` à la modification. C'est ce qui distingue
@@ -183,19 +220,19 @@ export default function CatalogPage() {
   // ── Création de catégorie ───────────────────────────────────────────
   const submitCategory = async (e: React.FormEvent) => {
     e.preventDefault();
-    const name = catName.trim();
-    if (!name) return;
+    const payload = versPayload(catName);
+    if (!payload.name) return;
     setCatSaving(true);
     setCatError(null);
     try {
       const created =
         kind === 'product'
-          ? await productsApi.createCategory(name)
-          : await servicesApi.createCategory(name);
+          ? await productsApi.createCategory(payload)
+          : await servicesApi.createCategory(payload);
       // Recharge les catégories et sélectionne la nouvelle comme filtre
       await load();
       setCatFilter(created.id);
-      setCatName('');
+      setCatName(NOMS_VIDES);
       setCatFormOpen(false);
     } catch (e: any) {
       const msg = e.response?.data?.message;
@@ -212,16 +249,16 @@ export default function CatalogPage() {
   };
 
   const submitRename = async (category: Category) => {
-    const name = catRenameValue.trim();
-    if (!name || name === category.name) {
+    const payload = versPayload(catRenameValue);
+    if (!payload.name) {
       setCatRenamingId(null);
       return;
     }
     setCatSaving(true);
     setCatError(null);
     try {
-      if (kind === 'product') await productsApi.renameCategory(category.id, name);
-      else await servicesApi.renameCategory(category.id, name);
+      if (kind === 'product') await productsApi.renameCategory(category.id, payload);
+      else await servicesApi.renameCategory(category.id, payload);
       // Rechargement complet : le nom de la catégorie est affiché sur chaque
       // ligne du tableau, pas seulement dans cette liste.
       await load();
@@ -256,7 +293,7 @@ export default function CatalogPage() {
     setCatFormOpen(false);
     setCatRenamingId(null);
     setCatError(null);
-    setCatName('');
+    setCatName(NOMS_VIDES);
   };
 
   const reactivate = async (item: Product | Service) => {
@@ -289,7 +326,7 @@ export default function CatalogPage() {
               className="btn btn-outline btn-sm"
               onClick={() => {
                 setCatError(null);
-                setCatName('');
+                setCatName(NOMS_VIDES);
                 setCatRenamingId(null);
                 setCatFormOpen(true);
               }}
@@ -394,7 +431,16 @@ export default function CatalogPage() {
                       </div>
                     </td>
                     <td>
-                      <div style={{ fontWeight: 500 }}>{it.name}</div>
+                      <div style={{ fontWeight: 500 }}>
+                        {it.name}
+                        {/* Sans ce repère, une fiche non traduite ne se
+                            remarque qu'en ouvrant le formulaire, une par une. */}
+                        {traductionIncomplete(it) && (
+                          <span className="badge badge-warning" style={{ marginLeft: 8 }}>
+                            À traduire
+                          </span>
+                        )}
+                      </div>
                       {it.description && (
                         <div className="small muted" style={styles.desc}>{it.description}</div>
                       )}
@@ -499,15 +545,33 @@ export default function CatalogPage() {
                   >
                     {catRenamingId === c.id ? (
                       <>
-                        <input
-                          autoFocus
-                          value={catRenameValue}
-                          onChange={(e) => setCatRenameValue(e.target.value)}
-                          style={{ flex: 1, minWidth: 160 }}
-                        />
+                        <div style={{ flex: 1, minWidth: 160, display: 'grid', gap: 4 }}>
+                          <input
+                            autoFocus
+                            value={catRenameValue.name}
+                            onChange={(e) =>
+                              setCatRenameValue({ ...catRenameValue, name: e.target.value })
+                            }
+                          />
+                          <input
+                            value={catRenameValue.nameAr}
+                            onChange={(e) =>
+                              setCatRenameValue({ ...catRenameValue, nameAr: e.target.value })
+                            }
+                            dir="rtl"
+                            placeholder="العربية — optionnel"
+                          />
+                          <input
+                            value={catRenameValue.nameEn}
+                            onChange={(e) =>
+                              setCatRenameValue({ ...catRenameValue, nameEn: e.target.value })
+                            }
+                            placeholder="English — optionnel"
+                          />
+                        </div>
                         <button
                           className="btn btn-gold btn-sm"
-                          disabled={catSaving || !catRenameValue.trim()}
+                          disabled={catSaving || !catRenameValue.name.trim()}
                           onClick={() => submitRename(c)}
                         >
                           {catSaving ? '…' : 'Enregistrer'}
@@ -522,13 +586,24 @@ export default function CatalogPage() {
                       </>
                     ) : (
                       <>
-                        <span style={{ flex: 1, minWidth: 160 }}>{c.name}</span>
+                        <span style={{ flex: 1, minWidth: 160 }}>
+                          {c.name}
+                          {traductionIncomplete(c) && (
+                            <span className="badge badge-warning" style={{ marginLeft: 8 }}>
+                              À traduire
+                            </span>
+                          )}
+                        </span>
                         <button
                           className="btn btn-outline btn-sm"
                           onClick={() => {
                             setCatError(null);
                             setCatRenamingId(c.id);
-                            setCatRenameValue(c.name);
+                            setCatRenameValue({
+                              name: c.name,
+                              nameAr: c.nameAr ?? '',
+                              nameEn: c.nameEn ?? '',
+                            });
                           }}
                         >
                           Renommer
@@ -550,20 +625,33 @@ export default function CatalogPage() {
               <label className="label" style={{ display: 'block', marginBottom: 5 }}>
                 Nouvelle catégorie
               </label>
-              <div className="row gap-2">
+              <div style={{ display: 'grid', gap: 4 }}>
                 <input
-                  value={catName}
-                  onChange={(e) => setCatName(e.target.value)}
+                  value={catName.name}
+                  onChange={(e) => setCatName({ ...catName, name: e.target.value })}
                   placeholder={kind === 'product' ? 'Soins capillaires' : 'Soins du visage'}
-                  style={{ flex: 1 }}
                 />
-                <button
-                  type="submit"
-                  className="btn btn-gold"
-                  disabled={catSaving || !catName.trim()}
-                >
-                  {catSaving ? '…' : 'Créer'}
-                </button>
+                <input
+                  value={catName.nameAr}
+                  onChange={(e) => setCatName({ ...catName, nameAr: e.target.value })}
+                  dir="rtl"
+                  placeholder="العربية — optionnel"
+                />
+                <div className="row gap-2">
+                  <input
+                    value={catName.nameEn}
+                    onChange={(e) => setCatName({ ...catName, nameEn: e.target.value })}
+                    placeholder="English — optionnel"
+                    style={{ flex: 1 }}
+                  />
+                  <button
+                    type="submit"
+                    className="btn btn-gold"
+                    disabled={catSaving || !catName.name.trim()}
+                  >
+                    {catSaving ? '…' : 'Créer'}
+                  </button>
+                </div>
               </div>
             </form>
 

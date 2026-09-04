@@ -26,6 +26,33 @@ export class UpdateProductDto {
   @MaxLength(2000)
   description?: string;
 
+  // ── Traductions ──
+  // Facultatives, et c'est le principe : une case vide veut dire « pas encore
+  // traduit », l'API sert alors le français et la fiche reste lisible.
+  @ApiPropertyOptional({ description: "Nom en arabe. Vide = servi en français." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  nameAr?: string | null;
+
+  @ApiPropertyOptional({ description: "Nom en anglais. Vide = servi en français." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  nameEn?: string | null;
+
+  @ApiPropertyOptional({ description: "Description en arabe. Vide = servie en français." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  descriptionAr?: string | null;
+
+  @ApiPropertyOptional({ description: "Description en anglais. Vide = servie en français." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  descriptionEn?: string | null;
+
   @ApiPropertyOptional({ example: 89.9, description: 'Prix en dirhams' })
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })

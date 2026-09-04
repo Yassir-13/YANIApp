@@ -28,6 +28,20 @@ apiClient.interceptors.request.use((config) => {
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  // Le back-office travaille en français, toujours : c'est la langue dans
+  // laquelle la gérante saisit ses fiches, et celle des colonnes que ce
+  // formulaire enregistre.
+  //
+  // Sans cette ligne, la langue serait celle du NAVIGATEUR. `Accept-Language`
+  // est un en-tête qu'une page web ne peut pas écrire — le navigateur le pose
+  // seul. Un Chrome en anglais aurait donc chargé la traduction anglaise dans
+  // le champ français du formulaire, et l'aurait réenregistrée par-dessus
+  // l'original au premier « Enregistrer ».
+  if (config.headers) {
+    config.headers['X-Locale'] = 'fr';
+  }
+
   return config;
 });
 

@@ -581,6 +581,13 @@ function RewardsTab() {
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  // Les traductions sont ici de simples champs sous leur original, et non des
+  // onglets comme dans le catalogue : ce formulaire tient en une colonne et
+  // sert deux ou trois récompenses, pas quatre-vingt-huit prestations.
+  const [nameAr, setNameAr] = useState('');
+  const [nameEn, setNameEn] = useState('');
+  const [descriptionAr, setDescriptionAr] = useState('');
+  const [descriptionEn, setDescriptionEn] = useState('');
   const [cost, setCost] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -595,6 +602,10 @@ function RewardsTab() {
     setEditing(null);
     setName('');
     setDescription('');
+    setNameAr('');
+    setNameEn('');
+    setDescriptionAr('');
+    setDescriptionEn('');
     setCost('');
   };
 
@@ -602,6 +613,10 @@ function RewardsTab() {
     setEditing(r);
     setName(r.name);
     setDescription(r.description ?? '');
+    setNameAr(r.nameAr ?? '');
+    setNameEn(r.nameEn ?? '');
+    setDescriptionAr(r.descriptionAr ?? '');
+    setDescriptionEn(r.descriptionEn ?? '');
     setCost(String(r.pointsCost));
     setError(null);
   };
@@ -627,9 +642,19 @@ function RewardsTab() {
     setSaving(true);
     setError(null);
     try {
+      // Une traduction effacée part en `null` : `undefined` disparaîtrait du
+      // JSON et la colonne garderait l'ancien texte. À la création il n'y a
+      // rien à effacer, le champ est simplement absent.
+      const vide = editing ? null : undefined;
+      const traduction = (t: string) => t.trim() || vide;
+
       const payload = {
         name: name.trim(),
         description: description.trim() || undefined,
+        nameAr: traduction(nameAr),
+        nameEn: traduction(nameEn),
+        descriptionAr: traduction(descriptionAr),
+        descriptionEn: traduction(descriptionEn),
         pointsCost: parseInt(cost, 10),
       };
       if (editing) {
@@ -695,6 +720,19 @@ function RewardsTab() {
             placeholder="Soin visage offert"
             required
           />
+          <div style={{ display: 'grid', gap: 4, marginTop: 4 }}>
+            <input
+              value={nameAr}
+              onChange={(e) => setNameAr(e.target.value)}
+              dir="rtl"
+              placeholder="العربية — optionnel"
+            />
+            <input
+              value={nameEn}
+              onChange={(e) => setNameEn(e.target.value)}
+              placeholder="English — optionnel"
+            />
+          </div>
 
           <label className="label" style={{ display: 'block', margin: '12px 0 5px' }}>Description</label>
           <input
@@ -702,6 +740,24 @@ function RewardsTab() {
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Optionnel"
           />
+          <div style={{ display: 'grid', gap: 4, marginTop: 4 }}>
+            <input
+              value={descriptionAr}
+              onChange={(e) => setDescriptionAr(e.target.value)}
+              dir="rtl"
+              placeholder="العربية — optionnel"
+            />
+            <input
+              value={descriptionEn}
+              onChange={(e) => setDescriptionEn(e.target.value)}
+              placeholder="English — optionnel"
+            />
+          </div>
+
+          <div className="small muted" style={{ marginTop: 6 }}>
+            Traductions facultatives : laissées vides, les clientes voient le
+            français.
+          </div>
 
           <label className="label" style={{ display: 'block', margin: '12px 0 5px' }}>Coût en points</label>
           <input
@@ -751,7 +807,14 @@ function RewardsTab() {
               {rewards.map((r) => (
                 <tr key={r.id} style={{ opacity: r.active ? 1 : 0.55 }}>
                   <td>
-                    <div style={{ fontWeight: 500 }}>{r.name}</div>
+                    <div style={{ fontWeight: 500 }}>
+                      {r.name}
+                      {(!r.nameAr?.trim() || !r.nameEn?.trim()) && (
+                        <span className="badge badge-warning" style={{ marginLeft: 8 }}>
+                          À traduire
+                        </span>
+                      )}
+                    </div>
                     {r.description && <div className="small muted">{r.description}</div>}
                   </td>
                   <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--gold-deep)' }}>
