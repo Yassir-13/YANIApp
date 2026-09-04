@@ -27,6 +27,9 @@
 \usepackage{xcolor}
 \usepackage{float}
 \usepackage{tikz}
+% `calc` fournit la syntaxe ($(a)+(x,y)$), qui permet de positionner les
+% éléments de la page de garde par rapport aux coins de la page.
+\usetikzlibrary{calc}
 
 % ── Tableaux ─────────────────────────────────────────────────────
 \usepackage{array}
@@ -74,6 +77,37 @@
 \definecolor{yaniCreme}{HTML}{F9F6F0}
 \definecolor{yaniGris}{HTML}{6B6252}
 \definecolor{yaniGrisClair}{HTML}{EBE3D4}
+
+% ═══════════════════════════════════════════════════════════════════
+%  Couleurs institutionnelles EMSI — page de garde uniquement
+% ═══════════════════════════════════════════════════════════════════
+%  La couverture suit la charte de l'école ; le corps du rapport garde la
+%  palette du projet définie au-dessus. C'est l'usage : l'établissement
+%  s'affiche sur la couverture, le projet à l'intérieur.
+%
+%  Pour une couverture aux couleurs du projet plutôt qu'à celles de l'école,
+%  il suffit de faire pointer ces deux noms ailleurs :
+%      \colorlet{jauneEMSI}{yaniOr}
+%      \colorlet{vertEMSI}{yaniOrProfond}
+\definecolor{jauneEMSI}{RGB}{234, 224, 15}
+\definecolor{vertEMSI}{RGB}{0, 120, 70}
+\definecolor{ombre}{RGB}{225, 225, 225}
+
+% ═══════════════════════════════════════════════════════════════════
+%  Logo de la page de garde, avec repli si le fichier manque
+% ═══════════════════════════════════════════════════════════════════
+%  Même principe que \figProjet : le document compile avant que les logos
+%  n'aient été déposés dans figures/, et un cadre nomme le fichier attendu.
+%  Usage : \logoCouverture{EMSI.png}{2.1cm}
+\newcommand{\logoCouverture}[2]{%
+  \IfFileExists{figures/#1}%
+    {\includegraphics[height=#2,keepaspectratio]{figures/#1}}%
+    {\setlength{\fboxrule}{0.8pt}\setlength{\fboxsep}{4pt}%
+     \fcolorbox{jauneEMSI}{white}{%
+       \begin{minipage}[c][#2][c]{3.4cm}
+         \centering\scriptsize\color{yaniGris}\ttfamily figures/#1
+       \end{minipage}}}%
+}
 
 % ═══════════════════════════════════════════════════════════════════
 %  Titres

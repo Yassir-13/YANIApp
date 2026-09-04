@@ -15,23 +15,31 @@
 % ═══════════════════════════════════════════════════════════════════
 \documentclass[a4paper,12pt,oneside]{report}
 
-% ── Informations à compléter ─────────────────────────────────────
-% Ce sont les seules valeurs à renseigner avant impression.
-% Les retours à la ligne sont explicites : le titre est composé en grand corps,
-% et un retour automatique y tomberait au mauvais endroit.
-\newcommand{\nouvelleTitre}{Conception et réalisation\\
-d'une application mobile, d'une API\\
-et d'un back-office pour un centre de beauté}
-\newcommand{\nouvelleTitreCourt}{Yani Concept by Fati}
+% ═══════════════════════════════════════════════════════════════════
+%  ▼▼▼  TOUT CE QUI EST À RENSEIGNER TIENT DANS CE BLOC  ▼▼▼
+% ═══════════════════════════════════════════════════════════════════
+% Le titre est composé dans un cadre de 9,6 cm : il se replie tout seul,
+% aucun retour à la ligne à placer à la main.
+\newcommand{\nouvelleTitre}{Conception et réalisation d'une application
+mobile, d'une API et d'un back-office pour un centre de beauté}
+
+\newcommand{\nouvelleNature}{Projet de Fin d'Année}
 \newcommand{\nouvelleFiliere}{Cybersécurité et Infrastructures Réseau}
-\newcommand{\nouvelleAnnee}{Année 2025--2026}
-% Les trois noms ci-dessous apparaissent sur la page de garde, dans les
-% remerciements et dans le tableau des rôles SCRUM. Tant qu'ils ne sont pas
-% renseignés, ils s'affichent en gris italique — impossible de les oublier.
+\newcommand{\nouvelleAnnee}{2025--2026}
+
+% Les noms ci-dessous servent aussi aux remerciements et au tableau des rôles
+% SCRUM. Tant qu'ils ne sont pas renseignés, ils s'affichent en gris italique
+% — impossible de les oublier à la relecture.
 \newcommand{\nouvelleAuteur}{\aCompleter{Prénom NOM}}
-\newcommand{\nouvelleEncadrantPedagogique}{\aCompleter{Mme/M. Prénom NOM}}
+\newcommand{\nouvelleEncadrantPedagogique}{\aCompleter{Pr. Prénom NOM}}
 \newcommand{\nouvelleEncadrantEntreprise}{\aCompleter{Mme/M. Prénom NOM}}
+
 \newcommand{\nouvelleEtablissement}{École Marocaine des Sciences de l'Ingénieur}
+\newcommand{\nouvelleVille}{Marrakech}
+\newcommand{\nouvelleTitreCourt}{Yani Concept by Fati}
+% ═══════════════════════════════════════════════════════════════════
+%  ▲▲▲  FIN DU BLOC À RENSEIGNER  ▲▲▲
+% ═══════════════════════════════════════════════════════════════════
 
 \input{preambule}
 
@@ -40,55 +48,103 @@ et d'un back-office pour un centre de beauté}
 % ═══════════════════════════════════════════════════════════════════
 %  PAGE DE GARDE
 % ═══════════════════════════════════════════════════════════════════
+%  Toutes les positions sont mesurées depuis le COIN SUPÉRIEUR GAUCHE de la
+%  page (`current page.north west`), en centimètres, y négatif vers le bas.
+%  Pour descendre un bloc, augmenter son deuxième nombre.
+%
+%  Repères verticaux : logos −2,3 · filière −6,6 · cadre du titre −7,9 à −12,9
+%  · « Réalisé par » −16,5 · « Encadré par » −20,6 · année −27,6.
 \begin{titlepage}
 \thispagestyle{empty}
-\centering
+\begin{tikzpicture}[remember picture, overlay]
 
-\vspace*{0.5cm}
+  % ---- Bande jaune en haut à gauche ----
+  \fill[jauneEMSI] ($(current page.north west)+(0.4cm,-1.1cm)$)
+    rectangle ($(current page.north west)+(8cm,-1.5cm)$);
 
-{\large\scshape\color{yaniGris} \nouvelleEtablissement}\\[0.2cm]
-{\color{yaniOr}\rule{0.4\textwidth}{0.8pt}}
+  % ---- Logos : l'école à gauche, le projet à droite ----
+  \node[anchor=north west] at ($(current page.north west)+(0.7cm,-2.3cm)$) {%
+    \logoCouverture{EMSI.png}{2.1cm}
+  };
+  \node[anchor=north east] at ($(current page.north east)+(-1cm,-2.3cm)$) {%
+    \logoCouverture{logo.png}{2.3cm}
+  };
 
-\vspace{1.6cm}
+  % ---- Bande jaune sous les logos ----
+  \fill[jauneEMSI] ($(current page.north west)+(3.6cm,-5.3cm)$)
+    rectangle ($(current page.north east)+(-0.4cm,-5.7cm)$);
 
-{\Huge\bfseries\color{yaniOrProfond} PROJET DE FIN D'ANNÉE}\\[0.5cm]
-{\large\color{yaniGris} \nouvelleAnnee}
+  % ---- Nature du travail + filière ----
+  \node[anchor=north east] at ($(current page.north east)+(-1cm,-6.6cm)$) {%
+    \begin{minipage}{9cm}\raggedleft
+      {\large\bfseries \nouvelleNature}\\[4pt]
+      {\normalsize\bfseries\color{vertEMSI} \nouvelleFiliere}
+    \end{minipage}
+  };
 
-\vspace{1.4cm}
+  % ---- Ombre + cadre arrondi du titre, avec ses deux attaches jaunes ----
+  \fill[ombre, rounded corners=8pt] ($(current page.north west)+(0.9cm,-8.1cm)$)
+    rectangle ($(current page.north west)+(11.2cm,-13.1cm)$);
+  \draw[jauneEMSI, line width=3pt, rounded corners=8pt]
+    ($(current page.north west)+(0.7cm,-7.9cm)$)
+    rectangle ($(current page.north west)+(11cm,-12.9cm)$);
+  \fill[jauneEMSI] ($(current page.north west)+(11cm,-8.3cm)$)
+    rectangle ($(current page.north east)+(-0.4cm,-8.7cm)$);
+  \fill[jauneEMSI] ($(current page.north west)+(11cm,-12.1cm)$)
+    rectangle ($(current page.north west)+(11.4cm,-12.9cm)$);
+  % La césure est désactivée ici seulement : un titre coupé en « ap-plication »
+  % au milieu d'une couverture se voit tout de suite. Le reste du rapport, lui,
+  % garde la césure — sans elle, le texte justifié se troue.
+  %
+  % \hyphenchar et non \hyphenpenalty : dans un nœud TikZ, la pénalité est
+  % rétablie avant que le paragraphe ne soit coupé, donc sans effet. Retirer le
+  % caractère de césure de la police, après l'avoir sélectionnée, tient.
+  \node[anchor=center, align=center, text width=9.6cm]
+    at ($(current page.north west)+(5.85cm,-10.4cm)$) {%
+    \normalsize\bfseries\selectfont
+    \hyphenchar\font=-1\relax
+    \nouvelleTitre
+  };
 
-{\color{yaniOr}\rule{0.75\textwidth}{1.5pt}}\\[0.7cm]
-{\Large\bfseries\color{yaniNoir} \nouvelleTitre}\\[0.7cm]
-{\color{yaniOr}\rule{0.75\textwidth}{1.5pt}}
+  % ---- Filet jaune de séparation ----
+  \fill[jauneEMSI] ($(current page.north west)+(1cm,-13.9cm)$)
+    rectangle ($(current page.north east)+(-1cm,-14.05cm)$);
 
-\vspace{0.9cm}
+  % ---- Bloc « Réalisé par » ----
+  % La barre est calée sur UN auteur. Pour un binôme, ajouter la seconde ligne
+  % dans le minipage ci-dessous et descendre le −17.9 à −18.5.
+  \fill[jauneEMSI] ($(current page.north west)+(1.1cm,-16.5cm)$)
+    rectangle ($(current page.north west)+(1.4cm,-17.9cm)$);
+  \node[anchor=north west] at ($(current page.north west)+(1.7cm,-16.6cm)$) {%
+    \begin{minipage}{12cm}
+      {\bfseries\color{vertEMSI} Réalisé par~:}\\[6pt]
+      \nouvelleAuteur
+    \end{minipage}
+  };
 
-{\large\itshape\color{yaniGris} \nouvelleFiliere}
+  % ---- Bloc « Encadré par » ----
+  \fill[jauneEMSI] ($(current page.north west)+(1.1cm,-20.6cm)$)
+    rectangle ($(current page.north west)+(1.4cm,-23.4cm)$);
+  \node[anchor=north west] at ($(current page.north west)+(1.7cm,-20.7cm)$) {%
+    \begin{minipage}{15.5cm}
+      {\bfseries\color{vertEMSI} Encadré par~:}\\[6pt]
+      \nouvelleEncadrantPedagogique, Encadrant Académique,
+      EMSI \nouvelleVille.\\[6pt]
+      \nouvelleEncadrantEntreprise, Encadrant Professionnel,
+      \nouvelleTitreCourt, \nouvelleVille.
+    \end{minipage}
+  };
 
-\vspace{1.2cm}
+  % ---- Filet jaune de bas de page ----
+  \fill[jauneEMSI] ($(current page.north west)+(1cm,-26.7cm)$)
+    rectangle ($(current page.north east)+(-1cm,-26.85cm)$);
 
-% Le logo réel du projet vit dans brand/logo-master.png à la racine du dépôt.
-% Le copier ici sous le nom logo.png pour qu'il remplace le cadre d'attente.
-\IfFileExists{figures/logo.png}
-  {\includegraphics[width=0.32\textwidth,keepaspectratio]{figures/logo.png}}
-  {\cadreAttente{logo.png}{Logo de \yani}}
+  % ---- Année universitaire ----
+  \node[anchor=north] at ($(current page.north)+(0cm,-27.6cm)$) {%
+    {\large\bfseries Année Universitaire~: \nouvelleAnnee}
+  };
 
-\vfill
-
-\begin{minipage}{0.46\textwidth}
-  \raggedright
-  {\bfseries\color{yaniOrProfond} Réalisé par :}\\[0.2cm]
-  \nouvelleAuteur
-\end{minipage}
-\hfill
-\begin{minipage}{0.46\textwidth}
-  \raggedleft
-  {\bfseries\color{yaniOrProfond} Encadré par :}\\[0.2cm]
-  \nouvelleEncadrantPedagogique\\[0.15cm]
-  \nouvelleEncadrantEntreprise
-\end{minipage}
-
-\vspace{1.2cm}
-
+\end{tikzpicture}
 \end{titlepage}
 
 % ═══════════════════════════════════════════════════════════════════
