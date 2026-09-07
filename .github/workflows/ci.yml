@@ -106,6 +106,31 @@ jobs:
       - name: Test end-to-end
         run: npm run test:e2e
 
+      # La promesse « un clone propre reproduit l'institut », vérifiée pour de
+      # bon : une base neuve, un dossier d'images vide, et le catalogue complet
+      # à l'arrivée — photos comprises.
+      #
+      # Sur SA base, et pas celle des tests : ceux-ci créent leurs propres
+      # prestations, et l'import refuse de toucher à un catalogue non vide. Il
+      # n'aurait donc plus rien prouvé.
+      #
+      # Le second `--apply` est le contrôle d'idempotence : rejoué, l'import ne
+      # doit rien créer et ne rien écraser. `catalog:translate` derrière sort en
+      # code 1 s'il reste une fiche sans traduction — c'est ce qui relie les
+      # deux fichiers versionnés.
+      - name: Catalogue initial sur une base vierge
+        env:
+          DATABASE_URL: postgresql://yani_ci:yani_ci@localhost:5432/yani_catalogue?schema=public
+          UPLOADS_DIR: ${{ runner.temp }}/uploads
+        run: |
+          psql postgresql://yani_ci:yani_ci@localhost:5432/postgres -c 'CREATE DATABASE yani_catalogue'
+          npx prisma migrate deploy
+          npm run catalog:sync
+          npm run catalog:sync -- --apply
+          npm run catalog:sync -- --apply
+          npm run catalog:translate -- --apply
+          npm run uploads:prune
+
   # ═════════════════════════════════════════════════════════════════════
   #  Backoffice et mobile — compilation seule
   #  Aucun des deux n'a de tests. La compilation est donc le seul filet,

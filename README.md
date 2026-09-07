@@ -74,6 +74,7 @@ cd backend
 npm install
 npx prisma migrate deploy         # applique le schéma
 npx prisma db seed                # horaires d'ouverture + compte administrateur
+npm run catalog:sync -- --apply   # catalogue initial : les fiches et leurs photos
 npm run start:dev
 ```
 
@@ -86,6 +87,28 @@ uniquement, elle est coupée en production.
 > idempotent : dès que la table des horaires contient une ligne, il n'y touche
 > plus — le rejouer sur une base en service ne peut pas altérer les horaires
 > réels de l'institut.
+
+#### Catalogue initial
+
+Le seed ne crée aucune prestation ni aucun produit. Le catalogue vient d'un
+fichier versionné, `prisma/catalog-initial.json`, et ses photos de
+`brand/service-images/` et `brand/product-images/`.
+
+```bash
+npm run catalog:sync              # contrôle seul, n'écrit rien
+npm run catalog:sync -- --apply   # crée les fiches et copie les photos
+```
+
+Les photos comptent autant que les fiches : elles ne sont dans aucun dump SQL,
+et le back-office les range sous un nom tiré au sort. Sans elles, une
+installation neuve affiche un catalogue entièrement troué, sans que rien ne le
+signale.
+
+La commande se lance depuis un clone du dépôt — l'image Docker n'embarque que
+`backend/`, pas les visuels. Elle ne touche à rien si le catalogue contient
+déjà quelque chose : ni les prix, ni les stocks, ni les photos changées depuis.
+Le contrôle sans argument sort en code 1 si le fichier décrit une adresse hors
+contrat ou un visuel absent.
 
 #### Catalogue trilingue
 
@@ -201,16 +224,34 @@ l'API. L'échec se manifeste par un blocage CORS dans la console du navigateur,
 **jamais par un message du serveur** — on cherche donc longtemps du mauvais
 côté.
 
+#### Le dossier des photos
+
+Les images du catalogue vivent dans `backend/uploads`, monté tel quel dans le
+conteneur — un dossier du dépôt et non un volume nommé, pour que les deux
+backends du développement servent les mêmes fichiers. `UPLOADS_DIR` permet de
+le placer ailleurs, sur un disque monté par exemple.
+
+Il est à provisionner comme la base : ce qu'il contient n'est ni dans l'image
+Docker, ni dans le dump SQL. Une fois en service, `npm run uploads:prune`
+recense les photos qu'aucune fiche n'affiche plus, et ne supprime rien sans
+`--apply`.
+
 ### Sauvegardes
 
 ```bash
 ./scripts/backup.sh
 ```
 
-Écrit un dump horodaté dans `backups/` (jamais versionné) et supprime ceux de
-plus de quatorze jours. À automatiser par une tâche planifiée, et à recopier
-**hors de la machine** : une sauvegarde qui vit sur le serveur qu'elle sauvegarde
-ne protège de rien.
+Écrit **deux** fichiers du même horodatage dans `backups/` (jamais versionné) :
+le dump de la base, et l'archive des images du catalogue. Supprime au passage
+les sauvegardes de plus de quatorze jours. À automatiser par une tâche
+planifiée, et à recopier **hors de la machine** : une sauvegarde qui vit sur le
+serveur qu'elle sauvegarde ne protège de rien.
+
+> **Les deux fichiers voyagent ensemble.** Les photos ne sont pas dans le dump.
+> Restaurer la base seule rend un catalogue dont toutes les images manquent, et
+> rien ne le signale : les fiches s'affichent, avec un trou à la place de la
+> photo.
 
 La procédure de restauration — et la vérification qui va avec — est documentée
 en bas de `scripts/backup.sh`.

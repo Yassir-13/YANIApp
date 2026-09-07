@@ -1,0 +1,879 @@
+{
+  "_lisezMoi": "Catalogue initial de l'institut : ce qu'une installation neuve doit contenir. Importé par « npm run catalog:sync », qui ne crée rien si le catalogue est déjà rempli. La clé d'une fiche est son nom FRANÇAIS, comme dans catalog-translations.json — les traductions se posent ensuite, avec « npm run catalog:translate ». « image » nomme le visuel versionné dans brand/service-images ou brand/product-images ; « imageUrl » est le nom sous lequel l'API le sert, figé ici pour que toutes les installations servent les mêmes adresses. Les durées ne figurent pas : aucune prestation n'en porte, la longueur d'un rendez-vous vient de slotIntervalMin (réglages du centre).",
+  "serviceCategories": [
+    "Amincissement et Drainage (Machine Ultra Vitalo)",
+    "Beauté du regard",
+    "HIFU",
+    "Laser Diod Cold",
+    "Laser Titanium Gold",
+    "Lifting Colombien Boost",
+    "Lifting Colombien Normal",
+    "Maquillage Semi Permanent et Detatouage",
+    "Microneedling Cheveux",
+    "Microneedling Corps (prix par zone)",
+    "Microneedling Visage",
+    "Plasma Pen",
+    "Soin Hydra Facial et Produits Bio",
+    "Soin dentaire"
+  ],
+  "productCategories": [
+    "Crèmes",
+    "Huiles de corps",
+    "Soins visage",
+    "Sérums"
+  ],
+  "services": [
+    {
+      "category": "Amincissement et Drainage (Machine Ultra Vitalo)",
+      "name": "Amincissement et Drainage - 1 seance",
+      "description": "Massage minceur à la machine Ultra Vitalo associé à nos huiles bio : drainage lymphatique, déstockage des graisses localisées et réduction de l'aspect peau d'orange. Séance découverte.",
+      "price": "300.00",
+      "image": "amincissement-drainage.webp",
+      "imageUrl": "/uploads/f70a9bc2-c82a-4de6-ba5a-74c3a4750aa9.webp"
+    },
+    {
+      "category": "Amincissement et Drainage (Machine Ultra Vitalo)",
+      "name": "Amincissement et Drainage - Pack du 10 seances",
+      "description": "La cure complète, au tarif le plus avantageux. Le format le plus efficace sur la cellulite installée, la rétention d'eau et les zones résistantes.",
+      "price": "2500.00",
+      "image": "amincissement-drainage.webp",
+      "imageUrl": "/uploads/f70a9bc2-c82a-4de6-ba5a-74c3a4750aa9.webp"
+    },
+    {
+      "category": "Amincissement et Drainage (Machine Ultra Vitalo)",
+      "name": "Amincissement et Drainage - Pack du 5 seances",
+      "description": "Cinq séances pour engager un vrai travail sur la silhouette. Le rythme conseillé pour commencer à voir les premiers centimètres partir et la peau se lisser.",
+      "price": "1400.00",
+      "image": "amincissement-drainage.webp",
+      "imageUrl": "/uploads/f70a9bc2-c82a-4de6-ba5a-74c3a4750aa9.webp"
+    },
+    {
+      "category": "Beauté du regard",
+      "name": "Brow lift",
+      "description": "Restructuration des sourcils : les poils sont assouplis, redressés puis fixés pour obtenir une ligne dense, harmonieuse et disciplinée. Effet naturel pendant 6 à 8 semaines.",
+      "price": "350.00",
+      "image": "brow-lift.webp",
+      "imageUrl": "/uploads/7b60605b-3c37-44f9-99bc-8ad98f90aae5.webp"
+    },
+    {
+      "category": "Beauté du regard",
+      "name": "Lash lift",
+      "description": "Rehaussement des cils naturels : ils sont recourbés dès la racine pour un effet « œil ouvert », sans extensions ni mascara. Résultat immédiat qui tient 6 à 8 semaines.",
+      "price": "300.00",
+      "image": "lash-lift.webp",
+      "imageUrl": "/uploads/706b1376-3212-4b8d-8b61-a3a28c5cc686.webp"
+    },
+    {
+      "category": "HIFU",
+      "name": "hifu double menton",
+      "description": "HIFU ciblé sous le menton : les ultrasons agissent à la fois sur la graisse localisée et sur le relâchement cutané pour redessiner la ligne de la mâchoire, sans chirurgie.",
+      "price": "600.00",
+      "image": "hifu-double-menton.webp",
+      "imageUrl": "/uploads/99e59242-5e45-4e0c-9a0d-bfef424d52bb.webp"
+    },
+    {
+      "category": "HIFU",
+      "name": "hifu vaginal",
+      "description": "Soin intime par ultrasons focalisés, non invasif et sans éviction. Vise le raffermissement et la tonicité des tissus. Réalisé en cabine, en toute discrétion et par une praticienne formée.",
+      "price": "700.00",
+      "image": "hifu-intime.webp",
+      "imageUrl": "/uploads/34058a4e-3f51-4ae9-ba9b-0c5d6a140797.webp"
+    },
+    {
+      "category": "HIFU",
+      "name": "hifu visage",
+      "description": "Ultrasons focalisés de haute intensité : un lifting sans chirurgie ni injection qui retend l'ovale du visage en profondeur. L'effet est progressif, optimal vers 3 mois, sans éviction sociale.",
+      "price": "900.00",
+      "image": "hifu-visage.webp",
+      "imageUrl": "/uploads/6100f6ff-23b5-4458-a606-113602efc93b.webp"
+    },
+    {
+      "category": "Laser Diod Cold",
+      "name": "Epilation definitive a partir de (par zone)",
+      "description": "Épilation définitive au laser à froid : le poil est détruit à la racine sans échauffement de la peau, pour une séance confortable. Tarif de départ par zone, variable selon la surface à traiter.",
+      "price": "400.00",
+      "image": "laser-diod-epilation.webp",
+      "imageUrl": "/uploads/733dbe95-0aef-4348-81c9-039ce85be1c1.webp"
+    },
+    {
+      "category": "Laser Diod Cold",
+      "name": "Rajeunissement avec Laser et Radio Frequence integree a partir de (par zone)",
+      "description": "Laser et radiofréquence combinés pour retendre la peau, resserrer les pores et raviver l'éclat du teint. Une alternative non invasive au lifting. Tarif de départ par zone.",
+      "price": "2000.00",
+      "image": "laser-diod-rajeunissement.webp",
+      "imageUrl": "/uploads/e38359b1-1f5e-4b6e-a069-391c13c52b7a.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Bords de maillot - 1 seance",
+      "description": "Les contours du maillot, pour une ligne nette sans irritation ni poils incarnés. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Séance à l'unité ; comptez en moyenne 6 à 8 séances espacées de 4 à 6 semaines pour un résultat définitif.",
+      "price": "400.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Bords de maillot - Pack 6 seances",
+      "description": "Les contours du maillot, pour une ligne nette sans irritation ni poils incarnés. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Pack de 6 séances : le cycle complet à tarif avantageux, la formule recommandée pour un résultat durable.",
+      "price": "2000.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Bras complet - 1 seance",
+      "description": "Les bras entiers, du poignet à l'épaule. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Séance à l'unité ; comptez en moyenne 6 à 8 séances espacées de 4 à 6 semaines pour un résultat définitif.",
+      "price": "700.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Bras complet - Pack 6 seances",
+      "description": "Les bras entiers, du poignet à l'épaule. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Pack de 6 séances : le cycle complet à tarif avantageux, la formule recommandée pour un résultat durable.",
+      "price": "3500.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Corps Z/G - 1 seance",
+      "description": "Formule regroupant les grandes zones du corps en une seule prestation. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Séance à l'unité ; comptez en moyenne 6 à 8 séances espacées de 4 à 6 semaines pour un résultat définitif.",
+      "price": "2500.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Corps Z/G - Pack 6 seances",
+      "description": "Formule regroupant les grandes zones du corps en une seule prestation. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Pack de 6 séances : le cycle complet à tarif avantageux, la formule recommandée pour un résultat durable.",
+      "price": "12500.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Corps complet - 1 seance",
+      "description": "Le corps entier traité en une seule formule, de la tête aux pieds. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Séance à l'unité ; comptez en moyenne 6 à 8 séances espacées de 4 à 6 semaines pour un résultat définitif.",
+      "price": "2900.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Corps complet - Pack 6 seances",
+      "description": "Le corps entier traité en une seule formule, de la tête aux pieds. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Pack de 6 séances : le cycle complet à tarif avantageux, la formule recommandée pour un résultat durable.",
+      "price": "14500.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Demi Bras - 1 seance",
+      "description": "Les avant-bras, du coude au poignet. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Séance à l'unité ; comptez en moyenne 6 à 8 séances espacées de 4 à 6 semaines pour un résultat définitif.",
+      "price": "400.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Demi Bras - Pack 6 seances",
+      "description": "Les avant-bras, du coude au poignet. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Pack de 6 séances : le cycle complet à tarif avantageux, la formule recommandée pour un résultat durable.",
+      "price": "2000.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Demi Dos - 1 seance",
+      "description": "Le haut ou le bas du dos, au choix. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Séance à l'unité ; comptez en moyenne 6 à 8 séances espacées de 4 à 6 semaines pour un résultat définitif.",
+      "price": "400.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Demi Dos - Pack 6 seances",
+      "description": "Le haut ou le bas du dos, au choix. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Pack de 6 séances : le cycle complet à tarif avantageux, la formule recommandée pour un résultat durable.",
+      "price": "2000.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Demi Jambe - 1 seance",
+      "description": "Les demi-jambes, du genou à la cheville. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Séance à l'unité ; comptez en moyenne 6 à 8 séances espacées de 4 à 6 semaines pour un résultat définitif.",
+      "price": "500.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Demi Jambe - Pack 6 seances",
+      "description": "Les demi-jambes, du genou à la cheville. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Pack de 6 séances : le cycle complet à tarif avantageux, la formule recommandée pour un résultat durable.",
+      "price": "2500.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Duvet + Menton - 1 seance",
+      "description": "Duvet de la lèvre supérieure et menton traités ensemble — la combinaison la plus demandée sur le visage. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Séance à l'unité ; comptez en moyenne 6 à 8 séances espacées de 4 à 6 semaines pour un résultat définitif.",
+      "price": "350.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Duvet + Menton - Pack 6 seances",
+      "description": "Duvet de la lèvre supérieure et menton traités ensemble — la combinaison la plus demandée sur le visage. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Pack de 6 séances : le cycle complet à tarif avantageux, la formule recommandée pour un résultat durable.",
+      "price": "1750.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Duvet - 1 seance",
+      "description": "Le fin duvet de la lèvre supérieure. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Séance à l'unité ; comptez en moyenne 6 à 8 séances espacées de 4 à 6 semaines pour un résultat définitif.",
+      "price": "150.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Duvet - Pack 6 seances",
+      "description": "Le fin duvet de la lèvre supérieure. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Pack de 6 séances : le cycle complet à tarif avantageux, la formule recommandée pour un résultat durable.",
+      "price": "750.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Jambe Complete - 1 seance",
+      "description": "Les jambes entières, cuisses et mollets compris. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Séance à l'unité ; comptez en moyenne 6 à 8 séances espacées de 4 à 6 semaines pour un résultat définitif.",
+      "price": "950.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Jambe Complete - Pack 6 seances",
+      "description": "Les jambes entières, cuisses et mollets compris. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Pack de 6 séances : le cycle complet à tarif avantageux, la formule recommandée pour un résultat durable.",
+      "price": "4750.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Le Double Menton - 1 seance",
+      "description": "La zone sous le menton et le haut du cou. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Séance à l'unité ; comptez en moyenne 6 à 8 séances espacées de 4 à 6 semaines pour un résultat définitif.",
+      "price": "300.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Le Double Menton - Pack 6 seances",
+      "description": "La zone sous le menton et le haut du cou. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Pack de 6 séances : le cycle complet à tarif avantageux, la formule recommandée pour un résultat durable.",
+      "price": "1500.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Le Menton - 1 seance",
+      "description": "Les poils du menton, souvent plus drus et récurrents. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Séance à l'unité ; comptez en moyenne 6 à 8 séances espacées de 4 à 6 semaines pour un résultat définitif.",
+      "price": "200.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Le Menton - Pack 6 seances",
+      "description": "Les poils du menton, souvent plus drus et récurrents. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Pack de 6 séances : le cycle complet à tarif avantageux, la formule recommandée pour un résultat durable.",
+      "price": "1000.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Les Aisselles - 1 seance",
+      "description": "Les aisselles — zone rapide à traiter et parmi les plus réactives au laser. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Séance à l'unité ; comptez en moyenne 6 à 8 séances espacées de 4 à 6 semaines pour un résultat définitif.",
+      "price": "500.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Les Aisselles - Pack 6 seances",
+      "description": "Les aisselles — zone rapide à traiter et parmi les plus réactives au laser. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Pack de 6 séances : le cycle complet à tarif avantageux, la formule recommandée pour un résultat durable.",
+      "price": "2500.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Les Cuisses - 1 seance",
+      "description": "Les cuisses, du genou au haut de la jambe. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Séance à l'unité ; comptez en moyenne 6 à 8 séances espacées de 4 à 6 semaines pour un résultat définitif.",
+      "price": "700.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Les Cuisses - Pack 6 seances",
+      "description": "Les cuisses, du genou au haut de la jambe. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Pack de 6 séances : le cycle complet à tarif avantageux, la formule recommandée pour un résultat durable.",
+      "price": "3500.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Maillot INT + l'anus - 1 seance",
+      "description": "Maillot intégral et zone anale, pour une épilation complète. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Séance à l'unité ; comptez en moyenne 6 à 8 séances espacées de 4 à 6 semaines pour un résultat définitif.",
+      "price": "700.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Maillot INT + l'anus - Pack 6 seances",
+      "description": "Maillot intégral et zone anale, pour une épilation complète. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Pack de 6 séances : le cycle complet à tarif avantageux, la formule recommandée pour un résultat durable.",
+      "price": "3500.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Maillot integral - 1 seance",
+      "description": "Le maillot dans son intégralité. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Séance à l'unité ; comptez en moyenne 6 à 8 séances espacées de 4 à 6 semaines pour un résultat définitif.",
+      "price": "600.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Maillot integral - Pack 6 seances",
+      "description": "Le maillot dans son intégralité. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Pack de 6 séances : le cycle complet à tarif avantageux, la formule recommandée pour un résultat durable.",
+      "price": "3000.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Torse - 1 seance",
+      "description": "Le torse — l'une des zones les plus demandées par la clientèle masculine. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Séance à l'unité ; comptez en moyenne 6 à 8 séances espacées de 4 à 6 semaines pour un résultat définitif.",
+      "price": "400.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Torse - Pack 6 seances",
+      "description": "Le torse — l'une des zones les plus demandées par la clientèle masculine. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Pack de 6 séances : le cycle complet à tarif avantageux, la formule recommandée pour un résultat durable.",
+      "price": "2000.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Tracages de Barbe - 1 seance",
+      "description": "Dessin et nettoyage des contours de la barbe au laser, pour une ligne nette sans rasage quotidien. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Séance à l'unité ; comptez en moyenne 6 à 8 séances espacées de 4 à 6 semaines pour un résultat définitif.",
+      "price": "400.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Tracages de Barbe - Pack 6 seances",
+      "description": "Dessin et nettoyage des contours de la barbe au laser, pour une ligne nette sans rasage quotidien. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Pack de 6 séances : le cycle complet à tarif avantageux, la formule recommandée pour un résultat durable.",
+      "price": "2000.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Ventre - 1 seance",
+      "description": "Le ventre, ligne ombilicale comprise. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Séance à l'unité ; comptez en moyenne 6 à 8 séances espacées de 4 à 6 semaines pour un résultat définitif.",
+      "price": "400.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Ventre - Pack 6 seances",
+      "description": "Le ventre, ligne ombilicale comprise. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Pack de 6 séances : le cycle complet à tarif avantageux, la formule recommandée pour un résultat durable.",
+      "price": "2000.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Visage + coup - 1 seance",
+      "description": "Le visage complet ainsi que le cou, pour une continuité parfaite entre les deux zones. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Séance à l'unité ; comptez en moyenne 6 à 8 séances espacées de 4 à 6 semaines pour un résultat définitif.",
+      "price": "700.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Visage + coup - Pack 6 seances",
+      "description": "Le visage complet ainsi que le cou, pour une continuité parfaite entre les deux zones. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Pack de 6 séances : le cycle complet à tarif avantageux, la formule recommandée pour un résultat durable.",
+      "price": "3500.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Visage entier - 1 seance",
+      "description": "L'ensemble du visage : duvet, menton, joues et contours. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Séance à l'unité ; comptez en moyenne 6 à 8 séances espacées de 4 à 6 semaines pour un résultat définitif.",
+      "price": "500.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Laser Titanium Gold",
+      "name": "Visage entier - Pack 6 seances",
+      "description": "L'ensemble du visage : duvet, menton, joues et contours. Laser Titanium triple longueur d'onde (755/808/1064 nm), efficace sur tous les phototypes et refroidi pour un maximum de confort. Pack de 6 séances : le cycle complet à tarif avantageux, la formule recommandée pour un résultat durable.",
+      "price": "2500.00",
+      "image": "laser-titanium.webp",
+      "imageUrl": "/uploads/47ff6321-7551-4ace-8406-b15af59416be.webp"
+    },
+    {
+      "category": "Lifting Colombien Boost",
+      "name": "Lifting Colombien Boost (Massage, Drainage inclus 2 Machines 1h30) - 1 seance",
+      "description": "La version intensive du lifting colombien : 1h30 combinant massage manuel, drainage lymphatique et deux machines. Pour un effet raffermissant et galbant nettement plus puissant.",
+      "price": "200.00",
+      "image": "lifting-colombien-boost.webp",
+      "imageUrl": "/uploads/88c3a4c9-8665-456a-8599-72f0a594c379.webp"
+    },
+    {
+      "category": "Lifting Colombien Boost",
+      "name": "Lifting Colombien Boost - Pack du 10 seances",
+      "description": "La cure Boost complète, notre formule la plus aboutie. Résultats maximaux sur le remodelage, le drainage et la qualité de la peau.",
+      "price": "1700.00",
+      "image": "lifting-colombien-boost.webp",
+      "imageUrl": "/uploads/88c3a4c9-8665-456a-8599-72f0a594c379.webp"
+    },
+    {
+      "category": "Lifting Colombien Boost",
+      "name": "Lifting Colombien Boost - Pack du 4 seances",
+      "description": "Quatre séances intensives pour lancer le remodelage. Le format le plus efficace sur une durée courte.",
+      "price": "700.00",
+      "image": "lifting-colombien-boost.webp",
+      "imageUrl": "/uploads/88c3a4c9-8665-456a-8599-72f0a594c379.webp"
+    },
+    {
+      "category": "Lifting Colombien Boost",
+      "name": "Lifting Colombien Boost - Pack du 6 seances",
+      "description": "Six séances Boost pour un travail en profondeur sur la fermeté et le galbe. Le meilleur compromis entre résultat et budget.",
+      "price": "1000.00",
+      "image": "lifting-colombien-boost.webp",
+      "imageUrl": "/uploads/88c3a4c9-8665-456a-8599-72f0a594c379.webp"
+    },
+    {
+      "category": "Lifting Colombien Normal",
+      "name": "Lifting Colombien Normal (Massage et Machine 1H) - 1 seance",
+      "description": "Vacuum thérapie : des ventouses aspirent la peau pour activer la circulation, drainer les toxines et raffermir la zone traitée. Une heure de massage et de machine, indolore et sans chirurgie.",
+      "price": "150.00",
+      "image": "lifting-colombien-normal.webp",
+      "imageUrl": "/uploads/1ac7a2b3-a459-4917-8eb5-0e0c0d0ee3f7.webp"
+    },
+    {
+      "category": "Lifting Colombien Normal",
+      "name": "Lifting Colombien Normal - Pack du 10 seances",
+      "description": "La cure complète au meilleur tarif. Le format le plus efficace pour un changement visible et qui tient dans la durée.",
+      "price": "1200.00",
+      "image": "lifting-colombien-normal.webp",
+      "imageUrl": "/uploads/1ac7a2b3-a459-4917-8eb5-0e0c0d0ee3f7.webp"
+    },
+    {
+      "category": "Lifting Colombien Normal",
+      "name": "Lifting Colombien Normal - Pack du 4 seances",
+      "description": "Quatre séances pour installer l'effet galbant et raffermissant. Le format découverte idéal pour un premier objectif silhouette.",
+      "price": "550.00",
+      "image": "lifting-colombien-normal.webp",
+      "imageUrl": "/uploads/1ac7a2b3-a459-4917-8eb5-0e0c0d0ee3f7.webp"
+    },
+    {
+      "category": "Lifting Colombien Normal",
+      "name": "Lifting Colombien Normal - Pack du 6 seances",
+      "description": "Six séances pour un remodelage plus marqué de la zone traitée. Rythme conseillé : une à deux séances par semaine, avec un jour de repos entre chacune.",
+      "price": "800.00",
+      "image": "lifting-colombien-normal.webp",
+      "imageUrl": "/uploads/1ac7a2b3-a459-4917-8eb5-0e0c0d0ee3f7.webp"
+    },
+    {
+      "category": "Maquillage Semi Permanent et Detatouage",
+      "name": "Baby lips",
+      "description": "Maquillage semi-permanent des lèvres dans une teinte douce et naturelle. Redessine le contour, ravive la couleur et donne un effet repulpé « bonne mine » sans effet maquillé.",
+      "price": "1200.00",
+      "image": "baby-lips.webp",
+      "imageUrl": "/uploads/3c6a8e06-48bc-4877-a6d4-b6f9ca27d962.webp"
+    },
+    {
+      "category": "Maquillage Semi Permanent et Detatouage",
+      "name": "Correction de la couleur des levres et contour - 1ere seance",
+      "description": "Reprise complète de la couleur et du contour des lèvres : la teinte est réharmonisée et la ligne redessinée pour corriger une asymétrie ou un ancien travail. Première séance du protocole.",
+      "price": "1200.00",
+      "image": "baby-lips.webp",
+      "imageUrl": "/uploads/3c6a8e06-48bc-4877-a6d4-b6f9ca27d962.webp"
+    },
+    {
+      "category": "Maquillage Semi Permanent et Detatouage",
+      "name": "Correction de la couleur des levres et contour - 2eme seance (max apres 1 mois)",
+      "description": "Séance de retouche, à réaliser au maximum un mois après la première. Elle fixe la teinte définitive, corrige les zones qui ont moins pris et assure la tenue du résultat dans le temps.",
+      "price": "800.00",
+      "image": "baby-lips.webp",
+      "imageUrl": "/uploads/3c6a8e06-48bc-4877-a6d4-b6f9ca27d962.webp"
+    },
+    {
+      "category": "Maquillage Semi Permanent et Detatouage",
+      "name": "Correction de la couleur des levres et contour - Pack 2 seances",
+      "description": "Le protocole complet en deux séances (correction puis retouche) à tarif préférentiel. La formule recommandée pour un résultat abouti et durable.",
+      "price": "1800.00",
+      "image": "baby-lips.webp",
+      "imageUrl": "/uploads/3c6a8e06-48bc-4877-a6d4-b6f9ca27d962.webp"
+    },
+    {
+      "category": "Maquillage Semi Permanent et Detatouage",
+      "name": "Detatouage (tattoo Corps) avec Laser a partir du",
+      "description": "Effacement du tatouage au laser : les pigments sont fragmentés puis éliminés naturellement par l'organisme. Tarif de départ, variable selon la surface, les couleurs et le nombre de séances nécessaires.",
+      "price": "1500.00",
+      "image": "detatouage-corps.webp",
+      "imageUrl": "/uploads/5ce4fb87-1f27-4d3e-953d-299b688d2a4c.webp"
+    },
+    {
+      "category": "Maquillage Semi Permanent et Detatouage",
+      "name": "Detatouage (tattoo Corps) avec Produits a partir du",
+      "description": "Retrait progressif d'un tatouage corporel par solution d'extraction, qui remonte les pigments vers la surface. Tarif de départ, ajusté selon la taille, la profondeur et l'ancienneté du tatouage.",
+      "price": "1000.00",
+      "image": "detatouage-corps.webp",
+      "imageUrl": "/uploads/5ce4fb87-1f27-4d3e-953d-299b688d2a4c.webp"
+    },
+    {
+      "category": "Maquillage Semi Permanent et Detatouage",
+      "name": "Detatouage des sourcils 1 seance",
+      "description": "Estompage d'un ancien maquillage permanent trop foncé, mal placé ou viré de couleur. Une séance d'éclaircissement progressif pour repartir sur une base propre avant un nouveau travail.",
+      "price": "550.00",
+      "image": "microblading-sourcils.webp",
+      "imageUrl": "/uploads/3c6de391-71fd-4dee-bdd3-acbe3a5d5cef.webp"
+    },
+    {
+      "category": "Maquillage Semi Permanent et Detatouage",
+      "name": "Detatouage des sourcils Pack 2 seances",
+      "description": "Deux séances d'estompage espacées, à tarif préférentiel. Recommandé pour les pigments anciens, très saturés ou appliqués en profondeur, qui demandent plusieurs passages.",
+      "price": "1000.00",
+      "image": "microblading-sourcils.webp",
+      "imageUrl": "/uploads/3c6de391-71fd-4dee-bdd3-acbe3a5d5cef.webp"
+    },
+    {
+      "category": "Maquillage Semi Permanent et Detatouage",
+      "name": "Microblading et Microshading",
+      "description": "Dermopigmentation des sourcils, poil par poil (microblading) ou en effet ombré poudré (microshading). Des sourcils denses, symétriques et parfaitement dessinés, pour un résultat naturel qui tient 12 à 18 mois.",
+      "price": "1200.00",
+      "image": "microblading-sourcils.webp",
+      "imageUrl": "/uploads/3c6de391-71fd-4dee-bdd3-acbe3a5d5cef.webp"
+    },
+    {
+      "category": "Maquillage Semi Permanent et Detatouage",
+      "name": "Neutralisation du blue des levres",
+      "description": "Correction des lèvres présentant un dépôt bleuté ou grisé, souvent lié à un ancien pigment ou à une hyperpigmentation. Des pigments neutralisants rééquilibrent la teinte pour retrouver un rose naturel et homogène.",
+      "price": "1200.00",
+      "image": "baby-lips.webp",
+      "imageUrl": "/uploads/3c6a8e06-48bc-4877-a6d4-b6f9ca27d962.webp"
+    },
+    {
+      "category": "Microneedling Cheveux",
+      "name": "Microneedling Cheveux - 1 seance",
+      "description": "Micro-perforations du cuir chevelu associées à des sérums fortifiants. Stimule la microcirculation et réveille les follicules pour densifier la chevelure et freiner la chute.",
+      "price": "700.00",
+      "image": "microneedling-cheveux.webp",
+      "imageUrl": "/uploads/4206b1c8-3a31-40fc-bfa9-e9bbb705a8cb.webp"
+    },
+    {
+      "category": "Microneedling Cheveux",
+      "name": "Microneedling Cheveux - Pack 2 seances",
+      "description": "Deux séances espacées pour ancrer les résultats sur le cuir chevelu. La formule conseillée en cas de chute saisonnière ou de zones clairsemées.",
+      "price": "1200.00",
+      "image": "microneedling-cheveux.webp",
+      "imageUrl": "/uploads/4206b1c8-3a31-40fc-bfa9-e9bbb705a8cb.webp"
+    },
+    {
+      "category": "Microneedling Corps (prix par zone)",
+      "name": "Microneedling + Bbglow",
+      "description": "Microneedling associé au BB Glow : un sérum teinté est infusé dans les couches superficielles pour unifier la couleur de la peau et masquer les irrégularités, en plus de l'effet régénérant.",
+      "price": "900.00",
+      "image": "microneedling-corps.webp",
+      "imageUrl": "/uploads/a0a160c7-68d6-48b3-8908-c881eb53fa12.webp"
+    },
+    {
+      "category": "Microneedling Corps (prix par zone)",
+      "name": "Microneedling + Bbglow + LED",
+      "description": "La formule complète : régénération par microneedling, unification du teint par BB Glow et apaisement par LED. Le protocole le plus abouti pour la peau du corps.",
+      "price": "1100.00",
+      "image": "microneedling-corps.webp",
+      "imageUrl": "/uploads/a0a160c7-68d6-48b3-8908-c881eb53fa12.webp"
+    },
+    {
+      "category": "Microneedling Corps (prix par zone)",
+      "name": "Microneedling + LED",
+      "description": "Le microneedling corps complété par la luminothérapie LED, qui apaise la zone traitée et accélère la cicatrisation. Résultat plus rapide et séance plus confortable.",
+      "price": "800.00",
+      "image": "microneedling-corps.webp",
+      "imageUrl": "/uploads/a0a160c7-68d6-48b3-8908-c881eb53fa12.webp"
+    },
+    {
+      "category": "Microneedling Corps (prix par zone)",
+      "name": "Microneedling simple",
+      "description": "Microneedling ciblé sur une zone du corps : vergetures, cicatrices ou relâchement cutané. La peau se régénère et retrouve densité et souplesse. Tarif par zone traitée.",
+      "price": "600.00",
+      "image": "microneedling-corps.webp",
+      "imageUrl": "/uploads/a0a160c7-68d6-48b3-8908-c881eb53fa12.webp"
+    },
+    {
+      "category": "Microneedling Visage",
+      "name": "Microneedling Gold visage et cernes",
+      "description": "Notre protocole premium au sérum d'or, visage et contour des yeux inclus. Cible spécifiquement les cernes, les signes de fatigue et les ridules pour un regard reposé et un teint lumineux.",
+      "price": "1300.00",
+      "image": "microneedling-visage.webp",
+      "imageUrl": "/uploads/64f30741-7432-48b7-af5c-879c24a17408.webp"
+    },
+    {
+      "category": "Microneedling Visage",
+      "name": "Microneedling Normal",
+      "description": "Des micro-perforations contrôlées relancent la production naturelle de collagène et d'élastine. Grain de peau affiné, pores resserrés, cicatrices d'acné atténuées et fermeté retrouvée.",
+      "price": "500.00",
+      "image": "microneedling-visage.webp",
+      "imageUrl": "/uploads/64f30741-7432-48b7-af5c-879c24a17408.webp"
+    },
+    {
+      "category": "Microneedling Visage",
+      "name": "Microneedling vitamines et Led",
+      "description": "Le microneedling associé à un cocktail vitaminé et à la luminothérapie LED. Les micro-canaux font pénétrer les actifs en profondeur, la LED apaise la peau et accélère la régénération.",
+      "price": "800.00",
+      "image": "microneedling-visage.webp",
+      "imageUrl": "/uploads/64f30741-7432-48b7-af5c-879c24a17408.webp"
+    },
+    {
+      "category": "Plasma Pen",
+      "name": "Plasma Pen Contre les Rides et Relachement de la Peau (par zone)",
+      "description": "Un arc de plasma crée des micro-impacts qui rétractent la peau immédiatement et relancent la production de collagène pendant plusieurs semaines. Cible les paupières tombantes, les rides et le relâchement. Tarif par zone.",
+      "price": "650.00",
+      "image": "plasma-pen.webp",
+      "imageUrl": "/uploads/4eb42d21-3b16-449a-af3a-2c01d1217ed5.webp"
+    },
+    {
+      "category": "Soin Hydra Facial et Produits Bio",
+      "name": "Soin Complet inclus plusieurs etapes, massages lifting et LED",
+      "description": "Protocole complet en plusieurs étapes : nettoyage, extraction des impuretés, massage lifting manuel et luminothérapie LED. Idéal pour relancer l'éclat, apaiser les rougeurs et retendre les traits.",
+      "price": "800.00",
+      "image": "hydra-facial.webp",
+      "imageUrl": "/uploads/30962709-8adb-4d1f-8a99-6988e34fff9d.webp"
+    },
+    {
+      "category": "Soin Hydra Facial et Produits Bio",
+      "name": "Soin Normal",
+      "description": "Nettoyage en profondeur, exfoliation douce et hydratation intense du visage. Le soin essentiel pour désincruster les pores, apaiser la peau et retrouver un teint frais dès la première séance.",
+      "price": "300.00",
+      "image": "hydra-facial.webp",
+      "imageUrl": "/uploads/30962709-8adb-4d1f-8a99-6988e34fff9d.webp"
+    },
+    {
+      "category": "Soin Hydra Facial et Produits Bio",
+      "name": "Soin Radio Frequence et vitamines",
+      "description": "L'hydrafacial enrichi d'un cocktail de vitamines et d'une phase de radiofréquence qui réchauffe le derme et relance la production de collagène. Peau raffermie, grain affiné et éclat immédiat.",
+      "price": "500.00",
+      "image": "hydra-facial.webp",
+      "imageUrl": "/uploads/30962709-8adb-4d1f-8a99-6988e34fff9d.webp"
+    },
+    {
+      "category": "Soin Hydra Facial et Produits Bio",
+      "name": "Soin Royal avec Multiples etapes et Masques Facials inclus le Massage lifting visage Nuque et cheveux",
+      "description": "Notre soin signature : multiples étapes de soin, masques faciaux ciblés et massage lifting du visage, de la nuque et du cuir chevelu. Un vrai moment de détente pour une peau visiblement rajeunie et repulpée.",
+      "price": "1200.00",
+      "image": "hydra-facial.webp",
+      "imageUrl": "/uploads/30962709-8adb-4d1f-8a99-6988e34fff9d.webp"
+    },
+    {
+      "category": "Soin Hydra Facial et Produits Bio",
+      "name": "Soin hydra facial pour le Dos (sans massage)",
+      "description": "Le même protocole de nettoyage profond du dos (extraction, exfoliation, hydratation), sans la phase de massage. Format plus court, même efficacité sur les imperfections.",
+      "price": "1000.00",
+      "image": "hydrafacial-dos.webp",
+      "imageUrl": "/uploads/52557fc4-e90d-468a-aec7-e26dd32f127b.webp"
+    },
+    {
+      "category": "Soin Hydra Facial et Produits Bio",
+      "name": "Soin hydra facial pour le Dos avec massage",
+      "description": "Nettoyage profond du dos : extraction des impuretés, exfoliation et hydratation, suivis d'un massage relaxant. Le soin idéal contre les boutons et points noirs de la zone dorsale.",
+      "price": "1200.00",
+      "image": "hydrafacial-dos.webp",
+      "imageUrl": "/uploads/52557fc4-e90d-468a-aec7-e26dd32f127b.webp"
+    },
+    {
+      "category": "Soin dentaire",
+      "name": "Blanchiment des dents - 1 séance",
+      "description": "Éclaircissement du sourire en une séance, avec gel activé par lampe LED. Plusieurs teintes gagnées en une visite, sans altérer l'émail.",
+      "price": "350.00",
+      "image": "blanchiment-dentaire.webp",
+      "imageUrl": "/uploads/ee68508b-8446-4171-8dfb-1ee5bf4c501f.webp"
+    },
+    {
+      "category": "Soin dentaire",
+      "name": "Blanchiment des dents - 2 seances",
+      "description": "Deux séances pour un résultat plus marqué et une meilleure tenue dans le temps. Conseillé sur les dents fortement colorées par le café, le thé ou le tabac.",
+      "price": "600.00",
+      "image": "blanchiment-dentaire.webp",
+      "imageUrl": "/uploads/ee68508b-8446-4171-8dfb-1ee5bf4c501f.webp"
+    }
+  ],
+  "products": [
+    {
+      "category": "Crèmes",
+      "name": "Argan & Saffron Cream",
+      "description": "Crème à l'argan et au safran, formulée contre les taches brunes. Convient à tous les types de peau. — 50 g",
+      "price": "280.00",
+      "stockQty": 9,
+      "image": "argan-saffron-cream.webp",
+      "imageUrl": "/uploads/3019511b-753a-48a0-9771-b18724371063.webp"
+    },
+    {
+      "category": "Crèmes",
+      "name": "Argan Cream & Prickly Pear Anti-Wrinkle",
+      "description": "Crème riche en bienfaits de l'argan et de la figue de barbarie. Elle lutte contre les rides, nourrit, hydrate et restructure la peau. Texture légère adaptée à tous les types de peau, à appliquer le soir. — 50 g",
+      "price": "280.00",
+      "stockQty": 10,
+      "image": "argan-prickly-pear-anti-wrinkle.webp",
+      "imageUrl": "/uploads/7577c0b7-a5be-4fb3-994e-658210885e9a.webp"
+    },
+    {
+      "category": "Crèmes",
+      "name": "Day Argan Cream (Crème de jour)",
+      "description": "Crème de jour riche en huile d'argan. Elle nourrit, hydrate et restructure la peau tout en la protégeant. Texture légère adaptée à tous les types de peau, à appliquer le matin. — 50 g",
+      "price": "200.00",
+      "stockQty": 10,
+      "image": "day-argan-cream.webp",
+      "imageUrl": "/uploads/bf8ebb71-3a73-46b6-bb7b-05d7e3d9211e.webp"
+    },
+    {
+      "category": "Crèmes",
+      "name": "Night Argan Cream (Crème de nuit)",
+      "description": "Crème de nuit riche en huile d'argan. Elle nourrit, hydrate et restructure la peau pendant la nuit. Texture légère adaptée à tous les types de peau. — 50 g",
+      "price": "200.00",
+      "stockQty": 10,
+      "image": "night-argan-cream.webp",
+      "imageUrl": "/uploads/7a0b6f80-fb03-4470-84d2-f7ab497d8395.webp"
+    },
+    {
+      "category": "Huiles de corps",
+      "name": "Argan Oil Chocolate & Vanilla",
+      "description": "Huile de massage à l'argan parfumée au chocolat et à la vanille. Adoucissante et nourrissante, elle glisse agréablement sur la peau sans laisser de film gras. — 100 ml",
+      "price": "175.00",
+      "stockQty": 10,
+      "image": "argan-oil-chocolate-vanilla.webp",
+      "imageUrl": "/uploads/4c721290-0f92-4787-b032-1c02bca39499.webp"
+    },
+    {
+      "category": "Huiles de corps",
+      "name": "Argan Oil Musk & Amber",
+      "description": "Huile de massage à l'argan parfumée au musc et à l'ambre. Adoucissante et nourrissante, elle glisse agréablement sur la peau sans laisser de film gras. — 100 ml",
+      "price": "175.00",
+      "stockQty": 10,
+      "image": "argan-oil-musk-amber.webp",
+      "imageUrl": "/uploads/a3fead58-65f1-4575-992d-5c40ac18a68c.webp"
+    },
+    {
+      "category": "Huiles de corps",
+      "name": "Argan Oil Rose & Jasmine",
+      "description": "Huile de massage à l'argan parfumée à la rose et au jasmin. Adoucissante et nourrissante, elle glisse agréablement sur la peau sans laisser de film gras. — 100 ml",
+      "price": "175.00",
+      "stockQty": 10,
+      "image": "argan-oil-rose-jasmine.webp",
+      "imageUrl": "/uploads/9a79889b-6877-4453-992e-d318e98b3415.webp"
+    },
+    {
+      "category": "Soins visage",
+      "name": "Argan Oil & Musk for Beard",
+      "description": "Huile d'argan bio enrichie en huiles essentielles de musc et d'ambre. À appliquer chaque jour pour une barbe nourrie, souple, brillante et délicatement parfumée. — 50 ml",
+      "price": "175.00",
+      "stockQty": 10,
+      "image": "argan-oil-musk-beard.webp",
+      "imageUrl": "/uploads/3e4866e8-7e73-4486-bbec-ae71d7f32eef.webp"
+    },
+    {
+      "category": "Soins visage",
+      "name": "Argan Soap (Savon d'argan)",
+      "description": "Savon naturel doux et frais, très riche en vitamine E, adapté à tous les types de peau. Exfoliant végétal puissant, il élimine les peaux mortes, favorise la régénération cellulaire et aide à éliminer les toxines. — 75 g",
+      "price": "70.00",
+      "stockQty": 10,
+      "image": "argan-soap.webp",
+      "imageUrl": "/uploads/5f38199a-cf30-408e-af5c-3d40517f7632.webp"
+    },
+    {
+      "category": "Soins visage",
+      "name": "Organic Argan Oil (visage, corps et cheveux)",
+      "description": "Huile d'argan vierge non torréfiée, 100 % naturelle. Riche en oméga 3, 6 et 9 et en vitamine E, elle hydrate, embellit et restructure la peau en optimisant les échanges cellulaires. S'utilise sur le visage, le corps et les cheveux. — 50 ml",
+      "price": "100.00",
+      "stockQty": 10,
+      "image": "organic-argan-oil.webp",
+      "imageUrl": "/uploads/06d7a7ea-14f1-4284-ab2f-3c7d0bf96cc8.webp"
+    },
+    {
+      "category": "Soins visage",
+      "name": "Prickly Pear Soap",
+      "description": "Savon à la figue de barbarie, adapté à tous les types de peau. Il protège et adoucit la peau et possède une action anti-rides grâce à sa forte teneur en vitamine C. — 75 g",
+      "price": "100.00",
+      "stockQty": 10,
+      "image": "prickly-pear-soap.webp",
+      "imageUrl": "/uploads/08515f8f-2d45-409e-af8e-7b74458f343e.webp"
+    },
+    {
+      "category": "Soins visage",
+      "name": "Savon eclairssisent",
+      "description": "100 g",
+      "price": "150.00",
+      "stockQty": 10,
+      "image": "brightening-soap.webp",
+      "imageUrl": "/uploads/ad2cc923-3bc9-48c2-9488-e93726387919.webp"
+    },
+    {
+      "category": "Soins visage",
+      "name": "Écran solaire+ SPF 50",
+      "description": "50 g",
+      "price": "300.00",
+      "stockQty": 10,
+      "image": "sunscreen-spf50.webp",
+      "imageUrl": "/uploads/8e974d51-4f47-4435-b133-aad638368eb6.webp"
+    },
+    {
+      "category": "Sérums",
+      "name": "Argan Oil Face Care",
+      "description": "Huile d'argan vierge dédiée au visage. Elle nourrit la peau, l'assouplit et unifie le teint. — 30 ml",
+      "price": "50.00",
+      "stockQty": 10,
+      "image": "argan-oil-face-care.webp",
+      "imageUrl": "/uploads/9f228556-571e-4209-ad1e-d3b14c8a28ce.webp"
+    },
+    {
+      "category": "Sérums",
+      "name": "Royal Serum (Anti circle of eyes)",
+      "description": "Mélange naturel d'huile de pépins de figue de barbarie, de curcuma et de vitamine E. Cible les cernes et les rides tout en hydratant et nourrissant la peau. — 30 ml",
+      "price": "400.00",
+      "stockQty": 10,
+      "image": "royal-serum.webp",
+      "imageUrl": "/uploads/19dcb756-f026-4ef5-b3a2-6b405bb8ea4a.webp"
+    }
+  ],
+  "rewards": [
+    {
+      "name": "Echantillon offert",
+      "pointsCost": 5
+    },
+    {
+      "name": "Soin visage offert",
+      "description": "Un soin complet du visage",
+      "pointsCost": 100
+    }
+  ]
+}

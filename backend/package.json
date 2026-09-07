@@ -18,7 +18,9 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "catalog:translate": "ts-node prisma/catalog-translate.ts"
+    "catalog:sync": "ts-node prisma/catalog-sync.ts",
+    "catalog:translate": "ts-node prisma/catalog-translate.ts",
+    "uploads:prune": "ts-node prisma/uploads-prune.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -88,6 +90,10 @@
       "ts"
     ],
     "rootDir": "src",
+    "roots": [
+      "<rootDir>",
+      "<rootDir>/../prisma"
+    ],
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
