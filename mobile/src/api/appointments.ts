@@ -44,7 +44,7 @@ export const appointmentsApi = {
 
   // Paginé côté serveur, du plus récent au plus ancien.
   //
-  // 📌 Cet ordre est VOULU, ne pas le « corriger ». « Mes rendez-vous » est un
+  //  Cet ordre est VOULU, ne pas le « corriger ». « Mes rendez-vous » est un
   // historique, et un historique se lit du plus récent au plus ancien — comme
   // « Mes commandes » juste à côté. L'ordre croissant d'avant mettait les plus
   // VIEUX rendez-vous en tête, ce qui ne se voyait pas sur une liste complète
