@@ -12,6 +12,13 @@ import { ConfigService } from '@nestjs/config';
 // rendez-vous. C'est le verrou consultatif Postgres qu'on vérifie ici, et un
 // verrou n'existe pas dans un mock. Voir orders.service.concurrency.spec.ts.
 
+// Le budget de Jest doit couvrir celui que PrismaService accorde à une
+// transaction : maxWait (10 s) + timeout (15 s), soit 25 s pour une réservation
+// qui attend le verrou. À 5 s — la valeur par défaut — la rafale se faisait
+// couper en plein vol sur le runner de la CI : le verrou restait pris, le ménage
+// d'`afterEach` expirait derrière, et les deux tests suivants tombaient avec.
+jest.setTimeout(30_000);
+
 const TZ = process.env.CENTER_TIMEZONE ?? 'Africa/Casablanca';
 
 // PrismaService porte les réglages de transaction de l'application.
