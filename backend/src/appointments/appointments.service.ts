@@ -149,7 +149,7 @@ export class AppointmentsService {
     // créneau de 11h, alors que le centre veut précisément pouvoir le donner.
     // C'est aussi pourquoi `durationMin` est devenue facultative : plus rien
     // ici ne la lit.
-    const { capacity, slotIntervalMin } = await this.settings.get();
+    const { capacity, slotIntervalMin } = await this.settings.get(db);
     const endAt = new Date(startAt.getTime() + slotIntervalMin * 60_000);
 
     // ── Fermeture exceptionnelle (congés, jour férié) ──
